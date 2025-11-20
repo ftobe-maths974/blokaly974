@@ -1,11 +1,12 @@
 import React from 'react';
 
-export default function MemoryVisualizer({ state, history }) {
+export default function MemoryVisualizer({ state, history, hiddenVars }) {
   const variables = state?.variables || {};
   const logs = history || [];
+  const hiddenList = hiddenVars || [];
 
-  // FILTRE : On cache les variables qui commencent par "_"
-  const visibleVariables = Object.entries(variables).filter(([name]) => !name.startsWith('_'));
+  // On affiche tout ce qui n'est PAS dans hiddenList (donc Editable + Locked = Visible)
+  const visibleVariables = Object.entries(variables).filter(([name]) => !hiddenList.includes(name));
 
   return (
     <div style={{display: 'flex', flexDirection: 'column', height: '100%', width: '100%', padding: '10px', boxSizing: 'border-box', gap: '15px', background: '#2c3e50'}}>
@@ -29,9 +30,11 @@ export default function MemoryVisualizer({ state, history }) {
             </div>
           </div>
         ))}
+        
+        {/* Message si tout est caché */}
         {visibleVariables.length === 0 && (
            <div style={{color:'rgba(255,255,255,0.5)', fontStyle:'italic', marginTop:'20px'}}>
-             Mémoire vide ou cachée...
+             {Object.keys(variables).length > 0 ? "Mémoire masquée 👻" : "Mémoire vide"}
            </div>
         )}
       </div>
@@ -39,7 +42,7 @@ export default function MemoryVisualizer({ state, history }) {
       {/* CONSOLE */}
       <div style={{flex: 1, background: '#ecf0f1', borderRadius: '8px', overflow: 'hidden', display: 'flex', flexDirection: 'column'}}>
         <div style={{padding: '8px 15px', background: '#bdc3c7', fontWeight: 'bold', color: '#2c3e50', fontSize: '0.9rem', borderBottom: '1px solid #95a5a6'}}>
-          >_ Terminal / Historique
+          &gt;_ Terminal / Historique
         </div>
         <div style={{flex: 1, overflowY: 'auto', padding: '10px', fontFamily: 'monospace', fontSize: '0.9rem', background:'#222', color:'#2ecc71'}}>
           {logs.map((log, i) => (

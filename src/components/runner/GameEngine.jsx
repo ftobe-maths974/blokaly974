@@ -2,19 +2,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import { BlocklyWorkspace } from 'react-blockly';
 import * as Blockly from 'blockly';
 import { javascriptGenerator } from 'blockly/javascript';
-
 import { MazePlugin } from '../../plugins/MazePlugin';
 import { MathPlugin } from '../../plugins/MathPlugin';
-
 import FeedbackModal from './FeedbackModal';
 import { generateProofToken } from '../../core/validation';
 import InstructionPanel from './InstructionPanel';
 import { MAZE_CONFIG } from '../../core/adapters/MazeAdapter';
 
-const PLUGINS = {
-  'MAZE': MazePlugin,
-  'MATH': MathPlugin
-};
+const PLUGINS = { 'MAZE': MazePlugin, 'MATH': MathPlugin };
 
 const workspaceConfig = {
   collapse: true, comments: true, disable: true, maxBlocks: Infinity,
@@ -35,7 +30,7 @@ export default function GameEngine({ levelData, onWin }) {
   });
 
   const [engineState, setEngineState] = useState(null); 
-  const [xml, setXml] = useState(safeData.startBlocks || ""); // Initialisation safe
+  const [xml, setXml] = useState(safeData.startBlocks || "");
   const [gameState, setGameState] = useState('IDLE');
   const [showModal, setShowModal] = useState(false);
   const [gameStats, setGameStats] = useState({ stars: 0, blockCount: 0, target: 0 });
@@ -48,35 +43,46 @@ export default function GameEngine({ levelData, onWin }) {
     plugin.registerBlocks(Blockly, javascriptGenerator);
   }, [plugin]);
 
-  const currentToolbox = plugin.getToolboxXML(safeData.allowedBlocks);
+  // On passe les variables cachées au plugin pour qu'il adapte la toolbox (cadenas)
+// ... (Dans GameEngine) ...
+  
+  // 1. Passage des listes au Plugin
+  const currentToolbox = plugin.getToolboxXML(
+    safeData.allowedBlocks, 
+    safeData.inputs, 
+    safeData.hiddenVars,
+    safeData.lockedVars // <--- AJOUT ICI
+  );
 
-  // --- CORRECTION DU CONFLIT DE VARIABLES ---
   const handleInject = (newWorkspace) => {
     workspaceRef.current = newWorkspace;
     javascriptGenerator.init(newWorkspace); 
     newWorkspace.updateToolbox(currentToolbox);
     
-    // 1. D'ABORD : Charger le XML (Priorité aux IDs stockés)
+    // Chargement XML...
     if (safeData.startBlocks) {
-        try {
-            const xmlDom = Blockly.utils.xml.textToDom(safeData.startBlocks);
-            Blockly.Xml.domToWorkspace(xmlDom, newWorkspace);
-        } catch (e) {
-            console.error("Erreur chargement blocs", e);
-        }
+       try {
+           const xmlDom = Blockly.utils.xml.textToDom(safeData.startBlocks);
+           Blockly.Xml.domToWorkspace(xmlDom, newWorkspace);
+       } catch (e) { console.error(e); }
     }
 
-    // 2. ENSUITE : Créer les variables manquantes (sans écraser les existantes)
+    // 2. Création Variables Blockly
     if (safeData.inputs) {
+        const hiddenList = safeData.hiddenVars || [];
+        const lockedList = safeData.lockedVars || [];
+        
         Object.keys(safeData.inputs).forEach(v => {
-            // On ne crée la variable que si elle n'existe pas déjà dans le workspace
-            if (!newWorkspace.getVariable(v)) {
+            // ON NE CRÉE QUE LES VARIABLES 100% ÉDITABLES
+            // Les "Locked" ont un bloc spécial, les "Hidden" n'ont rien.
+            const isEditable = !hiddenList.includes(v) && !lockedList.includes(v);
+            
+            if (isEditable && !newWorkspace.getVariable(v)) {
                 newWorkspace.createVariable(v);
             }
         });
     }
   };
-  // ------------------------------------------
 
   useEffect(() => {
     if (workspaceRef.current) {
@@ -90,14 +96,27 @@ export default function GameEngine({ levelData, onWin }) {
     setEngineState(null); 
 
     javascriptGenerator.init(workspaceRef.current);
-    let code = javascriptGenerator.workspaceToCode(workspaceRef.current);
+    let userCode = javascriptGenerator.workspaceToCode(workspaceRef.current);
     
+    // INJECTION DES VARIABLES (Même les cachées !)
+    // C'est ici qu'on les rend "vivantes" pour le code, même si Blockly ne les voit pas.
+    let initCode = "";
+    if (safeData.inputs) {
+        Object.entries(safeData.inputs).forEach(([key, val]) => {
+            const value = typeof val === 'string' ? `'${val}'` : val;
+            initCode += `var ${key} = ${value};\n`;
+        });
+    }
+    
+    const fullCode = initCode + userCode;
+
     const actions = [];
     try {
-      const fn = new Function('actions', code);
+      const fn = new Function('actions', fullCode);
       fn(actions);
     } catch (e) {
-      alert("Erreur code : " + e.message);
+      console.error("Erreur exécution :", e);
+      alert("Erreur dans ton code : " + e.message);
       setGameState('IDLE');
       return;
     }
@@ -145,8 +164,6 @@ export default function GameEngine({ levelData, onWin }) {
     if (executionRef.current) clearTimeout(executionRef.current);
     setGameState('IDLE');
     setEngineState(null);
-    
-    // Reset du visuel Labyrinthe si besoin
     if (plugin.id === 'MAZE') {
         setPlayerState({
             x: safeData.startPos?.x || 0,
@@ -175,7 +192,6 @@ export default function GameEngine({ levelData, onWin }) {
             toolboxConfiguration={currentToolbox}
             workspaceConfiguration={workspaceConfig}
             onInject={handleInject}
-             // La prop initialXml est retirée car gérée manuellement pour éviter les conflits
           />
         </div>
       
@@ -186,6 +202,7 @@ export default function GameEngine({ levelData, onWin }) {
              playerDir={engineState ? engineState.dir : 1}
              state={engineState || { variables: safeData.inputs }} 
              history={engineState?.logs}
+             hiddenVars={safeData.hiddenVars || []}
           />
         </div>
 

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react'; // Ajout useState ici au cas où
 import MazeEditor from './editors/MazeEditor';
 import MathEditor from './editors/MathEditor';
 import { BlocklyWorkspace } from 'react-blockly';
@@ -8,7 +8,6 @@ import { MathPlugin } from '../../plugins/MathPlugin';
 
 export default function LevelEditor({ levelData, onUpdate }) {
   
-  // --- 1. INIT DES BLOCS ---
   useEffect(() => {
     try {
         const dummyGenerator = { forBlock: {} };
@@ -28,27 +27,32 @@ export default function LevelEditor({ levelData, onUpdate }) {
     readOnly: false
   };
   
-  // --- 2. GESTION DU TYPE ---
   const handleTypeChange = (newType) => {
     onUpdate({ 
         ...levelData, 
         type: newType,
-        allowedBlocks: undefined // Reset des blocs pour éviter les mélanges
+        allowedBlocks: undefined 
     });
   };
   const currentType = levelData.type || 'MAZE';
 
-  // --- 3. TOOLBOX DYNAMIQUE ---
+  // --- CORRECTION ICI : ON PASSE TOUTES LES INFOS AU PLUGIN ---
   let editorToolbox = '<xml></xml>';
   try {
     if (currentType === 'MATH') {
-        editorToolbox = MathPlugin.getToolboxXML(levelData.allowedBlocks);
+        editorToolbox = MathPlugin.getToolboxXML(
+            levelData.allowedBlocks,
+            levelData.inputs,      // <--- Ajouté
+            levelData.hiddenVars,  // <--- Ajouté
+            levelData.lockedVars   // <--- Ajouté
+        );
     } else {
         editorToolbox = MazePlugin.getToolboxXML(levelData.allowedBlocks); 
     }
   } catch (e) {}
+  // -----------------------------------------------------------
 
-  // --- 4. CONFIGURATION DES CASES À COCHER ---
+
   const toggleBlock = (blockType) => {
     const defaults = currentType === 'MATH' 
         ? ['math_number', 'math_arithmetic', 'variables_set'] 
@@ -65,7 +69,6 @@ export default function LevelEditor({ levelData, onUpdate }) {
     onUpdate({ ...levelData, allowedBlocks: newAllowed });
   };
 
-  // ORGANISATION DES BLOCS (Variable unique pour éviter les erreurs)
   const allCategories = {
     "Mouvements": [
       { type: 'maze_move_forward', label: 'Avancer' },
@@ -87,20 +90,20 @@ export default function LevelEditor({ levelData, onUpdate }) {
     ]
   };
 
-  // Filtre d'affichage selon le mode
   const displayedCategories = currentType === 'MAZE' 
     ? ['Mouvements', 'Logique'] 
     : ['Mathématiques', 'Variables', 'Interactions', 'Logique'];
 
-  // Clé pour forcer le rechargement propre de Blockly
-  const workspaceKey = `${currentType}-${JSON.stringify(levelData.allowedBlocks || [])}`;
+  // La clé magique pour forcer le rafraîchissement
+  // On ajoute aussi inputs/hidden/locked pour que la toolbox change si on ajoute une variable
+  const workspaceKey = `${currentType}-${JSON.stringify(levelData.allowedBlocks || [])}-${JSON.stringify(levelData.inputs || {})}-${JSON.stringify(levelData.hiddenVars || [])}`;
 
   return (
     <div className="editor-wrapper" style={{display: 'flex', flexDirection: 'column', height: '100%'}}>
       
       <div style={{display: 'flex', gap: '20px', flex: 1, minHeight: '400px'}}>
         
-        {/* GAUCHE : VISUEL */}
+        {/* GAUCHE */}
         <div style={{flex: 2, display: 'flex', flexDirection: 'column'}}>
             <div style={{display: 'flex', marginBottom: '15px', background: '#ddd', padding: '5px', borderRadius: '8px'}}>
                 <button onClick={() => handleTypeChange('MAZE')} style={{flex: 1, padding: '8px', border: 'none', borderRadius: '6px', cursor: 'pointer', background: currentType === 'MAZE' ? 'white' : 'transparent', fontWeight: currentType === 'MAZE' ? 'bold' : 'normal'}}>🏰 Labyrinthe</button>
@@ -116,7 +119,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
             </div>
         </div>
 
-        {/* DROITE : CONFIGURATION */}
+        {/* DROITE */}
         <div style={{flex: 1, background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', overflowY: 'auto'}}>
           <h3 style={{marginTop: 0}}>⚙️ Config {currentType}</h3>
           
@@ -138,7 +141,6 @@ export default function LevelEditor({ levelData, onUpdate }) {
               <div key={catName} style={{marginBottom: '10px'}}>
                 <div style={{fontSize: '0.8em', color: '#888', fontWeight: 'bold', textTransform: 'uppercase'}}>{catName}</div>
                 {allCategories[catName] && allCategories[catName].map(b => {
-                    // Calcul sécurisé de l'état coché
                     const currentList = levelData.allowedBlocks || 
                         (currentType === 'MATH' 
                             ? ['math_number', 'math_arithmetic', 'variables_set', 'text_print', 'text_prompt_ext'] 
@@ -166,12 +168,12 @@ export default function LevelEditor({ levelData, onUpdate }) {
         </div>
       </div>
 
-      {/* BAS : CODE DE DÉPART */}
+      {/* BAS */}
       <div style={{height: '350px', marginTop: '20px', background: 'white', padding: '10px', borderRadius: '8px', border: '2px dashed #ccc', display: 'flex', flexDirection: 'column'}}>
         <h4 style={{margin: '0 0 5px 0', color: '#555'}}>🧩 Code de départ (Pré-rempli pour l'élève)</h4>
         <div style={{flex: 1, position: 'relative'}}>
            <BlocklyWorkspace
-              key={workspaceKey} // FORCE LE RECHARGEMENT PROPRE
+              key={workspaceKey}
               className="blockly-div"
               toolboxConfiguration={editorToolbox}
               workspaceConfiguration={editorConfig}
