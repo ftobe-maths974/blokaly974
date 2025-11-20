@@ -1,30 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import LevelEditor from './LevelEditor';
 import LZString from 'lz-string';
 import { MAZE_CONFIG } from '../../core/adapters/MazeAdapter';
 
 export default function Builder() {
-  // État global de la campagne
-  const [campaign, setCampaign] = useState({
-    title: "Ma Nouvelle Campagne",
-    levels: [
-      // Niveau 1 par défaut
-      {
+  // 1. CHARGEMENT : On essaie de lire la sauvegarde, sinon valeur par défaut
+  const [campaign, setCampaign] = useState(() => {
+    const saved = localStorage.getItem('blokaly_builder_autosave');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Erreur de lecture sauvegarde", e);
+      }
+    }
+    // Valeur par défaut si rien n'est trouvé
+    return {
+      title: "Ma Nouvelle Campagne",
+      levels: [{
         id: 1,
         type: 'MAZE',
-        grid: MAZE_CONFIG.defaultGrid || [
-          [4, 4, 4, 4, 4],
-          [2, 1, 1, 3, 4],
-          [4, 4, 4, 4, 4]
-        ],
+        grid: MAZE_CONFIG.defaultGrid,
         startPos: {x: 1, y: 1},
         maxBlocks: 5
-      }
-    ]
+      }]
+    };
   });
-
+  
   // Quel niveau est en train d'être édité ? (Index dans le tableau)
+  // On vérifie que l'index existe toujours (cas de suppression)
   const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
+
+  // 2. SAUVEGARDE : À chaque changement de 'campaign', on écrit dans le storage
+  useEffect(() => {
+    localStorage.setItem('blokaly_builder_autosave', JSON.stringify(campaign));
+  }, [campaign]);
 
   // --- ACTIONS ---
 
@@ -32,7 +42,6 @@ export default function Builder() {
     const newLevel = {
       id: campaign.levels.length + 1,
       type: 'MAZE',
-      // On clone une grille par défaut
       grid: [
           [4, 4, 4, 4, 4, 4, 4, 4],
           [4, 2, 1, 1, 1, 1, 3, 4],
@@ -65,7 +74,6 @@ export default function Builder() {
     const compressed = LZString.compressToEncodedURIComponent(json);
     const url = `${window.location.origin}/?data=${compressed}`;
     
-    // Copie dans le presse-papier pour être sympa
     navigator.clipboard.writeText(url);
     alert("Lien copié ! Ouverture du test...");
     window.location.href = url;
@@ -101,9 +109,27 @@ export default function Builder() {
           ))}
         </div>
 
-        <button onClick={addLevel} style={{padding: '15px', background: '#27ae60', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold'}}>
-          + Ajouter un niveau
-        </button>
+        {/* BOUTONS D'ACTION (Dans la sidebar) */}
+        <div style={{padding: '10px', borderTop: '1px solid #34495e'}}>
+            <button 
+                onClick={addLevel} 
+                style={{width: '100%', padding: '12px', background: '#27ae60', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold', marginBottom: '10px', borderRadius: '4px'}}
+            >
+            + Ajouter un niveau
+            </button>
+
+            <button 
+                onClick={() => {
+                    if(confirm("Attention, cela va effacer votre travail actuel et recharger la page !")) {
+                    localStorage.removeItem('blokaly_builder_autosave');
+                    window.location.reload();
+                    }
+                }} 
+                style={{width: '100%', padding: '8px', background: 'none', border: '1px solid #e74c3c', color: '#e74c3c', cursor: 'pointer', fontSize: '0.8rem', borderRadius: '4px'}}
+            >
+            🗑️ Tout effacer (Reset)
+            </button>
+        </div>
       </div>
 
       {/* ZONE CENTRALE : Éditeur */}
@@ -116,10 +142,15 @@ export default function Builder() {
         </div>
 
         <div style={{flex: 1, overflowY: 'auto', padding: '20px', background: '#f4f4f4'}}>
-          <LevelEditor 
-            levelData={campaign.levels[currentLevelIndex]} 
-            onUpdate={updateCurrentLevel} 
-          />
+          {/* Sécurité : on s'assure que le niveau existe avant de l'afficher */}
+          {campaign.levels[currentLevelIndex] ? (
+            <LevelEditor 
+                levelData={campaign.levels[currentLevelIndex]} 
+                onUpdate={updateCurrentLevel} 
+            />
+          ) : (
+            <div style={{padding: 20}}>Sélectionnez un niveau...</div>
+          )}
         </div>
       </div>
 

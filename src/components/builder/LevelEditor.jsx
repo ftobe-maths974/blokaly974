@@ -1,28 +1,49 @@
-import React, { useState } from 'react';
-import { MAZE_CONFIG } from '../../core/adapters/MazeAdapter';
+import React, { useEffect } from 'react';
+import MazeEditor from './editors/MazeEditor';
+import MathEditor from './editors/MathEditor';
+import { BlocklyWorkspace } from 'react-blockly';
+import * as Blockly from 'blockly';
+import { MazePlugin } from '../../plugins/MazePlugin';
 
 export default function LevelEditor({ levelData, onUpdate }) {
-  const [selectedTool, setSelectedTool] = useState(4);
-
-  // Liste des blocs disponibles (Pour les checkbox)
-  const availableBlocks = [
-    { type: 'maze_move_forward', label: 'Avancer' },
-    { type: 'maze_turn', label: 'Tourner' },
-    { type: 'controls_repeat_ext', label: 'Boucles (Répéter)' }
-  ];
-
-  // --- ACTIONS ---
   
-  const handleCellClick = (rIndex, cIndex) => {
-    const newGrid = levelData.grid.map(row => [...row]);
-    newGrid[rIndex][cIndex] = selectedTool;
-    onUpdate({ ...levelData, grid: newGrid });
-  };
+  // --- 1. INIT DES BLOCS POUR L'ÉDITEUR ---
+  // On doit enregistrer les blocs dès le chargement du composant pour qu'ils apparaissent
+  useEffect(() => {
+    try {
+        const dummyGenerator = { forBlock: {} };
+        const B = Blockly.default || Blockly; 
+        if (B) {
+            MazePlugin.registerBlocks(B, dummyGenerator);
+        }
+    } catch(e) {
+        console.error("Erreur init blocs éditeur", e);
+    }
+  }, []);
 
+  // Configuration de l'espace Blockly "Code de départ"
+  const editorConfig = {
+    scrollbars: true,
+    trashcan: true
+  };
+  
+  // Récupération de la toolbox via le Plugin (pour être sûr d'avoir les bons blocs)
+  let editorToolbox = '<xml></xml>';
+  try {
+    editorToolbox = MazePlugin.getToolboxXML(); 
+  } catch (e) {}
+
+
+  // --- 2. GESTION DU TYPE (ONGLETS) ---
+  const handleTypeChange = (newType) => {
+    onUpdate({ ...levelData, type: newType });
+  };
+  const currentType = levelData.type || 'MAZE';
+
+
+  // --- 3. GESTION CONFIGURATION ---
   const toggleBlock = (blockType) => {
-    // Si allowedBlocks n'existe pas encore (vieux niveaux), on le crée
-    const currentAllowed = levelData.allowedBlocks || availableBlocks.map(b => b.type);
-    
+    const currentAllowed = levelData.allowedBlocks || ['maze_move_forward', 'maze_turn', 'controls_repeat_ext'];
     let newAllowed;
     if (currentAllowed.includes(blockType)) {
       newAllowed = currentAllowed.filter(t => t !== blockType);
@@ -32,93 +53,105 @@ export default function LevelEditor({ levelData, onUpdate }) {
     onUpdate({ ...levelData, allowedBlocks: newAllowed });
   };
 
-  const handleMaxBlocksChange = (e) => {
-    onUpdate({ ...levelData, maxBlocks: parseInt(e.target.value) || 0 });
+  // Catégories pour les checkboxes
+  const blocksByCategory = {
+    "Mouvements": [
+      { type: 'maze_move_forward', label: 'Avancer' },
+      { type: 'maze_turn', label: 'Tourner' }
+    ],
+    "Logique": [
+      { type: 'controls_repeat_ext', label: 'Boucles' }
+    ]
   };
 
-  // --- RENDER ---
-
-  const tools = [
-    { id: 1, label: "Chemin", icon: "⬜" },
-    { id: 4, label: "Mur", icon: "🧱" },
-    { id: 2, label: "Départ", icon: "🏁" },
-    { id: 3, label: "Arrivée", icon: "🏆" },
-  ];
-
-  // Sécurité : si allowedBlocks est undefined, tout est autorisé par défaut
-  const allowed = levelData.allowedBlocks || availableBlocks.map(b => b.type);
-
   return (
-    <div className="editor-wrapper" style={{display: 'flex', gap: '20px'}}>
+    <div className="editor-wrapper" style={{display: 'flex', flexDirection: 'column', height: '100%'}}>
       
-      {/* COLONNE GAUCHE : Visuel */}
-      <div style={{flex: 2}}>
-        <div className="editor-toolbar">
-          {tools.map((tool) => (
-            <button
-              key={tool.id}
-              onClick={() => setSelectedTool(tool.id)}
-              className={`tool-btn ${selectedTool === tool.id ? 'active' : ''}`}
-            >
-              {tool.icon} {tool.label}
-            </button>
-          ))}
+      {/* HAUT : Onglets + Zone Visuelle + Config */}
+      <div style={{display: 'flex', gap: '20px', flex: 1, minHeight: '400px'}}>
+        
+        {/* GAUCHE : VISUEL (Labyrinthe ou Math) */}
+        <div style={{flex: 2, display: 'flex', flexDirection: 'column'}}>
+            
+            {/* ONGLETS */}
+            <div style={{display: 'flex', marginBottom: '15px', background: '#ddd', padding: '5px', borderRadius: '8px'}}>
+                <button 
+                    onClick={() => handleTypeChange('MAZE')}
+                    style={{flex: 1, padding: '8px', border: 'none', borderRadius: '6px', cursor: 'pointer', background: currentType === 'MAZE' ? 'white' : 'transparent', fontWeight: currentType === 'MAZE' ? 'bold' : 'normal'}}
+                >
+                    🏰 Labyrinthe
+                </button>
+                <button 
+                    onClick={() => handleTypeChange('MATH')}
+                    style={{flex: 1, padding: '8px', border: 'none', borderRadius: '6px', cursor: 'pointer', background: currentType === 'MATH' ? 'white' : 'transparent', fontWeight: currentType === 'MATH' ? 'bold' : 'normal'}}
+                >
+                    Fn Algo / Maths
+                </button>
+            </div>
+
+            {/* CONTENU DE L'ÉDITEUR */}
+            <div style={{flex: 1, background: 'white', padding: '20px', borderRadius: '8px', border: '1px solid #ccc', overflowY: 'auto'}}>
+                {currentType === 'MAZE' ? (
+                    <MazeEditor levelData={levelData} onUpdate={onUpdate} />
+                ) : (
+                    <MathEditor levelData={levelData} onUpdate={onUpdate} />
+                )}
+            </div>
         </div>
 
-        <div className="editor-grid">
-          {levelData.grid.map((row, rIndex) => (
-            <div key={rIndex} className="editor-row">
-              {row.map((cell, cIndex) => (
-                <div 
-                  key={`${rIndex}-${cIndex}`}
-                  className="editor-cell"
-                  onClick={() => handleCellClick(rIndex, cIndex)}
-                  style={{ background: cell === 4 ? '#34495e' : '#ecf0f1' }}
-                >
-                  {MAZE_CONFIG.THEME[cell]}
-                </div>
-              ))}
-            </div>
-          ))}
+        {/* DROITE : CONFIGURATION */}
+        <div style={{flex: 1, background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', overflowY: 'auto'}}>
+          <h3 style={{marginTop: 0}}>⚙️ Config</h3>
+          
+          {/* Consigne */}
+          <div style={{marginBottom: '20px'}}>
+              <label style={{fontWeight: 'bold', display: 'block', marginBottom: '5px'}}>Consigne :</label>
+              <textarea 
+                  value={levelData.instruction || ""}
+                  onChange={(e) => onUpdate({ ...levelData, instruction: e.target.value })}
+                  style={{width: '100%', height: '100px', padding: '5px', fontFamily: 'monospace'}}
+                  placeholder="Markdown / LaTeX supporté..."
+              />
+          </div>
+
+          <hr style={{border: 'none', borderTop: '1px solid #eee', margin: '15px 0'}} />
+
+          {/* Sélection des blocs */}
+          <div style={{marginBottom: '20px'}}>
+            <label style={{fontWeight: 'bold', display: 'block', marginBottom: '10px'}}>Blocs Autorisés :</label>
+            {Object.entries(blocksByCategory).map(([category, blocks]) => (
+              <div key={category} style={{marginBottom: '10px'}}>
+                <div style={{fontSize: '0.8em', color: '#888', fontWeight: 'bold', textTransform: 'uppercase'}}>{category}</div>
+                {blocks.map(b => (
+                  <div key={b.type} style={{marginLeft: '10px'}}>
+                    <label style={{cursor: 'pointer', display: 'flex', alignItems: 'center'}}>
+                      <input 
+                        type="checkbox" 
+                        checked={(levelData.allowedBlocks || []).includes(b.type)}
+                        onChange={() => toggleBlock(b.type)}
+                        style={{marginRight: '8px'}}
+                      />
+                      {b.label}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* COLONNE DROITE : Règles & Contraintes */}
-      <div style={{flex: 1, background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)'}}>
-        <h3 style={{marginTop: 0}}>⚙️ Règles du niveau</h3>
-        
-        <div style={{marginBottom: '20px'}}>
-          <label style={{fontWeight: 'bold', display: 'block', marginBottom: '5px'}}>Objectif (Étoiles) :</label>
-          <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
-            <span>Max</span>
-            <input 
-              type="number" 
-              value={levelData.maxBlocks || 5} 
-              onChange={handleMaxBlocksChange}
-              style={{width: '60px', padding: '5px'}}
-            />
-            <span>blocs</span>
-          </div>
-          <small style={{color: '#7f8c8d'}}>Si l'élève dépasse, il aura moins d'étoiles.</small>
-        </div>
-
-        <hr style={{border: 'none', borderTop: '1px solid #eee', margin: '20px 0'}} />
-
-        <div style={{marginBottom: '20px'}}>
-          <label style={{fontWeight: 'bold', display: 'block', marginBottom: '10px'}}>Blocs autorisés :</label>
-          {availableBlocks.map(b => (
-            <div key={b.type} style={{marginBottom: '8px'}}>
-              <label style={{cursor: 'pointer', display: 'flex', alignItems: 'center'}}>
-                <input 
-                  type="checkbox" 
-                  checked={allowed.includes(b.type)}
-                  onChange={() => toggleBlock(b.type)}
-                  style={{marginRight: '10px'}}
-                />
-                {b.label}
-              </label>
-            </div>
-          ))}
+      {/* BAS : CODE DE DÉPART */}
+      <div style={{height: '350px', marginTop: '20px', background: 'white', padding: '10px', borderRadius: '8px', border: '2px dashed #ccc', display: 'flex', flexDirection: 'column'}}>
+        <h4 style={{margin: '0 0 5px 0', color: '#555'}}>🧩 Code de départ (Pré-rempli pour l'élève)</h4>
+        <div style={{flex: 1, position: 'relative'}}>
+           <BlocklyWorkspace
+              className="blockly-div"
+              toolboxConfiguration={editorToolbox}
+              workspaceConfiguration={editorConfig}
+              initialXml={levelData.startBlocks || '<xml></xml>'}
+              onXmlChange={(xml) => onUpdate({ ...levelData, startBlocks: xml })}
+           />
         </div>
       </div>
 
