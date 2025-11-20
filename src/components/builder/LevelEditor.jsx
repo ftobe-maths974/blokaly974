@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import MazeEditor from './editors/MazeEditor';
 import MathEditor from './editors/MathEditor';
 import { BlocklyWorkspace } from 'react-blockly';
@@ -25,24 +25,22 @@ export default function LevelEditor({ levelData, onUpdate }) {
   const editorConfig = {
     scrollbars: true,
     trashcan: true,
-    readOnly: false // Important : on doit pouvoir glisser les blocs
+    readOnly: false
   };
   
   // --- 2. GESTION DU TYPE ---
   const handleTypeChange = (newType) => {
-    // Quand on change de type, on reset les blocs autorisés pour éviter les incohérences
     onUpdate({ 
         ...levelData, 
         type: newType,
-        allowedBlocks: undefined // On force le reset aux valeurs par défaut du nouveau mode
+        allowedBlocks: undefined // Reset des blocs pour éviter les mélanges
     });
   };
   const currentType = levelData.type || 'MAZE';
 
-  // --- 3. CALCUL DE LA TOOLBOX (XML) ---
+  // --- 3. TOOLBOX DYNAMIQUE ---
   let editorToolbox = '<xml></xml>';
   try {
-    // On passe explicitement allowedBlocks. Si undefined, le plugin mettra les défauts.
     if (currentType === 'MATH') {
         editorToolbox = MathPlugin.getToolboxXML(levelData.allowedBlocks);
     } else {
@@ -50,10 +48,8 @@ export default function LevelEditor({ levelData, onUpdate }) {
     }
   } catch (e) {}
 
-
   // --- 4. CONFIGURATION DES CASES À COCHER ---
   const toggleBlock = (blockType) => {
-    // Définition des défauts si la liste est vide
     const defaults = currentType === 'MATH' 
         ? ['math_number', 'math_arithmetic', 'variables_set'] 
         : ['maze_move_forward', 'maze_turn', 'controls_repeat_ext'];
@@ -69,7 +65,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
     onUpdate({ ...levelData, allowedBlocks: newAllowed });
   };
 
-  // Organisation visuelle des catégories
+  // ORGANISATION DES BLOCS (Variable unique pour éviter les erreurs)
   const allCategories = {
     "Mouvements": [
       { type: 'maze_move_forward', label: 'Avancer' },
@@ -84,17 +80,19 @@ export default function LevelEditor({ levelData, onUpdate }) {
     ],
     "Variables": [
       { type: 'variables_set', label: 'Définir une variable' }
+    ],
+    "Interactions": [
+      { type: 'text_print', label: 'Afficher (Print)' },
+      { type: 'text_prompt_ext', label: 'Demander (Input)' }
     ]
   };
 
+  // Filtre d'affichage selon le mode
   const displayedCategories = currentType === 'MAZE' 
     ? ['Mouvements', 'Logique'] 
-    : ['Mathématiques', 'Variables', 'Logique'];
+    : ['Mathématiques', 'Variables', 'Interactions', 'Logique'];
 
-  // --- 5. CORRECTION CRITIQUE : La Clé Unique ---
-  // Cette clé force React à détruire et recréer l'éditeur Blockly 
-  // à chaque fois qu'on change une option. C'est radical mais ça évite 100% des bugs.
-  // On utilise JSON.stringify pour détecter tout changement dans la liste des blocs.
+  // Clé pour forcer le rechargement propre de Blockly
   const workspaceKey = `${currentType}-${JSON.stringify(levelData.allowedBlocks || [])}`;
 
   return (
@@ -125,7 +123,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
           <div style={{marginBottom: '20px'}}>
               <label style={{fontWeight: 'bold', display: 'block', marginBottom: '5px'}}>Consigne :</label>
               <textarea 
-                  value={levelData.instruction || ""} // Correction bug null value
+                  value={levelData.instruction || ""}
                   onChange={(e) => onUpdate({ ...levelData, instruction: e.target.value })}
                   style={{width: '100%', height: '100px', padding: '5px', fontFamily: 'monospace'}}
                   placeholder="Markdown..."
@@ -140,9 +138,11 @@ export default function LevelEditor({ levelData, onUpdate }) {
               <div key={catName} style={{marginBottom: '10px'}}>
                 <div style={{fontSize: '0.8em', color: '#888', fontWeight: 'bold', textTransform: 'uppercase'}}>{catName}</div>
                 {allCategories[catName] && allCategories[catName].map(b => {
-                    // Vérification sécurisée de l'état coché
+                    // Calcul sécurisé de l'état coché
                     const currentList = levelData.allowedBlocks || 
-                        (currentType === 'MATH' ? ['math_number', 'math_arithmetic', 'variables_set'] : ['maze_move_forward', 'maze_turn', 'controls_repeat_ext']);
+                        (currentType === 'MATH' 
+                            ? ['math_number', 'math_arithmetic', 'variables_set', 'text_print', 'text_prompt_ext'] 
+                            : ['maze_move_forward', 'maze_turn', 'controls_repeat_ext']);
                     
                     const isChecked = currentList.includes(b.type);
 
@@ -171,7 +171,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
         <h4 style={{margin: '0 0 5px 0', color: '#555'}}>🧩 Code de départ (Pré-rempli pour l'élève)</h4>
         <div style={{flex: 1, position: 'relative'}}>
            <BlocklyWorkspace
-              key={workspaceKey} // <--- LA SOLUTION MAGIQUE EST ICI
+              key={workspaceKey} // FORCE LE RECHARGEMENT PROPRE
               className="blockly-div"
               toolboxConfiguration={editorToolbox}
               workspaceConfiguration={editorConfig}
