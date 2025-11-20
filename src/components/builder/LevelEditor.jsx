@@ -1,49 +1,53 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import MazeEditor from './editors/MazeEditor';
 import MathEditor from './editors/MathEditor';
 import { BlocklyWorkspace } from 'react-blockly';
 import * as Blockly from 'blockly';
 import { MazePlugin } from '../../plugins/MazePlugin';
+import { MathPlugin } from '../../plugins/MathPlugin'; // <-- IMPORTANT : On importe aussi le plugin Math
 
 export default function LevelEditor({ levelData, onUpdate }) {
   
-  // --- 1. INIT DES BLOCS POUR L'ÉDITEUR ---
-  // On doit enregistrer les blocs dès le chargement du composant pour qu'ils apparaissent
+  // --- 1. INIT DES BLOCS POUR L'APERÇU EN BAS ---
   useEffect(() => {
     try {
         const dummyGenerator = { forBlock: {} };
         const B = Blockly.default || Blockly; 
         if (B) {
+            // On enregistre TOUS les blocs possibles pour que l'éditeur les connaisse
             MazePlugin.registerBlocks(B, dummyGenerator);
+            MathPlugin.registerBlocks(B, dummyGenerator);
         }
     } catch(e) {
         console.error("Erreur init blocs éditeur", e);
     }
   }, []);
 
-  // Configuration de l'espace Blockly "Code de départ"
   const editorConfig = {
     scrollbars: true,
     trashcan: true
   };
   
-  // Récupération de la toolbox via le Plugin (pour être sûr d'avoir les bons blocs)
-  let editorToolbox = '<xml></xml>';
-  try {
-    editorToolbox = MazePlugin.getToolboxXML(); 
-  } catch (e) {}
-
-
   // --- 2. GESTION DU TYPE (ONGLETS) ---
   const handleTypeChange = (newType) => {
     onUpdate({ ...levelData, type: newType });
   };
   const currentType = levelData.type || 'MAZE';
 
+  // --- 3. TOOLBOX DYNAMIQUE (POUR L'ÉDITEUR DU BAS) ---
+  // Si on est en mode Maths, on affiche la toolbox Maths en bas, sinon Maze
+  let editorToolbox = '<xml></xml>';
+  try {
+    if (currentType === 'MATH') {
+        editorToolbox = MathPlugin.getToolboxXML();
+    } else {
+        editorToolbox = MazePlugin.getToolboxXML(); 
+    }
+  } catch (e) {}
 
-  // --- 3. GESTION CONFIGURATION ---
+  // --- 4. CONFIGURATION DES CASES À COCHER ---
   const toggleBlock = (blockType) => {
-    const currentAllowed = levelData.allowedBlocks || ['maze_move_forward', 'maze_turn', 'controls_repeat_ext'];
+    const currentAllowed = levelData.allowedBlocks || ['maze_move_forward', 'maze_turn']; 
     let newAllowed;
     if (currentAllowed.includes(blockType)) {
       newAllowed = currentAllowed.filter(t => t !== blockType);
@@ -53,14 +57,22 @@ export default function LevelEditor({ levelData, onUpdate }) {
     onUpdate({ ...levelData, allowedBlocks: newAllowed });
   };
 
-  // Catégories pour les checkboxes
+  // C'EST ICI QUE TOUT SE JOUE : LA LISTE COMPLÈTE
   const blocksByCategory = {
-    "Mouvements": [
+    "Mouvements (Labyrinthe)": [
       { type: 'maze_move_forward', label: 'Avancer' },
       { type: 'maze_turn', label: 'Tourner' }
     ],
     "Logique": [
-      { type: 'controls_repeat_ext', label: 'Boucles' }
+      { type: 'controls_repeat_ext', label: 'Boucles (Répéter)' }
+    ],
+    "Mathématiques": [
+      { type: 'math_number', label: 'Nombre' },
+      { type: 'math_arithmetic', label: 'Calculs (+ - * /)' }
+    ],
+    "Variables & Mémoire": [
+      { type: 'variables_set', label: 'Définir une variable' },
+      { type: 'variables_get', label: 'Lire une variable' }
     ]
   };
 
@@ -85,7 +97,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
                     onClick={() => handleTypeChange('MATH')}
                     style={{flex: 1, padding: '8px', border: 'none', borderRadius: '6px', cursor: 'pointer', background: currentType === 'MATH' ? 'white' : 'transparent', fontWeight: currentType === 'MATH' ? 'bold' : 'normal'}}
                 >
-                    Fn Algo / Maths
+                    🧪 Labo Algo
                 </button>
             </div>
 
@@ -101,7 +113,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
 
         {/* DROITE : CONFIGURATION */}
         <div style={{flex: 1, background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', overflowY: 'auto'}}>
-          <h3 style={{marginTop: 0}}>⚙️ Config</h3>
+          <h3 style={{marginTop: 0}}>⚙️ Config {currentType}</h3>
           
           {/* Consigne */}
           <div style={{marginBottom: '20px'}}>
@@ -147,7 +159,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
         <div style={{flex: 1, position: 'relative'}}>
            <BlocklyWorkspace
               className="blockly-div"
-              toolboxConfiguration={editorToolbox}
+              toolboxConfiguration={editorToolbox} // S'adapte selon Maze/Math
               workspaceConfiguration={editorConfig}
               initialXml={levelData.startBlocks || '<xml></xml>'}
               onXmlChange={(xml) => onUpdate({ ...levelData, startBlocks: xml })}
