@@ -3,17 +3,18 @@ import { BlocklyWorkspace } from 'react-blockly';
 import * as Blockly from 'blockly';
 import { javascriptGenerator } from 'blockly/javascript';
 
-// NOUVEAU : On importe le Plugin
+// IMPORT DES PLUGINS
 import { MazePlugin } from '../../plugins/MazePlugin';
+import { MathPlugin } from '../../plugins/MathPlugin';
 
-import { MAZE_CONFIG } from '../../core/adapters/MazeAdapter'; 
 import FeedbackModal from './FeedbackModal';
 import { generateProofToken } from '../../core/validation';
 import InstructionPanel from './InstructionPanel';
 
-// Registre des plugins
+// REGISTRE DES PLUGINS
 const PLUGINS = {
-  'MAZE': MazePlugin
+  'MAZE': MazePlugin,
+  'MATH': MathPlugin
 };
 
 const workspaceConfig = {
@@ -24,24 +25,16 @@ const workspaceConfig = {
 };
 
 export default function GameEngine({ levelData, onWin }) {
-  // 1. Chargement du Plugin adapté
+  // 1. SÉLECTION DU PLUGIN
   const plugin = PLUGINS[levelData?.type] || MazePlugin;
   const GameView = plugin.RenderComponent;
 
-  // --- ÉTATS ---
   const [isPanelOpen, setIsPanelOpen] = useState(true);
-  const safeData = levelData || { grid: MAZE_CONFIG.defaultGrid, startPos: {x:0, y:1} };
+  const safeData = levelData || {};
   
-  const [playerState, setPlayerState] = useState({
-    x: safeData.startPos?.x || 0,
-    y: safeData.startPos?.y || 1,
-    dir: 1
-  });
-
-  // --- CORRECTION ICI : UNE SEULE DÉCLARATION DE XML ---
-  // On initialise avec le code de départ s'il existe, sinon vide
+  // État générique (sera x/y pour Maze, variables pour Math)
+  const [engineState, setEngineState] = useState(null); 
   const [xml, setXml] = useState(safeData.startBlocks || "");
-  
   const [gameState, setGameState] = useState('IDLE');
   const [showModal, setShowModal] = useState(false);
   const [gameStats, setGameStats] = useState({ stars: 0, blockCount: 0, target: 0 });
@@ -50,66 +43,68 @@ export default function GameEngine({ levelData, onWin }) {
   const executionRef = useRef(null);
   const workspaceRef = useRef(null);
 
-  // 2. Enregistrement des blocs VIA LE PLUGIN
+  // 2. INITIALISATION BLOCS & TOOLBOX
   useEffect(() => {
     plugin.registerBlocks(Blockly, javascriptGenerator);
   }, [plugin]);
 
-  // 3. Toolbox VIA LE PLUGIN
   const currentToolbox = plugin.getToolboxXML(safeData.allowedBlocks);
 
   const handleInject = (newWorkspace) => {
     workspaceRef.current = newWorkspace;
     javascriptGenerator.init(newWorkspace); 
     newWorkspace.updateToolbox(currentToolbox);
+    
+    // Création des variables initiales si besoin (Mode Math)
+    if (safeData.inputs) {
+        Object.keys(safeData.inputs).forEach(v => newWorkspace.createVariable(v));
+    }
   };
 
   useEffect(() => {
     if (workspaceRef.current) {
-      workspaceRef.current.updateToolbox(currentToolbox);
+        workspaceRef.current.updateToolbox(currentToolbox);
     }
   }, [safeData, currentToolbox]); 
   
-  // --- MOTEUR D'EXÉCUTION ---
+  // 3. MOTEUR D'EXÉCUTION GÉNÉRIQUE
   const runCode = () => {
     if (!workspaceRef.current) return;
     setGameState('RUNNING');
     
-    let currentState = {
-      x: safeData.startPos?.x || 0,
-      y: safeData.startPos?.y || 1,
-      dir: 1
-    };
-    setPlayerState(currentState);
+    // Reset de l'état via le plugin (si implémenté) ou null pour reset par défaut
+    setEngineState(null); 
 
     javascriptGenerator.init(workspaceRef.current);
     let code = javascriptGenerator.workspaceToCode(workspaceRef.current);
     
     const actions = [];
     try {
-      // eslint-disable-next-line no-new-func
       const fn = new Function('actions', code);
       fn(actions);
     } catch (e) {
-      alert("Erreur : " + e.message);
+      alert("Erreur code : " + e.message);
       setGameState('IDLE');
       return;
     }
 
     let step = 0;
+    let currentState = null; // État courant local à l'exécution
+
     const playStep = () => {
       if (step >= actions.length) {
-        setGameState('IDLE');
+        setGameState('IDLE'); // Fin sans victoire
         return;
       }
 
       const action = actions[step];
       step++;
 
-      const result = plugin.updateState(currentState, action, safeData.grid);
+      // --- DÉLÉGATION AU PLUGIN ---
+      const result = plugin.executeStep(currentState, action, safeData);
       
-      currentState = result.playerState;
-      setPlayerState(currentState);
+      currentState = result.newState;
+      setEngineState(currentState); // Mise à jour visuelle
 
       if (result.status === 'WIN') {
         setGameState('WON');
@@ -120,7 +115,7 @@ export default function GameEngine({ levelData, onWin }) {
         return;
       }
 
-      executionRef.current = setTimeout(playStep, 500);
+      executionRef.current = setTimeout(playStep, plugin.id === 'MATH' ? 800 : 300); // Plus lent pour les maths pour bien voir
     };
     
     playStep();
@@ -129,9 +124,7 @@ export default function GameEngine({ levelData, onWin }) {
   const handleWin = () => {
     const currentBlocks = workspaceRef.current.getAllBlocks(false).length;
     const targetBlocks = safeData.maxBlocks || 5; 
-    let stars = 1;
-    if (currentBlocks <= targetBlocks) stars = 3;
-    else if (currentBlocks <= targetBlocks + 2) stars = 2;
+    let stars = (currentBlocks <= targetBlocks) ? 3 : 2;
 
     setGameStats({ stars, blockCount: currentBlocks, target: targetBlocks });
     if (onWin) onWin({ stars, blockCount: currentBlocks });
@@ -144,11 +137,7 @@ export default function GameEngine({ levelData, onWin }) {
   const handleReset = () => {
     if (executionRef.current) clearTimeout(executionRef.current);
     setGameState('IDLE');
-    setPlayerState({
-        x: safeData.startPos?.x || 0,
-        y: safeData.startPos?.y || 1,
-        dir: 1
-    });
+    setEngineState(null); // Reset visuel
   }
 
   return (
@@ -160,28 +149,30 @@ export default function GameEngine({ levelData, onWin }) {
 
       <div style={{display: 'flex', flex: 1, overflow: 'hidden'}}>
         <InstructionPanel 
-            title={`Niveau ${safeData.id || ""}`}
-            content={safeData.instruction}
-            isCollapsed={!isPanelOpen}
-            onToggle={() => setIsPanelOpen(!isPanelOpen)}
+            title={`Niveau ${safeData.id || ""}`} content={safeData.instruction}
+            isCollapsed={!isPanelOpen} onToggle={() => setIsPanelOpen(!isPanelOpen)}
         />
 
         <div className="blocklyContainer" style={{flex: 1, position: 'relative', minWidth: '0'}}>
           <BlocklyWorkspace
-            className="blockly-div"
-            toolboxConfiguration={currentToolbox}
-            initialXml={xml}
-            onXmlChange={setXml}
-            workspaceConfiguration={workspaceConfig}
-            onInject={handleInject}
+            className="blockly-div" toolboxConfiguration={currentToolbox} initialXml={xml}
+            onXmlChange={setXml} workspaceConfiguration={workspaceConfig} onInject={handleInject}
           />
         </div>
       
-        <div style={{width: '40%', background: '#2c3e50', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+        {/* ZONE DE DROITE DYNAMIQUE */}
+        <div style={{width: '40%', background: '#2c3e50', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow:'hidden'}}>
+          {/* On passe 'state' qui contient soit {x,y} pour Maze, soit {variables} pour Math */}
+          {/* On passe aussi 'history' (les logs) si le plugin en a besoin */}
           <GameView 
+             // Props Maze
              grid={safeData.grid} 
-             playerPos={{x: playerState.x, y: playerState.y}} 
-             playerDir={playerState.dir} 
+             playerPos={engineState ? {x: engineState.x, y: engineState.y} : (safeData.startPos || {x:0, y:1})} 
+             playerDir={engineState ? engineState.dir : 1}
+             
+             // Props Math
+             state={engineState || { variables: safeData.inputs }} 
+             history={engineState?.logs}
           />
         </div>
 
