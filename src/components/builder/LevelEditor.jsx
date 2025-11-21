@@ -29,7 +29,6 @@ export default function LevelEditor({ levelData, onUpdate }) {
     readOnly: false
   };
   
-  // --- 2. GESTION DU TYPE ---
   const handleTypeChange = (newType) => {
     onUpdate({ 
         ...levelData, 
@@ -39,7 +38,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
   };
   const currentType = levelData.type || 'MAZE';
 
-  // --- 3. TOOLBOX DYNAMIQUE ---
+  // --- 2. TOOLBOX ---
   let editorToolbox = '<xml></xml>';
   try {
     if (currentType === 'MATH') {
@@ -64,11 +63,11 @@ export default function LevelEditor({ levelData, onUpdate }) {
     workspaceRef.current = newWorkspace;
   };
 
-
-  // --- 4. CONFIGURATION DES CASES ---
+  // --- 3. CONFIGURATION DES CASES (CORRIGÉE) ---
   const toggleBlock = (blockType) => {
+    // Liste par défaut propre (sans le "...")
     const defaults = currentType === 'MATH' 
-        ? ['math_number', 'math_arithmetic', 'variables_set'] 
+        ? ['math_number', 'math_arithmetic', 'variables_set', 'text_print', 'lists_create_with', 'lists_getIndex', 'lists_setIndex'] 
         : ['maze_move_forward', 'maze_turn', 'controls_repeat_ext'];
 
     const currentAllowed = levelData.allowedBlocks || defaults;
@@ -91,12 +90,20 @@ export default function LevelEditor({ levelData, onUpdate }) {
       { type: 'controls_repeat_ext', label: 'Boucles (Répéter)' },
       { type: 'controls_whileUntil', label: 'Répéter (Tant que)' },
       { type: 'controls_if', label: 'Si / Sinon' },
-      { type: 'logic_compare', label: 'Comparaisons (= < >)' }
+      { type: 'logic_compare', label: 'Comparaisons' },
+      { type: 'logic_operation', label: 'Opérateurs (ET/OU)' }
     ],
     "Mathématiques": [
       { type: 'math_number', label: 'Nombre' },
       { type: 'math_arithmetic', label: 'Calculs (+ - * /)' },
+      { type: 'math_modulo', label: 'Modulo' },
       { type: 'math_random_int', label: 'Aléatoire' }
+    ],
+    "Listes & Tableaux": [
+      { type: 'lists_create_with', label: 'Créer une liste' },
+      { type: 'lists_getIndex', label: 'Lire un élément' },
+      { type: 'lists_setIndex', label: 'Modifier un élément' }, // Ajouté !
+      { type: 'lists_length', label: 'Longueur de liste' }
     ],
     "Variables": [
       { type: 'variables_set', label: 'Définir une variable' }
@@ -109,10 +116,8 @@ export default function LevelEditor({ levelData, onUpdate }) {
 
   const displayedCategories = currentType === 'MAZE' 
     ? ['Mouvements', 'Logique'] 
-    : ['Mathématiques', 'Variables', 'Interactions', 'Logique'];
+    : ['Mathématiques', 'Listes & Tableaux', 'Variables', 'Interactions', 'Logique'];
 
-  // --- CORRECTION CLÉ UNIQUE ---
-  // On ajoute levelData.id pour que chaque niveau ait son propre éditeur frais
   const workspaceKey = `${levelData.id}-${currentType}-${JSON.stringify(levelData.allowedBlocks || [])}-${JSON.stringify(levelData.inputs || {})}-${JSON.stringify(levelData.hiddenVars || [])}`;
 
   return (
@@ -160,7 +165,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
                 {allCategories[catName] && allCategories[catName].map(b => {
                     const currentList = levelData.allowedBlocks || 
                         (currentType === 'MATH' 
-                            ? ['math_number', 'math_arithmetic', 'variables_set', 'text_print', 'text_prompt_ext'] 
+                            ? ['math_number', 'math_arithmetic', 'variables_set', 'text_print'] 
                             : ['maze_move_forward', 'maze_turn', 'controls_repeat_ext']);
                     
                     const isChecked = currentList.includes(b.type);

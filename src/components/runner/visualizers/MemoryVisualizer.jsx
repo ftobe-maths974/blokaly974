@@ -5,33 +5,57 @@ export default function MemoryVisualizer({ state, history, hiddenVars }) {
   const logs = history || [];
   const hiddenList = hiddenVars || [];
 
-  // On affiche tout ce qui n'est PAS dans hiddenList (donc Editable + Locked = Visible)
   const visibleVariables = Object.entries(variables).filter(([name]) => !hiddenList.includes(name));
+
+  // Sous-composant pour afficher une valeur (Nombre, Texte ou Tableau)
+  const ValueRenderer = ({ value }) => {
+    if (Array.isArray(value)) {
+      return (
+        <div style={{display: 'flex', gap: '2px', marginTop: '5px'}}>
+          {value.map((item, idx) => (
+            <div key={idx} style={{display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
+               <div style={{border: '1px solid #2c3e50', padding: '4px 8px', minWidth: '20px', textAlign: 'center', background: '#fff', fontSize: '1.2rem', fontWeight: 'bold'}}>
+                 {item}
+               </div>
+               <div style={{fontSize: '0.6rem', color: '#7f8c8d'}}>{idx}</div>
+            </div>
+          ))}
+          {value.length === 0 && <span style={{fontStyle:'italic', color:'#aaa'}}>Vide []</span>}
+        </div>
+      );
+    }
+    return <div style={{fontSize: '2rem', fontWeight: 'bold', color: '#2c3e50'}}>{value}</div>;
+  };
 
   return (
     <div style={{display: 'flex', flexDirection: 'column', height: '100%', width: '100%', padding: '10px', boxSizing: 'border-box', gap: '15px', background: '#2c3e50'}}>
       
-      {/* ARDOISES (Variables Publiques) */}
+      {/* ARDOISES */}
       <div style={{display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center', alignContent: 'flex-start', minHeight: '130px'}}>
-        {visibleVariables.map(([name, value]) => (
-          <div key={name} style={{
-            background: 'white', borderRadius: '8px', width: '100px', height: '120px',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between',
-            padding: '10px', boxShadow: '0 4px 0 #bdc3c7', animation: 'popIn 0.3s'
-          }}>
-            <div style={{fontWeight: 'bold', color: '#7f8c8d', borderBottom: '2px solid #eee', width: '100%', textAlign: 'center', overflow:'hidden', textOverflow:'ellipsis'}}>
-              {name}
-            </div>
-            <div style={{fontSize: '2rem', fontWeight: 'bold', color: '#2c3e50'}}>
-              {value}
-            </div>
-            <div style={{fontSize: '0.6rem', color: '#ccc', textTransform:'uppercase'}}>
-              {typeof value}
-            </div>
-          </div>
-        ))}
+        {visibleVariables.map(([name, value]) => {
+           // On adapte la largeur si c'est un tableau
+           const isArray = Array.isArray(value);
+           return (
+              <div key={name} style={{
+                background: 'white', borderRadius: '8px', 
+                minWidth: isArray ? '160px' : '100px', // Plus large pour les tableaux
+                height: 'auto', minHeight: '120px',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between',
+                padding: '10px', boxShadow: '0 4px 0 #bdc3c7', animation: 'popIn 0.3s'
+              }}>
+                <div style={{fontWeight: 'bold', color: '#7f8c8d', borderBottom: '2px solid #eee', width: '100%', textAlign: 'center', marginBottom:'5px'}}>
+                  {name}
+                </div>
+                
+                <ValueRenderer value={value} />
+
+                <div style={{fontSize: '0.6rem', color: '#ccc', textTransform:'uppercase', marginTop:'5px'}}>
+                  {isArray ? `LISTE (${value.length})` : typeof value}
+                </div>
+              </div>
+           );
+        })}
         
-        {/* Message si tout est caché */}
         {visibleVariables.length === 0 && (
            <div style={{color:'rgba(255,255,255,0.5)', fontStyle:'italic', marginTop:'20px'}}>
              {Object.keys(variables).length > 0 ? "Mémoire masquée 👻" : "Mémoire vide"}

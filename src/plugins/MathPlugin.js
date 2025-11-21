@@ -6,9 +6,17 @@ export const MathPlugin = {
 
   registerBlocks: (Blockly, javascriptGenerator) => {
     javascriptGenerator.forBlock['variables_set'] = (block) => {
-      const argument0 = javascriptGenerator.valueToCode(block, 'VALUE', javascriptGenerator.ORDER_ASSIGNMENT) || '0';
+      // Utiliser ORDER_ATOMIC ici est plus sûr pour éviter des parenthèses bizarres
+      const argument0 = javascriptGenerator.valueToCode(block, 'VALUE', javascriptGenerator.ORDER_ATOMIC) || '0';
       const varName = block.getField('VAR').getText();
-      return `${varName} = ${argument0};\n actions.push({type: 'SET', var: '${varName}', val: ${varName}});\n`;
+      
+      // On ajoute un try/catch dans le code généré pour que l'élève ne voit pas l'erreur technique
+      return `
+        try {
+          ${varName} = ${argument0};
+          actions.push({type: 'SET', var: '${varName}', val: ${varName}});
+        } catch(e) { console.error(e); }
+      \n`;
     };
 
     if (!Blockly.Blocks['text_print']) {
@@ -37,13 +45,69 @@ export const MathPlugin = {
         const varName = block.getField('VAR_NAME').getText();
         return [varName, javascriptGenerator.ORDER_ATOMIC];
     };
+
+    // --- CORRECTION LISTES ---
+    // On ne touche PAS à lists_create_with standard de Blockly si possible, 
+    // mais comme on doit assurer la compatibilité, on utilise cette version sûre :
+    javascriptGenerator.forBlock['lists_create_with'] = (block) => {
+        const elements = new Array(block.itemCount_);
+        for (let i = 0; i < block.itemCount_; i++) {
+            // On force une valeur par défaut '0' si c'est vide pour éviter les trous
+            let val = javascriptGenerator.valueToCode(block, 'ADD' + i, javascriptGenerator.ORDER_NONE);
+            
+            // Si le bloc n'est pas connecté, on met 'null' ou '0' pour éviter le crash
+            if (!val) val = '0'; 
+            
+            elements[i] = val;
+        }
+        
+        // On génère le tableau avec des virgules explicites
+        const code = '[' + elements.join(', ') + ']';
+        
+        // DEBUG : On affiche le code généré dans la console pour vérifier
+        console.log("Code Liste généré :", code); 
+        
+        return [code, javascriptGenerator.ORDER_ATOMIC];
+    };
+
+    javascriptGenerator.forBlock['lists_getIndex'] = (block) => {
+        const list = javascriptGenerator.valueToCode(block, 'VALUE', javascriptGenerator.ORDER_MEMBER) || '[]';
+        let at = javascriptGenerator.valueToCode(block, 'AT', javascriptGenerator.ORDER_NONE) || '1';
+        
+        if (String(at).match(/^\d+$/)) {
+            at = parseInt(at, 10) - 1;
+        } else {
+            at = `(${at} - 1)`;
+        }
+        
+        const code = `${list}[${at}]`;
+        return [code, javascriptGenerator.ORDER_MEMBER];
+    };
+
+    javascriptGenerator.forBlock['lists_setIndex'] = (block) => {
+        const list = javascriptGenerator.valueToCode(block, 'LIST', javascriptGenerator.ORDER_MEMBER) || '[]';
+        let at = javascriptGenerator.valueToCode(block, 'AT', javascriptGenerator.ORDER_NONE) || '1';
+        const value = javascriptGenerator.valueToCode(block, 'TO', javascriptGenerator.ORDER_ASSIGNMENT) || 'null';
+
+        if (String(at).match(/^\d+$/)) {
+            at = parseInt(at, 10) - 1;
+        } else {
+            at = `(${at} - 1)`;
+        }
+
+        return `${list}[${at}] = ${value};\n actions.push({type: 'PRINT', msg: 'Mise à jour liste...'});\n`;
+    };
+
+    javascriptGenerator.forBlock['lists_length'] = (block) => {
+        const list = javascriptGenerator.valueToCode(block, 'VALUE', javascriptGenerator.ORDER_MEMBER) || '[]';
+        return [`${list}.length`, javascriptGenerator.ORDER_MEMBER];
+    };
   },
 
   getToolboxXML: (allowedBlocks, levelInputs, hiddenVars = [], lockedVars = []) => {
     const allowed = allowedBlocks || ['math_number', 'math_arithmetic', 'variables_set', 'text_print', 'text_prompt_ext', 'controls_repeat_ext'];
     let xml = '<xml id="toolbox" style="display: none">';
     
-    // 1. VARIABLES
     if (levelInputs) {
       const allVars = Object.keys(levelInputs);
       const visibleVars = allVars.filter(k => !hiddenVars.includes(k) && !lockedVars.includes(k));
@@ -67,7 +131,15 @@ export const MathPlugin = {
       }
     }
 
-    // 2. MATHS
+    if (allowed.includes('lists_create_with') || allowed.includes('lists_getIndex') || allowed.includes('lists_setIndex') || allowed.includes('lists_length')) {
+        xml += '<category name="Listes" colour="260">';
+        if (allowed.includes('lists_create_with')) xml += '<block type="lists_create_with"><mutation items="3"></mutation></block>';
+        if (allowed.includes('lists_getIndex')) xml += '<block type="lists_getIndex"></block>';
+        if (allowed.includes('lists_setIndex')) xml += '<block type="lists_setIndex"></block>';
+        if (allowed.includes('lists_length')) xml += '<block type="lists_length"></block>';
+        xml += '</category>';
+    }
+
     if (allowed.some(b => b.startsWith('math_'))) {
       xml += '<category name="Calculs" colour="230">';
       if (allowed.includes('math_number')) xml += '<block type="math_number"></block>';
@@ -77,7 +149,6 @@ export const MathPlugin = {
       xml += '</category>';
     }
 
-    // 3. INTERACTIONS
     if (allowed.includes('text_print') || allowed.includes('text_prompt_ext')) {
         xml += '<category name="Interactions" colour="160">';
         if (allowed.includes('text_print')) xml += '<block type="text_print"></block>';
@@ -87,17 +158,11 @@ export const MathPlugin = {
         xml += '</category>';
     }
     
-    // 4. LOGIQUE & BOUCLES
     xml += '<category name="Logique" colour="210">';
-    
-    // --- CORRECTION ICI : AJOUT DU BLOC BOUCLE SI COCHÉ ---
     if (allowed.includes('controls_repeat_ext')) {
         xml += '<block type="controls_repeat_ext"><value name="TIMES"><shadow type="math_number"><field name="NUM">5</field></shadow></value></block>';
-        // On ajoute aussi le While (Tant que) car c'est souvent utile en algo
         xml += '<block type="controls_whileUntil"></block>';
     }
-    // -------------------------------------------------------
-
     xml += '<block type="controls_if"></block>';
     xml += '<block type="logic_compare"></block>';
     xml += '<block type="logic_operation"></block>';
@@ -121,7 +186,11 @@ export const MathPlugin = {
         newLogs.push(`⛔ ERREUR : ${action.var} est protégée.`);
       } else {
         newVariables[action.var] = action.val;
-        newLogs.push(`📝 ${action.var} <- ${action.val}`);
+        
+        let displayVal = action.val;
+        if (Array.isArray(action.val)) displayVal = JSON.stringify(action.val);
+        
+        newLogs.push(`📝 ${action.var} <- ${displayVal}`);
       }
     } else if (action.type === 'PRINT') {
       newLogs.push(`🖨️ ${action.msg}`);
@@ -135,6 +204,10 @@ export const MathPlugin = {
         let expectedVal = targets[key];
         if (typeof expectedVal === 'string' && expectedVal.startsWith('@')) {
             expectedVal = newVariables[expectedVal.substring(1)];
+        }
+        
+        if (Array.isArray(currentVal) || Array.isArray(expectedVal)) {
+            return JSON.stringify(currentVal) === JSON.stringify(expectedVal);
         }
         // eslint-disable-next-line eqeqeq
         return currentVal == expectedVal;

@@ -1,18 +1,35 @@
 import React, { useState } from 'react';
 
 export default function MathEditor({ levelData, onUpdate }) {
+  // États locaux pour l'ajout
   const [newVarName, setNewVarName] = useState("");
   const [newVarValue, setNewVarValue] = useState(0);
   
   const inputs = levelData.inputs || {};
-  const hiddenVars = levelData.hiddenVars || []; // Liste des Fantômes
-  const lockedVars = levelData.lockedVars || []; // Liste des Cadenas (Nouveau)
+  const hiddenVars = levelData.hiddenVars || [];
+  const lockedVars = levelData.lockedVars || [];
   const targets = levelData.targets || {};
 
-  // --- GESTION VARIABLES ---
+  // Fonction utilitaire pour convertir intelligemment l'entrée
+  const parseValue = (val) => {
+    // Si c'est un tableau [1,2]
+    if (typeof val === 'string' && val.trim().startsWith('[') && val.trim().endsWith(']')) {
+        try {
+            return JSON.parse(val);
+        } catch (e) {
+            return val; // Si invalide, on garde le texte
+        }
+    }
+    // Si c'est un nombre
+    if (!isNaN(Number(val)) && val.toString().trim() !== '') return Number(val);
+    
+    // Sinon texte
+    return val;
+  };
+
   const addVariable = () => {
     if (!newVarName) return;
-    const newInputs = { ...inputs, [newVarName]: parseInt(newVarValue) };
+    const newInputs = { ...inputs, [newVarName]: parseValue(newVarValue) };
     onUpdate({ ...levelData, inputs: newInputs });
     setNewVarName("");
   };
@@ -20,29 +37,23 @@ export default function MathEditor({ levelData, onUpdate }) {
   const removeVariable = (key) => {
     const newInputs = { ...inputs };
     delete newInputs[key];
-    // On nettoie aussi les listes d'états
     const newHidden = hiddenVars.filter(k => k !== key);
     const newLocked = lockedVars.filter(k => k !== key);
     onUpdate({ ...levelData, inputs: newInputs, hiddenVars: newHidden, lockedVars: newLocked });
   };
 
-  // CYCLE DES ÉTATS : Éditable -> Verrouillé -> Fantôme -> Éditable
   const cycleState = (key) => {
     let newHidden = [...hiddenVars];
     let newLocked = [...lockedVars];
-
     const isHidden = hiddenVars.includes(key);
     const isLocked = lockedVars.includes(key);
 
     if (!isHidden && !isLocked) {
-        // Était Éditable -> Devient Verrouillé
         newLocked.push(key);
     } else if (isLocked) {
-        // Était Verrouillé -> Devient Fantôme
         newLocked = newLocked.filter(k => k !== key);
         newHidden.push(key);
     } else {
-        // Était Fantôme -> Devient Éditable
         newHidden = newHidden.filter(k => k !== key);
     }
 
@@ -50,11 +61,10 @@ export default function MathEditor({ levelData, onUpdate }) {
   };
 
   const updateVariableValue = (key, val) => {
-    const newInputs = { ...inputs, [key]: parseInt(val) };
+    const newInputs = { ...inputs, [key]: parseValue(val) };
     onUpdate({ ...levelData, inputs: newInputs });
   };
 
-  // --- GESTION OBJECTIFS ---
   const toggleTarget = (key) => {
     const newTargets = { ...targets };
     if (newTargets[key] !== undefined) delete newTargets[key];
@@ -64,7 +74,7 @@ export default function MathEditor({ levelData, onUpdate }) {
 
   const updateTargetValue = (key, val) => {
     const isRef = val.toString().startsWith('@');
-    const newVal = isRef ? val : (isNaN(parseInt(val)) ? val : parseInt(val));
+    const newVal = isRef ? val : parseValue(val);
     const newTargets = { ...targets, [key]: newVal };
     onUpdate({ ...levelData, targets: newTargets });
   };
@@ -79,45 +89,49 @@ export default function MathEditor({ levelData, onUpdate }) {
           <h4>1. Variables</h4>
           <div style={{display: 'flex', gap: '10px', marginBottom: '15px'}}>
             <input type="text" placeholder="Nom" value={newVarName} onChange={e => setNewVarName(e.target.value)} style={{flex: 1, padding: '5px'}} />
-            <input type="number" placeholder="Val" value={newVarValue} onChange={e => setNewVarValue(e.target.value)} style={{width: '60px', padding: '5px'}} />
+            <input 
+                type="text" 
+                placeholder="Val ou [1,2]" 
+                value={newVarValue} 
+                onChange={e => setNewVarValue(e.target.value)} 
+                style={{width: '80px', padding: '5px', border:'1px solid #ccc', borderRadius:'4px'}} 
+            />
             <button onClick={addVariable} style={{cursor:'pointer', background:'#27ae60', color:'white', border:'none', borderRadius:'4px'}}>OK</button>
           </div>
 
           {Object.entries(inputs).map(([key, val]) => {
             const isHidden = hiddenVars.includes(key);
             const isLocked = lockedVars.includes(key);
-            
-            let icon = '✏️'; // Éditable
-            let title = "Éditable (Lecture/Écriture)";
+            let icon = '✏️';
             let style = {};
+            if (isLocked) { icon = '🔒'; style={background:'#fff3cd'}; }
+            if (isHidden) { icon = '👻'; style={background:'#eee', color:'#999'}; }
 
-            if (isLocked) { icon = '🔒'; title = "Verrouillée (Lecture seule)"; style={background:'#fff3cd'}; }
-            if (isHidden) { icon = '👻'; title = "Fantôme (Invisible)"; style={background:'#eee', color:'#999'}; }
+            // CORRECTION ICI : Définition de displayVal
+            const displayVal = Array.isArray(val) ? JSON.stringify(val) : val;
 
             return (
               <div key={key} style={{...style, padding: '8px', marginBottom: '8px', borderRadius: '4px', border: '1px solid #ccc', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
                 <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
-                    <button onClick={() => cycleState(key)} title={title} style={{border:'none', background:'none', cursor:'pointer', fontSize:'1.2rem'}}>
+                    <button onClick={() => cycleState(key)} style={{border:'none', background:'none', cursor:'pointer', fontSize:'1.2rem'}}>
                         {icon}
                     </button>
                     <span style={{fontWeight: 'bold'}}>{key}</span> 
-                    <span>= {val}</span>
+                    
+                    {/* Affichage Joli */}
+                    <span style={{fontFamily: 'monospace', background: '#fff', padding: '2px 5px', borderRadius: '4px'}}>
+                        = {displayVal}
+                    </span>
                 </div>
                 <button onClick={() => removeVariable(key)} style={{color:'red', border:'none', background:'none', cursor:'pointer'}}>×</button>
               </div>
             );
           })}
-          <div style={{fontSize:'0.8em', color:'#666', marginTop:'10px'}}>
-             Cliquez sur l'icône pour changer le mode :<br/>
-             ✏️ <b>Éditable</b> : Élève total (Ardoise + Blocs)<br/>
-             🔒 <b>Cadenas</b> : Lecture seule (Ardoise + Bloc Fixe)<br/>
-             👻 <b>Fantôme</b> : Invisible (Pour le prof uniquement)
-          </div>
         </div>
 
-        {/* COLONNE 2 : VALIDATION (Reste inchangée) */}
+        {/* COLONNE 2 : VALIDATION */}
         <div style={{flex: 1, borderLeft: '1px solid #ddd', paddingLeft: '20px'}}>
-          <h4>2. Objectifs (Victoire)</h4>
+          <h4>2. Objectifs</h4>
           {Object.keys(inputs).map(key => {
             const isTarget = targets[key] !== undefined;
             return (
