@@ -12,16 +12,54 @@ export default function MazeEditor({ levelData, onUpdate }) {
   ];
 
   const handleCellClick = (rIndex, cIndex) => {
-    // On s'assure que la grille existe, sinon on utilise celle par défaut
     const currentGrid = levelData.grid || MAZE_CONFIG.defaultGrid;
-    // Copie profonde pour éviter les bugs de référence
+    // Copie profonde pour éviter les mutations directes
     const newGrid = currentGrid.map(row => [...row]);
     
-    newGrid[rIndex][cIndex] = selectedTool;
-    onUpdate({ ...levelData, grid: newGrid });
+    // LOGIQUE "UN SEUL DÉPART"
+    if (selectedTool === 2) { // 2 = Départ 🏁
+      // 1. On nettoie l'ancien départ s'il existe
+      for (let y = 0; y < newGrid.length; y++) {
+        for (let x = 0; x < newGrid[y].length; x++) {
+          if (newGrid[y][x] === 2) {
+            newGrid[y][x] = 1; // On remplace par du chemin blanc
+          }
+        }
+      }
+      
+      // 2. On place le nouveau départ
+      newGrid[rIndex][cIndex] = 2;
+
+      // 3. CRUCIAL : On met à jour startPos pour que le robot suive !
+      // On garde la direction existante (ou 1 par défaut)
+      const newStartPos = { 
+        x: cIndex, 
+        y: rIndex, 
+        dir: levelData.startPos?.dir || 1 
+      };
+
+      onUpdate({ 
+        ...levelData, 
+        grid: newGrid,
+        startPos: newStartPos 
+      });
+
+    } else {
+      // Cas normal (Mur, Chemin, Arrivée)
+      
+      // Si on écrase le départ, attention : le robot n'a plus de maison.
+      // (Optionnel : on pourrait empêcher d'écraser le départ sans le déplacer)
+      if (newGrid[rIndex][cIndex] === 2) {
+         // Si on efface le départ, on ne met pas à jour startPos tout de suite
+         // ou on pourrait le mettre à null, mais gardons ça simple.
+      }
+
+      newGrid[rIndex][cIndex] = selectedTool;
+      onUpdate({ ...levelData, grid: newGrid });
+    }
   };
 
-  // Sécurité : Fallback si la grille est vide
+  // Sécurité
   const gridToRender = levelData.grid || MAZE_CONFIG.defaultGrid;
 
   return (
@@ -64,6 +102,10 @@ export default function MazeEditor({ levelData, onUpdate }) {
           </div>
         ))}
       </div>
+      
+      <p style={{fontSize: '0.8rem', color: '#666', marginTop: '10px'}}>
+        💡 Astuce : Placer le drapeau "Départ" 🏁 déplace automatiquement le robot.
+      </p>
     </div>
   );
 }

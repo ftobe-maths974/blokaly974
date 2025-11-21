@@ -1,4 +1,22 @@
 export const BLOCK_DEFINITIONS = {
+  // --- TURTLE (Nouveau) ---
+  'turtle_move': `
+    <block type="turtle_move">
+      <value name="VALUE"><shadow type="math_number"><field name="NUM">50</field></shadow></value>
+    </block>
+  `,
+  'turtle_turn': `
+    <block type="turtle_turn">
+      <value name="VALUE"><shadow type="math_number"><field name="NUM">90</field></shadow></value>
+    </block>
+  `,
+  'turtle_pen': `
+    <block type="turtle_pen"><field name="STATE">UP</field></block>
+    <block type="turtle_pen"><field name="STATE">DOWN</field></block>
+  `,
+  'turtle_color': `
+    <block type="turtle_color"><field name="COLOR">#ff0000</field></block>
+  `,
   // --- MAZE ---
   'maze_move_forward': '<block type="maze_move_forward"></block>',
   'maze_turn': `
