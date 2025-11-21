@@ -46,56 +46,65 @@ export const MathPlugin = {
         return [varName, javascriptGenerator.ORDER_ATOMIC];
     };
 
-    // --- CORRECTION LISTES ---
-    // On ne touche PAS à lists_create_with standard de Blockly si possible, 
-    // mais comme on doit assurer la compatibilité, on utilise cette version sûre :
+    // --- GESTION DES LISTES (CORRIGÉE) ---
+    
+    // Helper pour calculer l'index selon le menu (Premier, Dernier, #...)
+    const getListIndex = (block, listName) => {
+        const where = block.getFieldValue('WHERE') || 'FROM_START';
+        let at = '0';
+
+        switch (where) {
+            case 'FIRST': 
+                at = '0'; 
+                break;
+            case 'LAST': 
+                at = `${listName}.length - 1`; 
+                break;
+            case 'FROM_START': {
+                const atInput = javascriptGenerator.valueToCode(block, 'AT', javascriptGenerator.ORDER_NONE) || '1';
+                // Si c'est un chiffre simple, on optimise, sinon on génère la formule
+                at = String(atInput).match(/^\d+$/) ? parseInt(atInput, 10) - 1 : `(${atInput} - 1)`;
+                break;
+            }
+            case 'FROM_END': {
+                const atInput = javascriptGenerator.valueToCode(block, 'AT', javascriptGenerator.ORDER_NONE) || '1';
+                at = `${listName}.length - ${atInput}`;
+                break;
+            }
+            case 'RANDOM':
+                at = `Math.floor(Math.random() * ${listName}.length)`;
+                break;
+        }
+        return at;
+    };
+
     javascriptGenerator.forBlock['lists_create_with'] = (block) => {
         const elements = new Array(block.itemCount_);
         for (let i = 0; i < block.itemCount_; i++) {
-            // On force une valeur par défaut '0' si c'est vide pour éviter les trous
             let val = javascriptGenerator.valueToCode(block, 'ADD' + i, javascriptGenerator.ORDER_NONE);
-            
-            // Si le bloc n'est pas connecté, on met 'null' ou '0' pour éviter le crash
             if (!val) val = '0'; 
-            
             elements[i] = val;
         }
-        
-        // On génère le tableau avec des virgules explicites
         const code = '[' + elements.join(', ') + ']';
-        
-        // DEBUG : On affiche le code généré dans la console pour vérifier
-        console.log("Code Liste généré :", code); 
-        
         return [code, javascriptGenerator.ORDER_ATOMIC];
     };
 
     javascriptGenerator.forBlock['lists_getIndex'] = (block) => {
         const list = javascriptGenerator.valueToCode(block, 'VALUE', javascriptGenerator.ORDER_MEMBER) || '[]';
-        let at = javascriptGenerator.valueToCode(block, 'AT', javascriptGenerator.ORDER_NONE) || '1';
-        
-        if (String(at).match(/^\d+$/)) {
-            at = parseInt(at, 10) - 1;
-        } else {
-            at = `(${at} - 1)`;
-        }
-        
-        const code = `${list}[${at}]`;
-        return [code, javascriptGenerator.ORDER_MEMBER];
+        const at = getListIndex(block, list);
+        return [`${list}[${at}]`, javascriptGenerator.ORDER_MEMBER];
     };
 
     javascriptGenerator.forBlock['lists_setIndex'] = (block) => {
         const list = javascriptGenerator.valueToCode(block, 'LIST', javascriptGenerator.ORDER_MEMBER) || '[]';
-        let at = javascriptGenerator.valueToCode(block, 'AT', javascriptGenerator.ORDER_NONE) || '1';
         const value = javascriptGenerator.valueToCode(block, 'TO', javascriptGenerator.ORDER_ASSIGNMENT) || 'null';
+        const at = getListIndex(block, list);
 
-        if (String(at).match(/^\d+$/)) {
-            at = parseInt(at, 10) - 1;
-        } else {
-            at = `(${at} - 1)`;
-        }
-
-        return `${list}[${at}] = ${value};\n actions.push({type: 'PRINT', msg: 'Mise à jour liste...'});\n`;
+        // IMPORTANT : On modifie la liste JS, PUIS on envoie l'info 'SET' au moteur pour mettre à jour l'affichage
+        return `
+          ${list}[${at}] = ${value};
+          actions.push({type: 'SET', var: '${list}', val: ${list}});
+        \n`;
     };
 
     javascriptGenerator.forBlock['lists_length'] = (block) => {

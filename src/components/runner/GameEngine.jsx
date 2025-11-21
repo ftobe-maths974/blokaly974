@@ -98,8 +98,9 @@ export default function GameEngine({ levelData, onWin }) {
     let initCode = "";
     if (safeData.inputs) {
         Object.entries(safeData.inputs).forEach(([key, val]) => {
-            const value = typeof val === 'string' ? `'${val}'` : val;
-            initCode += `var ${key} = ${value};\n`;
+            // CORRECTION ICI : JSON.stringify gère proprement les tableaux [1,2] -> "[1,2]"
+            // et ajoute les guillemets aux chaînes automatiquement.
+            initCode += `var ${key} = ${JSON.stringify(val)};\n`;
         });
     }
     
