@@ -50,7 +50,8 @@ const LevelRunner = ({ levelJson }) => {
   const [feedback, setFeedback] = useState(null);
 
   const handleRun = useCallback(async () => {
-    const actions = [];
+    const generatedCode = workspaceRef.current ? javascriptGenerator.workspaceToCode(workspaceRef.current) : null;
+    const actions = generatedCode || ['noop'];
     const result = await runtime.run(async () => actions);
     const success = result.validation?.success ?? false;
     setFeedback(success ? 'success' : 'failure');
