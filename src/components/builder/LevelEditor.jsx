@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'; // Ajout useState ici au cas où
+import React, { useEffect, useState, useRef } from 'react';
 import MazeEditor from './editors/MazeEditor';
 import MathEditor from './editors/MathEditor';
 import { BlocklyWorkspace } from 'react-blockly';
@@ -7,7 +7,9 @@ import { MazePlugin } from '../../plugins/MazePlugin';
 import { MathPlugin } from '../../plugins/MathPlugin';
 
 export default function LevelEditor({ levelData, onUpdate }) {
-  
+  const workspaceRef = useRef(null);
+
+  // --- 1. INIT DES BLOCS ---
   useEffect(() => {
     try {
         const dummyGenerator = { forBlock: {} };
@@ -27,6 +29,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
     readOnly: false
   };
   
+  // --- 2. GESTION DU TYPE ---
   const handleTypeChange = (newType) => {
     onUpdate({ 
         ...levelData, 
@@ -36,23 +39,33 @@ export default function LevelEditor({ levelData, onUpdate }) {
   };
   const currentType = levelData.type || 'MAZE';
 
-  // --- CORRECTION ICI : ON PASSE TOUTES LES INFOS AU PLUGIN ---
+  // --- 3. TOOLBOX DYNAMIQUE ---
   let editorToolbox = '<xml></xml>';
   try {
     if (currentType === 'MATH') {
         editorToolbox = MathPlugin.getToolboxXML(
             levelData.allowedBlocks,
-            levelData.inputs,      // <--- Ajouté
-            levelData.hiddenVars,  // <--- Ajouté
-            levelData.lockedVars   // <--- Ajouté
+            levelData.inputs,
+            levelData.hiddenVars,
+            levelData.lockedVars
         );
     } else {
         editorToolbox = MazePlugin.getToolboxXML(levelData.allowedBlocks); 
     }
   } catch (e) {}
-  // -----------------------------------------------------------
+
+  useEffect(() => {
+    if (workspaceRef.current) {
+        workspaceRef.current.updateToolbox(editorToolbox);
+    }
+  }, [editorToolbox]);
+
+  const handleInject = (newWorkspace) => {
+    workspaceRef.current = newWorkspace;
+  };
 
 
+  // --- 4. CONFIGURATION DES CASES ---
   const toggleBlock = (blockType) => {
     const defaults = currentType === 'MATH' 
         ? ['math_number', 'math_arithmetic', 'variables_set'] 
@@ -75,11 +88,15 @@ export default function LevelEditor({ levelData, onUpdate }) {
       { type: 'maze_turn', label: 'Tourner' }
     ],
     "Logique": [
-      { type: 'controls_repeat_ext', label: 'Boucles (Répéter)' }
+      { type: 'controls_repeat_ext', label: 'Boucles (Répéter)' },
+      { type: 'controls_whileUntil', label: 'Répéter (Tant que)' },
+      { type: 'controls_if', label: 'Si / Sinon' },
+      { type: 'logic_compare', label: 'Comparaisons (= < >)' }
     ],
     "Mathématiques": [
       { type: 'math_number', label: 'Nombre' },
-      { type: 'math_arithmetic', label: 'Calculs (+ - * /)' }
+      { type: 'math_arithmetic', label: 'Calculs (+ - * /)' },
+      { type: 'math_random_int', label: 'Aléatoire' }
     ],
     "Variables": [
       { type: 'variables_set', label: 'Définir une variable' }
@@ -94,9 +111,9 @@ export default function LevelEditor({ levelData, onUpdate }) {
     ? ['Mouvements', 'Logique'] 
     : ['Mathématiques', 'Variables', 'Interactions', 'Logique'];
 
-  // La clé magique pour forcer le rafraîchissement
-  // On ajoute aussi inputs/hidden/locked pour que la toolbox change si on ajoute une variable
-  const workspaceKey = `${currentType}-${JSON.stringify(levelData.allowedBlocks || [])}-${JSON.stringify(levelData.inputs || {})}-${JSON.stringify(levelData.hiddenVars || [])}`;
+  // --- CORRECTION CLÉ UNIQUE ---
+  // On ajoute levelData.id pour que chaque niveau ait son propre éditeur frais
+  const workspaceKey = `${levelData.id}-${currentType}-${JSON.stringify(levelData.allowedBlocks || [])}-${JSON.stringify(levelData.inputs || {})}-${JSON.stringify(levelData.hiddenVars || [])}`;
 
   return (
     <div className="editor-wrapper" style={{display: 'flex', flexDirection: 'column', height: '100%'}}>
@@ -179,6 +196,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
               workspaceConfiguration={editorConfig}
               initialXml={levelData.startBlocks || '<xml></xml>'}
               onXmlChange={(xml) => onUpdate({ ...levelData, startBlocks: xml })}
+              onInject={handleInject}
            />
         </div>
       </div>

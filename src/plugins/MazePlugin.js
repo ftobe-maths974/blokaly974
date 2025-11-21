@@ -5,33 +5,44 @@ export const MazePlugin = {
   id: 'MAZE',
   RenderComponent: MazeRender,
 
-  // Définition des blocs spécifiques au Labyrinthe
+  // CORRECTION : Utilisation de defineBlocksWithJsonArray (Plus robuste)
   registerBlocks: (Blockly, javascriptGenerator) => {
-    // Bloc Avancer
-    if (!Blockly.Blocks['maze_move_forward']) {
-      Blockly.Blocks['maze_move_forward'] = {
-        init: function() {
-          this.jsonInit({ "message0": "Avancer ⬆️", "previousStatement": null, "nextStatement": null, "colour": 160 });
-        }
-      };
-    }
-    javascriptGenerator.forBlock['maze_move_forward'] = () => 'actions.push("MOVE");\n';
+    
+    // Définition des blocs en JSON Array (Écrase les anciennes définitions si elles existent)
+    Blockly.defineBlocksWithJsonArray([
+      {
+        "type": "maze_move_forward",
+        "message0": "Avancer ⬆️",
+        "previousStatement": null,
+        "nextStatement": null,
+        "colour": 160,
+        "tooltip": "Avance d'une case"
+      },
+      {
+        "type": "maze_turn",
+        "message0": "Tourner %1 ↪️",
+        "args0": [
+          {
+            "type": "field_dropdown",
+            "name": "DIR",
+            "options": [["à gauche ↺", "LEFT"], ["à droite ↻", "RIGHT"]]
+          }
+        ],
+        "previousStatement": null,
+        "nextStatement": null,
+        "colour": 160
+      }
+    ]);
 
-    // Bloc Tourner
-    if (!Blockly.Blocks['maze_turn']) {
-      Blockly.Blocks['maze_turn'] = {
-        init: function() {
-          this.jsonInit({ "message0": "Tourner %1 ↪️", "args0": [{ "type": "field_dropdown", "name": "DIR", "options": [["à gauche ↺", "LEFT"], ["à droite ↻", "RIGHT"]] }], "previousStatement": null, "nextStatement": null, "colour": 160 });
-        }
-      };
-    }
+    // Générateurs JavaScript
+    javascriptGenerator.forBlock['maze_move_forward'] = () => 'actions.push("MOVE");\n';
+    
     javascriptGenerator.forBlock['maze_turn'] = (block) => {
       const dir = block.getFieldValue('DIR');
       return `actions.push("TURN_${dir}");\n`;
     };
   },
 
-  // Génération de la Toolbox
   getToolboxXML: (allowedBlocks) => {
     const allowed = allowedBlocks || ['maze_move_forward', 'maze_turn', 'controls_repeat_ext'];
     let xml = '<xml id="toolbox" style="display: none">';
@@ -52,9 +63,7 @@ export const MazePlugin = {
     return xml;
   },
 
-  // Logique d'exécution (Physique)
   executeStep: (currentState, action, levelData) => {
-    // État initial par défaut
     const state = currentState || { 
       x: levelData.startPos?.x || 0, 
       y: levelData.startPos?.y || 1, 

@@ -39,19 +39,20 @@ export default function GameEngine({ levelData, onWin }) {
   const executionRef = useRef(null);
   const workspaceRef = useRef(null);
 
-  useEffect(() => {
-    plugin.registerBlocks(Blockly, javascriptGenerator);
-  }, [plugin]);
+  // --- CORRECTION CRITIQUE : ENREGISTREMENT IMMÉDIAT ---
+  // On enregistre les blocs AVANT de calculer la Toolbox
+  // On utilise un flag useRef pour ne pas le refaire à chaque render
+  const blocksRegistered = useRef(false);
+  if (!blocksRegistered.current || blocksRegistered.current !== plugin.id) {
+     plugin.registerBlocks(Blockly, javascriptGenerator);
+     blocksRegistered.current = plugin.id;
+  }
 
-  // On passe les variables cachées au plugin pour qu'il adapte la toolbox (cadenas)
-// ... (Dans GameEngine) ...
-  
-  // 1. Passage des listes au Plugin
   const currentToolbox = plugin.getToolboxXML(
     safeData.allowedBlocks, 
     safeData.inputs, 
     safeData.hiddenVars,
-    safeData.lockedVars // <--- AJOUT ICI
+    safeData.lockedVars 
   );
 
   const handleInject = (newWorkspace) => {
@@ -59,7 +60,6 @@ export default function GameEngine({ levelData, onWin }) {
     javascriptGenerator.init(newWorkspace); 
     newWorkspace.updateToolbox(currentToolbox);
     
-    // Chargement XML...
     if (safeData.startBlocks) {
        try {
            const xmlDom = Blockly.utils.xml.textToDom(safeData.startBlocks);
@@ -67,16 +67,12 @@ export default function GameEngine({ levelData, onWin }) {
        } catch (e) { console.error(e); }
     }
 
-    // 2. Création Variables Blockly
     if (safeData.inputs) {
         const hiddenList = safeData.hiddenVars || [];
         const lockedList = safeData.lockedVars || [];
         
         Object.keys(safeData.inputs).forEach(v => {
-            // ON NE CRÉE QUE LES VARIABLES 100% ÉDITABLES
-            // Les "Locked" ont un bloc spécial, les "Hidden" n'ont rien.
             const isEditable = !hiddenList.includes(v) && !lockedList.includes(v);
-            
             if (isEditable && !newWorkspace.getVariable(v)) {
                 newWorkspace.createVariable(v);
             }
@@ -84,6 +80,7 @@ export default function GameEngine({ levelData, onWin }) {
     }
   };
 
+  // Mise à jour dynamique si le niveau change
   useEffect(() => {
     if (workspaceRef.current) {
       workspaceRef.current.updateToolbox(currentToolbox);
@@ -98,8 +95,6 @@ export default function GameEngine({ levelData, onWin }) {
     javascriptGenerator.init(workspaceRef.current);
     let userCode = javascriptGenerator.workspaceToCode(workspaceRef.current);
     
-    // INJECTION DES VARIABLES (Même les cachées !)
-    // C'est ici qu'on les rend "vivantes" pour le code, même si Blockly ne les voit pas.
     let initCode = "";
     if (safeData.inputs) {
         Object.entries(safeData.inputs).forEach(([key, val]) => {
@@ -188,6 +183,7 @@ export default function GameEngine({ levelData, onWin }) {
 
         <div className="blocklyContainer" style={{flex: 1, position: 'relative', minWidth: '0'}}>
           <BlocklyWorkspace
+            key={`${safeData.id}-${plugin.id}`} // FORCE RESET SUR CHANGEMENT DE PLUGIN
             className="blockly-div"
             toolboxConfiguration={currentToolbox}
             workspaceConfiguration={workspaceConfig}
