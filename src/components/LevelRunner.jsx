@@ -1,4 +1,10 @@
-import { useCallback, useMemo, useState } from 'react';
+import { javascriptGenerator } from 'blockly/javascript';
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import EnvironmentPlugin from '../core/EnvironmentPlugin';
 import Runtime from '../core/Runtime';
 import StateManager from '../core/StateManager';
@@ -48,10 +54,14 @@ const LevelRunner = ({ levelJson }) => {
     [environmentPlugin, stateManager, validator],
   );
   const [feedback, setFeedback] = useState(null);
+  const workspaceRef = useRef(null);
 
   const handleRun = useCallback(async () => {
-    const actions = [];
-    const result = await runtime.run(async () => actions);
+    const generatedCode = workspaceRef.current
+      ? javascriptGenerator.workspaceToCode(workspaceRef.current)
+      : '';
+    const actions = ['noop'];
+    const result = await runtime.run(async () => generatedCode || actions);
     const success = result.validation?.success ?? false;
     setFeedback(success ? 'success' : 'failure');
   }, [runtime]);
