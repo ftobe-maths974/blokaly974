@@ -1,0 +1,32 @@
+{
+  "id": "grid-basics-01",
+  "type": "grid",
+  "title": "Atteindre la case (2, 0)",
+  "instructions": "Déplace le robot jusqu'en **(2, 0)**.\n\nUtilise les blocs fournis.",
+  "format": "markdown+mathjax",
+  "initialState": {
+    "robot": { "x": 0, "y": 4, "dir": "N" }
+  },
+  "target": { "x": 2, "y": 0 },
+  "conditions": [
+    {
+      "type": "robot_at",
+      "x": 2,
+      "y": 0
+    }
+  ],
+  "blocks": {
+    "categories": [
+      {
+        "name": "Actions",
+        "colour": "#5BA58C",
+        "blocks": [
+          { "type": "grid_move_forward" },
+          { "type": "grid_turn_left" },
+          { "type": "grid_turn_right" },
+          { "type": "controls_repeat" }
+        ]
+      }
+    ]
+  }
+}
