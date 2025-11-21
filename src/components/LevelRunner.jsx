@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import buildToolbox from '../blockly/loadBlocksForLevel';
 import BlocklyContainer from './BlocklyContainer';
 import EnvironmentPlugin from '../core/EnvironmentPlugin';
 import Runtime from '../core/Runtime';
@@ -57,16 +58,11 @@ const LevelRunner = ({ levelJson }) => {
   const [feedback, setFeedback] = useState(null);
   const workspaceRef = useRef(null);
 
-  const handleWorkspaceCreated = useCallback((workspace) => {
-    workspaceRef.current = workspace;
-  }, []);
-
   const handleRun = useCallback(async () => {
-    const generatedCode = workspaceRef.current
+    const actions = workspaceRef.current
       ? javascriptGenerator.workspaceToCode(workspaceRef.current)
-      : '';
-    const actions = ['noop'];
-    const result = await runtime.run(async () => generatedCode || actions);
+      : ['noop'];
+    const result = await runtime.run(async () => actions);
     const success = result.validation?.success ?? false;
     setFeedback(success ? 'success' : 'failure');
   }, [runtime]);
@@ -78,8 +74,10 @@ const LevelRunner = ({ levelJson }) => {
       </button>
       <div>{environmentPlugin.render(stateManager)}</div>
       <BlocklyContainer
-        onWorkspaceCreated={handleWorkspaceCreated}
-        toolboxXml={levelJson?.toolboxXml}
+        onWorkspaceCreated={(workspace) => {
+          workspaceRef.current = workspace;
+        }}
+        toolboxXml={buildToolbox(levelJson)}
       />
       {feedback && <div>{feedback}</div>}
     </div>
