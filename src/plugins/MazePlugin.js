@@ -1,5 +1,6 @@
 import MazeRender from '../components/runner/MazeRender';
 import { MAZE_CONFIG } from '../core/adapters/MazeAdapter';
+import { generateToolbox } from '../core/BlockDefinitions';
 
 export const MazePlugin = {
   id: 'MAZE',
@@ -43,24 +44,8 @@ export const MazePlugin = {
     };
   },
 
-  getToolboxXML: (allowedBlocks) => {
-    const allowed = allowedBlocks || ['maze_move_forward', 'maze_turn', 'controls_repeat_ext'];
-    let xml = '<xml id="toolbox" style="display: none">';
-    
-    if (allowed.includes('maze_move_forward') || allowed.includes('maze_turn')) {
-      xml += '<category name="🏃 Actions" colour="120">';
-      if (allowed.includes('maze_move_forward')) xml += '<block type="maze_move_forward"></block>';
-      if (allowed.includes('maze_turn')) {
-        xml += '<block type="maze_turn"><field name="DIR">LEFT</field></block>';
-        xml += '<block type="maze_turn"><field name="DIR">RIGHT</field></block>';
-      }
-      xml += '</category>';
-    }
-    if (allowed.includes('controls_repeat_ext')) {
-      xml += '<category name="🔄 Boucles" colour="210"><block type="controls_repeat_ext"><value name="TIMES"><shadow type="math_number"><field name="NUM">5</field></shadow></value></block></category>';
-    }
-    xml += '</xml>';
-    return xml;
+  getToolboxXML: (allowedBlocks, levelInputs, hiddenVars, lockedVars) => {
+    return generateToolbox(allowedBlocks, levelInputs, hiddenVars, lockedVars);
   },
 
   executeStep: (currentState, action, levelData) => {

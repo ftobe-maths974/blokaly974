@@ -63,14 +63,10 @@ export default function LevelEditor({ levelData, onUpdate }) {
     workspaceRef.current = newWorkspace;
   };
 
-  // --- 3. CONFIGURATION DES CASES (CORRIGÉE) ---
+  // --- 3. CONFIGURATION DES CASES (INDIVIDUELLE) ---
   const toggleBlock = (blockType) => {
-    // Liste par défaut propre (sans le "...")
-    const defaults = currentType === 'MATH' 
-        ? ['math_number', 'math_arithmetic', 'variables_set', 'text_print', 'lists_create_with', 'lists_getIndex', 'lists_setIndex'] 
-        : ['maze_move_forward', 'maze_turn', 'controls_repeat_ext'];
-
-    const currentAllowed = levelData.allowedBlocks || defaults;
+    // Pas de défauts imposés, on part de vide si nécessaire (Zéro Catalogue)
+    const currentAllowed = levelData.allowedBlocks || [];
     
     let newAllowed;
     if (currentAllowed.includes(blockType)) {
@@ -78,6 +74,29 @@ export default function LevelEditor({ levelData, onUpdate }) {
     } else {
       newAllowed = [...currentAllowed, blockType];
     }
+    onUpdate({ ...levelData, allowedBlocks: newAllowed });
+  };
+
+  // --- 4. CONFIGURATION DES CASES (PAR CATÉGORIE) ---
+  const toggleCategory = (catName) => {
+    if (!allCategories[catName]) return;
+
+    const categoryBlockTypes = allCategories[catName].map(b => b.type);
+    const currentAllowed = levelData.allowedBlocks || [];
+
+    // Vérifier si TOUS les blocs de cette catégorie sont déjà cochés
+    const allChecked = categoryBlockTypes.every(type => currentAllowed.includes(type));
+
+    let newAllowed;
+    if (allChecked) {
+      // Si tout est coché -> On décoche tout (on retire les blocs de la catégorie)
+      newAllowed = currentAllowed.filter(type => !categoryBlockTypes.includes(type));
+    } else {
+      // Si pas tout coché -> On coche tout (on ajoute ceux qui manquent)
+      const toAdd = categoryBlockTypes.filter(type => !currentAllowed.includes(type));
+      newAllowed = [...currentAllowed, ...toAdd];
+    }
+    
     onUpdate({ ...levelData, allowedBlocks: newAllowed });
   };
 
@@ -102,7 +121,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
     "Listes & Tableaux": [
       { type: 'lists_create_with', label: 'Créer une liste' },
       { type: 'lists_getIndex', label: 'Lire un élément' },
-      { type: 'lists_setIndex', label: 'Modifier un élément' }, // Ajouté !
+      { type: 'lists_setIndex', label: 'Modifier un élément' },
       { type: 'lists_length', label: 'Longueur de liste' }
     ],
     "Variables": [
@@ -159,33 +178,53 @@ export default function LevelEditor({ levelData, onUpdate }) {
 
           <div style={{marginBottom: '20px'}}>
             <label style={{fontWeight: 'bold', display: 'block', marginBottom: '10px'}}>Blocs Autorisés :</label>
-            {displayedCategories.map(catName => (
-              <div key={catName} style={{marginBottom: '10px'}}>
-                <div style={{fontSize: '0.8em', color: '#888', fontWeight: 'bold', textTransform: 'uppercase'}}>{catName}</div>
-                {allCategories[catName] && allCategories[catName].map(b => {
-                    const currentList = levelData.allowedBlocks || 
-                        (currentType === 'MATH' 
-                            ? ['math_number', 'math_arithmetic', 'variables_set', 'text_print'] 
-                            : ['maze_move_forward', 'maze_turn', 'controls_repeat_ext']);
-                    
-                    const isChecked = currentList.includes(b.type);
+            
+            {displayedCategories.map(catName => {
+                // LOGIQUE D'AFFICHAGE DE LA CHECKBOX CATÉGORIE
+                const categoryBlocks = allCategories[catName] || [];
+                const currentAllowed = levelData.allowedBlocks || [];
+                const catBlockTypes = categoryBlocks.map(b => b.type);
+                
+                // État : Tout coché, rien coché, ou mixte ?
+                const allChecked = catBlockTypes.every(t => currentAllowed.includes(t));
+                const someChecked = catBlockTypes.some(t => currentAllowed.includes(t));
+                const isIndeterminate = someChecked && !allChecked;
 
-                    return (
-                      <div key={b.type} style={{marginLeft: '10px'}}>
-                        <label style={{cursor: 'pointer', display: 'flex', alignItems: 'center'}}>
-                          <input 
+                return (
+                  <div key={catName} style={{marginBottom: '15px', background:'#f9f9f9', padding:'10px', borderRadius:'6px'}}>
+                    
+                    {/* TITRE DE CATÉGORIE AVEC CHECKBOX */}
+                    <div style={{fontSize: '0.9em', color: '#555', fontWeight: 'bold', textTransform: 'uppercase', marginBottom:'8px', display:'flex', alignItems:'center', borderBottom:'1px solid #eee', paddingBottom:'5px'}}>
+                        <input 
                             type="checkbox" 
-                            checked={isChecked}
-                            onChange={() => toggleBlock(b.type)}
-                            style={{marginRight: '8px'}}
-                          />
-                          {b.label}
-                        </label>
-                      </div>
-                    );
-                })}
-              </div>
-            ))}
+                            checked={allChecked}
+                            ref={input => { if (input) input.indeterminate = isIndeterminate; }}
+                            onChange={() => toggleCategory(catName)}
+                            style={{marginRight: '8px', cursor: 'pointer'}}
+                        />
+                        {catName}
+                    </div>
+
+                    {/* LISTE DES BLOCS */}
+                    {categoryBlocks.map(b => {
+                        const isChecked = currentAllowed.includes(b.type);
+                        return (
+                          <div key={b.type} style={{marginLeft: '10px', marginBottom: '4px'}}>
+                            <label style={{cursor: 'pointer', display: 'flex', alignItems: 'center', fontSize:'0.9rem'}}>
+                              <input 
+                                type="checkbox" 
+                                checked={isChecked}
+                                onChange={() => toggleBlock(b.type)}
+                                style={{marginRight: '8px'}}
+                              />
+                              {b.label}
+                            </label>
+                          </div>
+                        );
+                    })}
+                  </div>
+                );
+            })}
           </div>
         </div>
       </div>
