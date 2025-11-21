@@ -2,6 +2,11 @@ import EnvironmentPlugin from '../core/EnvironmentPlugin';
 
 const GRID_SIZE = 5;
 const DEFAULT_ROBOT = { x: 0, y: 0, dir: 'N' };
+const JS_TO_ACTION = {
+  grid_move_forward: 'move_forward',
+  grid_turn_left: 'turn_left',
+  grid_turn_right: 'turn_right'
+};
 
 function createDefaultGrid() {
   return Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
@@ -57,7 +62,21 @@ function moveForward(robot) {
 
 export default class GridPlugin extends EnvironmentPlugin {
   async parseActions(rawCode) {
-    return ['move_forward', 'turn_right', 'move_forward'];
+    const matches = typeof rawCode === 'string'
+      ? rawCode.matchAll(/(grid_[a-zA-Z0-9_]+)\s*\(/g)
+      : [];
+
+    const actions = [];
+
+    for (const match of matches) {
+      const funcName = match[1];
+      const action = JS_TO_ACTION[funcName];
+      if (action) {
+        actions.push(action);
+      }
+    }
+
+    return actions;
   }
 
   async applyAction(action, stateManager) {
@@ -122,7 +141,8 @@ export default class GridPlugin extends EnvironmentPlugin {
     return [
       { type: 'grid_move_forward' },
       { type: 'grid_turn_left' },
-      { type: 'grid_turn_right' }
+      { type: 'grid_turn_right' },
+      { type: 'controls_repeat' }
     ];
   }
 }
