@@ -1,42 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import LZString from 'lz-string';
-import Builder from './components/builder/Builder';
-import Runner from './components/runner/Runner';
-import './App.css'; // On garde le css par défaut pour l'instant
+import React, { useState } from 'react';
+import './App.css';
+import LevelRunner from './components/LevelRunner';
+import LevelSelector from './components/LevelSelector';
+import levels from './levels';
 
 function App() {
-  const [mode, setMode] = useState('loading'); // 'builder' ou 'runner'
-  const [campaignData, setCampaignData] = useState(null);
-
-  useEffect(() => {
-    // Regarder l'URL
-    const params = new URLSearchParams(window.location.search);
-    const encodedData = params.get('data');
-
-    if (encodedData) {
-      try {
-        console.log("Chargement des données compressées...");
-        const json = LZString.decompressFromEncodedURIComponent(encodedData);
-        const data = JSON.parse(json);
-        setCampaignData(data);
-        setMode('runner');
-      } catch (e) {
-        console.error("Erreur de lecture", e);
-        setMode('builder');
-      }
-    } else {
-      setMode('builder');
-    }
-  }, []);
-
-  if (mode === 'loading') return <div>Chargement...</div>;
+  const [selectedLevel, setSelectedLevel] = useState(null);
 
   return (
     <div className="App">
-      {mode === 'builder' ? (
-        <Builder />
+      {selectedLevel ? (
+        <LevelRunner levelJson={selectedLevel} />
       ) : (
-        <Runner campaign={campaignData} />
+        <LevelSelector levels={levels} onSelect={setSelectedLevel} />
       )}
     </div>
   );
