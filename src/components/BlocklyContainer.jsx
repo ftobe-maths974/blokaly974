@@ -1,12 +1,29 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
+import Blockly from 'blockly';
 
 const BlocklyContainer = ({ toolboxXml }) => {
   const blocklyRef = useRef(null);
+  const workspaceRef = useRef(null);
 
-  // Placeholder: Blockly will be initialized here using toolboxXml when implemented.
-  void toolboxXml;
+  useEffect(() => {
+    if (!blocklyRef.current) return undefined;
 
-  return <div ref={blocklyRef}>blockly placeholder</div>;
+    const workspace = Blockly.inject(blocklyRef.current, { toolbox: toolboxXml });
+    workspaceRef.current = workspace;
+
+    Blockly.svgResize(workspace);
+
+    const handleResize = () => Blockly.svgResize(workspace);
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      workspace.dispose();
+      workspaceRef.current = null;
+    };
+  }, [toolboxXml]);
+
+  return <div ref={blocklyRef} />;
 };
 
 export default BlocklyContainer;
