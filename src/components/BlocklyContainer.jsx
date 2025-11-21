@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import Blockly from 'blockly';
+import * as Blockly from 'blockly';
 
 const BlocklyContainer = ({ onWorkspaceCreated, toolboxXml }) => {
   const blocklyRef = useRef(null);
