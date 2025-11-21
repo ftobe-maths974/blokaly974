@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import Blockly from 'blockly';
 
-const BlocklyContainer = ({ toolboxXml }) => {
+const BlocklyContainer = ({ onWorkspaceCreated, toolboxXml }) => {
   const blocklyRef = useRef(null);
   const workspaceRef = useRef(null);
 
@@ -10,6 +10,9 @@ const BlocklyContainer = ({ toolboxXml }) => {
 
     const workspace = Blockly.inject(blocklyRef.current, { toolbox: toolboxXml });
     workspaceRef.current = workspace;
+    if (onWorkspaceCreated) {
+      onWorkspaceCreated(workspace);
+    }
 
     Blockly.svgResize(workspace);
 
@@ -21,7 +24,7 @@ const BlocklyContainer = ({ toolboxXml }) => {
       workspace.dispose();
       workspaceRef.current = null;
     };
-  }, [toolboxXml]);
+  }, [onWorkspaceCreated, toolboxXml]);
 
   return <div ref={blocklyRef} />;
 };
