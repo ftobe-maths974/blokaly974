@@ -62,19 +62,52 @@ function moveForward(robot) {
 
 export default class GridPlugin extends EnvironmentPlugin {
   async parseActions(rawCode) {
-    const matches = typeof rawCode === 'string'
-      ? rawCode.matchAll(/(grid_[a-zA-Z0-9_]+)\s*\(/g)
-      : [];
+    return this.parseJsActions(rawCode);
+  }
 
+  parseJsActions(rawJs) {
     const actions = [];
 
-    for (const match of matches) {
-      const funcName = match[1];
-      const action = JS_TO_ACTION[funcName];
-      if (action) {
-        actions.push(action);
-      }
+    if (typeof rawJs !== 'string') {
+      return actions;
     }
+
+    const parseGridActions = (code) => {
+      const matches = code.matchAll(/(grid_[a-zA-Z0-9_]+)\s*\(/g);
+      const gridActions = [];
+
+      for (const match of matches) {
+        const funcName = match[1];
+        const action = JS_TO_ACTION[funcName];
+        if (action) {
+          gridActions.push(action);
+        }
+      }
+
+      return gridActions;
+    };
+
+    const repeatRegex = /for\s*\(.*?;\s*i\s*<\s*(\d+)\s*;.*?\)\s*\{([\s\S]*?)\}/g;
+    let lastIndex = 0;
+
+    for (const match of rawJs.matchAll(repeatRegex)) {
+      const repeatCount = parseInt(match[1], 10);
+      const body = match[2];
+      const index = match.index || 0;
+      const beforeLoop = rawJs.slice(lastIndex, index);
+
+      actions.push(...parseGridActions(beforeLoop));
+
+      const repeatedActions = this.parseJsActions(body);
+      for (let i = 0; i < repeatCount; i += 1) {
+        actions.push(...repeatedActions);
+      }
+
+      lastIndex = index + match[0].length;
+    }
+
+    const remaining = rawJs.slice(lastIndex);
+    actions.push(...parseGridActions(remaining));
 
     return actions;
   }
