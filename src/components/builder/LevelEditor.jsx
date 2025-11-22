@@ -1,162 +1,214 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import MazeEditor from './editors/MazeEditor';
 import MathEditor from './editors/MathEditor';
 import TurtleEditor from './editors/TurtleEditor';
 import { BlocklyWorkspace } from 'react-blockly';
-import * as Blockly from 'blockly'; // Nécessaire pour le svgResize
+import * as Blockly from 'blockly';
 import { MazePlugin } from '../../plugins/MazePlugin';
 import { MathPlugin } from '../../plugins/MathPlugin';
 import { TurtlePlugin } from '../../plugins/TurtlePlugin';
+import { registerAllBlocks } from '../../core/BlockRegistry';
+import { generateToolbox, generateMasterToolbox, CATEGORIES_BY_TYPE, CATEGORY_CONTENTS } from '../../core/BlockDefinitions'; 
 
 export default function LevelEditor({ levelData, onUpdate }) {
   const workspaceRef = useRef(null);
-  const [codeMode, setCodeMode] = useState('START');
+  const [codeMode, setCodeMode] = useState('START'); // 'START' (Élève) ou 'SOLUTION' (Prof)
+  const [isReady, setIsReady] = useState(false);
 
-  // Plus besoin de useEffect d'initialisation ici, c'est fait dans main.jsx !
-  // Plus besoin de isReady non plus.
+  // Init unique
+  useEffect(() => {
+    const timer = setTimeout(() => {
+        try {
+            registerAllBlocks();
+            setIsReady(true);
+        } catch(e) { console.error(e); }
+    }, 10);
+    return () => clearTimeout(timer);
+  }, []);
 
-  const editorConfig = {
-    scrollbars: true,
-    trashcan: true,
-    readOnly: false
-  };
+  const editorConfig = { scrollbars: true, trashcan: true, readOnly: false };
   
   const handleTypeChange = (newType) => {
     onUpdate({ ...levelData, type: newType, allowedBlocks: undefined });
   };
   const currentType = levelData.type || 'MAZE';
 
-  let editorToolbox = '<xml></xml>';
-  try {
-    if (currentType === 'MATH') {
-        editorToolbox = MathPlugin.getToolboxXML(levelData.allowedBlocks, levelData.inputs, levelData.hiddenVars, levelData.lockedVars);
-    } else if (currentType === 'TURTLE') {
-        editorToolbox = TurtlePlugin.getToolboxXML(levelData.allowedBlocks);
-    } else {
-        editorToolbox = MazePlugin.getToolboxXML(levelData.allowedBlocks); 
-    }
-  } catch (e) {}
+  // --- 1. CALCUL DES DEUX TOOLBOXES ---
+  
+  // A. La Toolbox "Élève" (Celle qu'on construit avec les checkboxes)
+  const studentToolboxResult = useMemo(() => generateToolbox(
+      levelData.allowedBlocks, 
+      levelData.inputs, 
+      levelData.hiddenVars, 
+      levelData.lockedVars
+  ), [levelData.allowedBlocks, levelData.inputs, levelData.hiddenVars, levelData.lockedVars]);
 
-  useEffect(() => {
-    if (workspaceRef.current) {
-        workspaceRef.current.updateToolbox(editorToolbox);
-    }
-  }, [editorToolbox]);
+  // B. La Toolbox "Maître" (Celle du Prof, toujours complète)
+  const masterToolboxResult = useMemo(() => generateMasterToolbox(
+      currentType, 
+      levelData.inputs, 
+      levelData.hiddenVars, 
+      levelData.lockedVars
+  ), [currentType, levelData.inputs, levelData.hiddenVars, levelData.lockedVars]);
 
-  // --- CORRECTIF BUG AFFICHAGE ---
+  // --- 2. SÉLECTION INTELLIGENTE ---
+  // Si on est sur l'onglet "SOLUTION", on montre tout.
+  // Si on est sur l'onglet "CODE ÉLÈVE", on montre la version restreinte (Preview).
+  const activeToolbox = codeMode === 'SOLUTION' ? masterToolboxResult : studentToolboxResult;
+  const editorToolboxXML = activeToolbox.xml;
+  const hasCategories = activeToolbox.hasCategories;
+
+  // --- 3. CLÉ DE RESET ---
+  // On inclut 'hasCategories' dans la clé. 
+  // Si on passe d'une toolbox "Dossiers" (Prof) à une toolbox "Vrac" (Élève restreint), 
+  // la clé change -> React recrée le composant -> Pas de crash Blockly !
+  const workspaceKey = `${levelData.id}-${currentType}-${codeMode}-${hasCategories ? 'CAT' : 'FLY'}`;
+
   const handleInject = (newWorkspace) => {
     workspaceRef.current = newWorkspace;
-    // On force le redimensionnement juste après l'injection pour éviter les blocs invisibles
-    window.setTimeout(() => {
-        Blockly.svgResize(newWorkspace);
-    }, 0);
+    window.setTimeout(() => Blockly.svgResize(newWorkspace), 0);
   };
 
+  // Mise à jour dynamique (ex: cocher une case met à jour la toolbox élève en temps réel)
+  useEffect(() => {
+    if (workspaceRef.current && isReady) {
+        workspaceRef.current.updateToolbox(editorToolboxXML);
+    }
+  }, [editorToolboxXML, isReady]);
+
+  // --- GESTIONNAIRES UI ---
   const toggleBlock = (blockType) => {
     const currentAllowed = levelData.allowedBlocks || [];
-    const newAllowed = currentAllowed.includes(blockType) 
-        ? currentAllowed.filter(t => t !== blockType)
-        : [...currentAllowed, blockType];
+    const newAllowed = currentAllowed.includes(blockType) ? currentAllowed.filter(t => t !== blockType) : [...currentAllowed, blockType];
     onUpdate({ ...levelData, allowedBlocks: newAllowed });
   };
 
   const toggleCategory = (catName) => {
-    if (!allCategories[catName]) return;
-    const categoryBlockTypes = allCategories[catName].map(b => b.type);
+    const categoryBlocks = CATEGORY_CONTENTS[catName] || [];
     const currentAllowed = levelData.allowedBlocks || [];
-    const allChecked = categoryBlockTypes.every(type => currentAllowed.includes(type));
-
-    let newAllowed;
-    if (allChecked) {
-      newAllowed = currentAllowed.filter(type => !categoryBlockTypes.includes(type));
-    } else {
-      const toAdd = categoryBlockTypes.filter(type => !currentAllowed.includes(type));
-      newAllowed = [...currentAllowed, ...toAdd];
-    }
+    const allChecked = categoryBlocks.every(type => currentAllowed.includes(type));
+    
+    const newAllowed = allChecked 
+        ? currentAllowed.filter(type => !categoryBlocks.includes(type)) 
+        : [...currentAllowed, ...categoryBlocks.filter(t => !currentAllowed.includes(t))];
     onUpdate({ ...levelData, allowedBlocks: newAllowed });
   };
 
-  // ... (Garde la constante allCategories et le reste du composant identique) ...
-  // Je remets juste la fin pour le contexte des imports
-  const allCategories = {
-    "Mouvements": [{ type: 'maze_move_forward', label: 'Avancer (Maze)' }, { type: 'maze_turn', label: 'Tourner (Maze)' }],
-    "Tortue": [{ type: 'turtle_move', label: 'Avancer 🐢' }, { type: 'turtle_turn', label: 'Tourner 🐢' }, { type: 'turtle_pen', label: 'Stylo ✏️' }, { type: 'turtle_color', label: 'Couleur 🎨' }],
-    "Logique": [{ type: 'controls_repeat_ext', label: 'Boucles' }, { type: 'controls_whileUntil', label: 'Tant que' }, { type: 'controls_if', label: 'Si' }, { type: 'logic_compare', label: 'Comparaisons' }, { type: 'logic_operation', label: 'Opérateurs' }],
-    "Mathématiques": [{ type: 'math_number', label: 'Nombre' }, { type: 'math_arithmetic', label: 'Calculs' }, { type: 'math_modulo', label: 'Modulo' }, { type: 'math_random_int', label: 'Aléatoire' }],
-    "Listes & Tableaux": [{ type: 'lists_create_with', label: 'Créer liste' }, { type: 'lists_getIndex', label: 'Lire' }, { type: 'lists_setIndex', label: 'Modifier' }, { type: 'lists_length', label: 'Longueur' }],
-    "Variables": [{ type: 'variables_set', label: 'Variable' }],
-    "Interactions": [{ type: 'text_print', label: 'Afficher' }, { type: 'text_prompt_ext', label: 'Demander' }]
+  const displayedCategories = CATEGORIES_BY_TYPE[currentType] || [];
+  const getTabStyle = (isActive) => ({ flex: 1, padding: '6px', border: 'none', borderRadius: '4px', cursor: 'pointer', background: isActive ? 'white' : '#eee', fontWeight: isActive ? 'bold' : 'normal', fontSize: '0.8rem', transition: 'all 0.2s' });
+  
+  // Style des onglets du bas avec indicateur visuel de la toolbox active
+  const tabStyle = (isActive, mode) => {
+      const color = mode === 'SOLUTION' ? '#27ae60' : '#2980b9'; // Vert pour Prof, Bleu pour Élève
+      return { 
+        padding: '10px 20px', cursor: 'pointer', border: 'none', 
+        borderBottom: isActive ? `3px solid ${color}` : '3px solid transparent', 
+        background: isActive ? (mode === 'SOLUTION' ? '#f0fbf4' : '#f0f8ff') : 'transparent', 
+        fontWeight: isActive ? 'bold' : 'normal', 
+        color: isActive ? color : '#7f8c8d', 
+        fontSize: '0.95rem', transition: 'all 0.2s' 
+      };
   };
 
-  let displayedCategories = [];
-  if (currentType === 'MAZE') displayedCategories = ['Mouvements', 'Logique'];
-  else if (currentType === 'TURTLE') displayedCategories = ['Tortue', 'Logique', 'Mathématiques', 'Variables'];
-  else displayedCategories = ['Mathématiques', 'Listes & Tableaux', 'Variables', 'Interactions', 'Logique'];
-
-  const workspaceKey = `${levelData.id}-${currentType}-${codeMode}-${JSON.stringify(levelData.allowedBlocks || [])}`;
-  const getTabStyle = (isActive) => ({ flex: 1, padding: '8px', border: 'none', borderRadius: '6px', cursor: 'pointer', background: isActive ? 'white' : 'transparent', fontWeight: isActive ? 'bold' : 'normal', transition: 'all 0.2s' });
-  const tabStyle = (isActive) => ({ padding: '10px 20px', cursor: 'pointer', border: 'none', borderBottom: isActive ? '3px solid #3498db' : '3px solid transparent', background: isActive ? '#f0f8ff' : 'transparent', fontWeight: isActive ? 'bold' : 'normal', color: isActive ? '#2980b9' : '#7f8c8d', fontSize: '0.95rem', transition: 'all 0.2s' });
+  if (!isReady) return <div style={{padding: 50, textAlign: 'center', color: '#666'}}>Chargement...</div>;
 
   return (
     <div className="editor-wrapper" style={{display: 'flex', flexDirection: 'column', height: '100%'}}>
-      <div style={{display: 'flex', gap: '20px', flex: 1, minHeight: '400px'}}>
-        <div style={{flex: 2, display: 'flex', flexDirection: 'column'}}>
-            <div style={{display: 'flex', marginBottom: '15px', background: '#ddd', padding: '5px', borderRadius: '8px'}}>
+      <div style={{display: 'flex', gap: '15px', flex: 1, minHeight: '400px'}}>
+        
+        {/* GAUCHE */}
+        <div style={{flex: 3, display: 'flex', flexDirection: 'column'}}>
+            <div style={{display: 'flex', marginBottom: '10px', background: '#ecf0f1', padding: '4px', borderRadius: '6px', gap:'5px'}}>
                 <button onClick={() => handleTypeChange('MAZE')} style={getTabStyle(currentType === 'MAZE')}>🏰 Labyrinthe</button>
                 <button onClick={() => handleTypeChange('TURTLE')} style={getTabStyle(currentType === 'TURTLE')}>🐢 Tortue</button>
-                <button onClick={() => handleTypeChange('MATH')} style={getTabStyle(currentType === 'MATH')}>🧪 Labo Algo</button>
+                <button onClick={() => handleTypeChange('MATH')} style={getTabStyle(currentType === 'MATH')}>🧪 Labo</button>
             </div>
-            <div style={{flex: 1, background: 'white', padding: '20px', borderRadius: '8px', border: '1px solid #ccc', overflowY: 'auto'}}>
+            <div style={{flex: 1, background: 'white', padding: '15px', borderRadius: '8px', border: '1px solid #ddd', overflowY: 'auto'}}>
                 {currentType === 'MAZE' && <MazeEditor levelData={levelData} onUpdate={onUpdate} />}
                 {currentType === 'TURTLE' && <TurtleEditor levelData={levelData} onUpdate={onUpdate} />}
                 {currentType === 'MATH' && <MathEditor levelData={levelData} onUpdate={onUpdate} />}
             </div>
         </div>
-        <div style={{flex: 1, background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', overflowY: 'auto'}}>
-          <h3 style={{marginTop: 0}}>⚙️ Config {currentType}</h3>
-          <div style={{marginBottom: '20px'}}>
-              <label style={{fontWeight: 'bold', display: 'block', marginBottom: '5px'}}>Consigne :</label>
-              <textarea value={levelData.instruction || ""} onChange={(e) => onUpdate({ ...levelData, instruction: e.target.value })} style={{width: '100%', height: '100px', padding: '5px', fontFamily: 'monospace'}} placeholder="Markdown..." />
+
+        {/* DROITE */}
+        <div style={{flex: 1, minWidth: '220px', background: 'white', padding: '15px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)', overflowY: 'auto', border: '1px solid #eee'}}>
+          <h4 style={{marginTop: 0, marginBottom: '10px', color: '#2c3e50', borderBottom:'2px solid #eee', paddingBottom:'5px'}}>⚙️ Propriétés</h4>
+          
+          <div style={{marginBottom: '10px'}}>
+              <label style={{fontWeight: 'bold', fontSize: '0.8rem', display: 'block', marginBottom: '3px', color:'#7f8c8d'}}>Consigne</label>
+              <textarea value={levelData.instruction || ""} onChange={(e) => onUpdate({ ...levelData, instruction: e.target.value })} style={{width: '100%', height: '60px', padding: '5px', fontSize: '0.8rem', border: '1px solid #ccc', borderRadius: '4px', resize: 'vertical'}} placeholder="Ex: Dessine un carré..." />
           </div>
-          <hr style={{border: 'none', borderTop: '1px solid #eee', margin: '15px 0'}} />
-          <div style={{marginBottom: '20px'}}>
-            <label style={{fontWeight: 'bold', display: 'block', marginBottom: '10px'}}>Blocs Autorisés :</label>
+
+          <div style={{marginBottom: '15px', display:'flex', alignItems:'center', justifyContent:'space-between', background:'#f8f9fa', padding:'5px 8px', borderRadius:'4px'}}>
+              <label style={{fontWeight: 'bold', fontSize: '0.8rem', color:'#27ae60'}}>🏆 Objectif</label>
+              <div style={{display:'flex', alignItems:'center', gap:'5px'}}>
+                <input type="number" min="1" value={levelData.maxBlocks || 5} onChange={(e) => onUpdate({ ...levelData, maxBlocks: parseInt(e.target.value) })} style={{width: '40px', padding: '2px', textAlign: 'center', border:'1px solid #ddd', borderRadius:'3px'}} />
+                <span style={{fontSize:'0.8rem', color:'#7f8c8d'}}>blocs</span>
+              </div>
+          </div>
+
+          <h4 style={{marginTop: '15px', marginBottom: '5px', color: '#2c3e50', borderBottom:'2px solid #eee', paddingBottom:'5px'}}>
+            🧰 Toolbox Élève
+          </h4>
+          
+          <div style={{fontSize: '0.85rem'}}>
             {displayedCategories.map(catName => {
-                const categoryBlocks = allCategories[catName] || [];
+                const categoryBlocks = CATEGORY_CONTENTS[catName] || [];
                 const currentAllowed = levelData.allowedBlocks || [];
-                const allChecked = categoryBlocks.every(b => currentAllowed.includes(b.type));
-                const someChecked = categoryBlocks.some(b => currentAllowed.includes(b.type));
-                const isIndeterminate = someChecked && !allChecked;
+                const allChecked = categoryBlocks.every(type => currentAllowed.includes(type));
+                const isIndeterminate = categoryBlocks.some(type => currentAllowed.includes(type)) && !allChecked;
+
                 return (
-                  <div key={catName} style={{marginBottom: '15px', background:'#f9f9f9', padding:'10px', borderRadius:'6px'}}>
-                    <div style={{fontSize: '0.9em', color: '#555', fontWeight: 'bold', textTransform: 'uppercase', marginBottom:'8px', display:'flex', alignItems:'center', borderBottom:'1px solid #eee', paddingBottom:'5px'}}>
-                        <input type="checkbox" checked={allChecked} ref={input => { if (input) input.indeterminate = isIndeterminate; }} onChange={() => toggleCategory(catName)} style={{marginRight: '8px', cursor: 'pointer'}} />
-                        {catName}
+                  <details key={catName} open={allChecked || isIndeterminate} style={{marginBottom: '5px', border:'1px solid #f0f0f0', borderRadius:'4px'}}>
+                    <summary style={{padding: '6px', cursor: 'pointer', background: '#f9f9f9', fontWeight: 'bold', color: '#555', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+                        <span>{catName}</span>
+                        <input 
+                            type="checkbox" 
+                            checked={allChecked} 
+                            ref={input => { if (input) input.indeterminate = isIndeterminate; }}
+                            onChange={(e) => { e.stopPropagation(); toggleCategory(catName); }} 
+                        />
+                    </summary>
+                    <div style={{padding: '5px 10px'}}>
+                        {categoryBlocks.map(blockType => (
+                          <div key={blockType} style={{margin: '4px 0'}}>
+                            <label style={{cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#666'}}>
+                              <input type="checkbox" checked={currentAllowed.includes(blockType)} onChange={() => toggleBlock(blockType)} style={{marginRight: '6px'}} />
+                              {blockType.replace(/_/g, ' ')}
+                            </label>
+                          </div>
+                        ))}
                     </div>
-                    {categoryBlocks.map(b => (
-                      <div key={b.type} style={{marginLeft: '10px', marginBottom: '4px'}}>
-                        <label style={{cursor: 'pointer', display: 'flex', alignItems: 'center', fontSize:'0.9rem'}}>
-                          <input type="checkbox" checked={currentAllowed.includes(b.type)} onChange={() => toggleBlock(b.type)} style={{marginRight: '8px'}} />
-                          {b.label}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
+                  </details>
                 );
             })}
           </div>
         </div>
       </div>
-      <div style={{height: '400px', marginTop: '20px', background: 'white', padding: '0', borderRadius: '8px', border: '1px solid #ccc', display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
+
+      {/* BAS */}
+      <div style={{height: '350px', marginTop: '15px', background: 'white', padding: '0', borderRadius: '8px', border: '1px solid #ccc', display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
         <div style={{display: 'flex', background: '#ecf0f1', borderBottom: '1px solid #bdc3c7'}}>
-            <button onClick={() => setCodeMode('START')} style={tabStyle(codeMode === 'START')}>🧩 Code de départ</button>
-            <button onClick={() => setCodeMode('SOLUTION')} style={tabStyle(codeMode === 'SOLUTION')}>✅ Code Modèle / Calque</button>
+            <button onClick={() => setCodeMode('START')} style={tabStyle(codeMode === 'START', 'START')}>
+                🧩 Code Élève (Preview)
+            </button>
+            <button onClick={() => setCodeMode('SOLUTION')} style={tabStyle(codeMode === 'SOLUTION', 'SOLUTION')}>
+                ✅ Solution Prof (Complet)
+            </button>
         </div>
-        <div style={{flex: 1, position: 'relative', background: codeMode === 'SOLUTION' ? '#f9fff9' : 'white'}}>
+        
+        <div style={{flex: 1, position: 'relative', background: codeMode === 'SOLUTION' ? '#f0fbf4' : 'white'}}>
+           {/* Indicateur visuel du mode */}
+           {codeMode === 'START' && (
+               <div style={{position:'absolute', right:10, top:5, zIndex:10, fontSize:'0.75rem', color:'#aaa', background:'rgba(255,255,255,0.8)', padding:'2px 5px', borderRadius:'3px'}}>
+                   Vue : Toolbox Élève (Restreinte)
+               </div>
+           )}
+
            <BlocklyWorkspace
               key={workspaceKey}
               className="blockly-div"
-              toolboxConfiguration={editorToolbox}
+              toolboxConfiguration={editorToolboxXML}
               workspaceConfiguration={editorConfig}
               initialXml={codeMode === 'START' ? (levelData.startBlocks || '<xml></xml>') : (levelData.solutionBlocks || '<xml></xml>')}
               onXmlChange={(xml) => {

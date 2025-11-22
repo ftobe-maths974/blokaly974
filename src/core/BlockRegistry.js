@@ -1,8 +1,14 @@
 import * as Blockly from 'blockly';
 import { javascriptGenerator } from 'blockly/javascript';
 
+// Variable globale pour éviter le rechargement
+let isRegistered = false;
+
 export const registerAllBlocks = () => {
-  console.log("🏗️ Enregistrement global des blocs...");
+  if (isRegistered) return; // On arrête si déjà fait
+  isRegistered = true;
+  
+  console.log("🏗️ Enregistrement global des blocs (Unique)...");
 
   // --- 1. MAZE ---
   Blockly.defineBlocksWithJsonArray([
@@ -19,10 +25,10 @@ export const registerAllBlocks = () => {
     }
   ]);
   
-  javascriptGenerator.forBlock['maze_move_forward'] = () => 'actions.push("MOVE");\n';
+  javascriptGenerator.forBlock['maze_move_forward'] = (block) => `actions.push({type: "MOVE", id: "${block.id}"});\n`;
   javascriptGenerator.forBlock['maze_turn'] = (block) => {
     const dir = block.getFieldValue('DIR');
-    return `actions.push("TURN_${dir}");\n`;
+    return `actions.push({type: "TURN_${dir}", id: "${block.id}"});\n`;
   };
 
   // --- 2. TURTLE ---
@@ -52,26 +58,32 @@ export const registerAllBlocks = () => {
     }
   ]);
 
-  javascriptGenerator.forBlock['turtle_move'] = (block) => `actions.push({type: 'MOVE', dist: ${javascriptGenerator.valueToCode(block, 'VALUE', javascriptGenerator.ORDER_ATOMIC) || '0'}});\n`;
+  javascriptGenerator.forBlock['turtle_move'] = (block) => {
+    const val = javascriptGenerator.valueToCode(block, 'VALUE', javascriptGenerator.ORDER_ATOMIC) || '0';
+    return `actions.push({type: 'MOVE', id: "${block.id}", dist: ${val}});\n`;
+  };
+  
   javascriptGenerator.forBlock['turtle_turn'] = (block) => {
     const dir = block.getFieldValue('DIR');
     const val = javascriptGenerator.valueToCode(block, 'VALUE', javascriptGenerator.ORDER_ATOMIC) || '0';
-    return `actions.push({type: 'TURN', angle: ${dir === 'LEFT' ? val : `-${val}`}});\n`;
+    const angle = dir === 'LEFT' ? val : `-${val}`;
+    return `actions.push({type: 'TURN', id: "${block.id}", angle: ${angle}});\n`;
   };
-  javascriptGenerator.forBlock['turtle_pen'] = (block) => `actions.push({type: 'PEN', state: '${block.getFieldValue('STATE')}'});\n`;
-  javascriptGenerator.forBlock['turtle_color'] = (block) => `actions.push({type: 'COLOR', color: '${block.getFieldValue('COLOR')}'});\n`;
-
-  // --- 3. STANDARDS (Variables, Print, Listes) ---
-  // On réintègre ici le contenu de StandardBlocks pour tout centraliser
   
-  // Variables Set (Secure)
+  javascriptGenerator.forBlock['turtle_pen'] = (block) => 
+    `actions.push({type: 'PEN', id: "${block.id}", state: '${block.getFieldValue('STATE')}'});\n`;
+  
+  javascriptGenerator.forBlock['turtle_color'] = (block) => 
+    `actions.push({type: 'COLOR', id: "${block.id}", color: '${block.getFieldValue('COLOR')}'});\n`;
+
+  // --- 3. STANDARDS ---
+  
   javascriptGenerator.forBlock['variables_set'] = (block) => {
     const argument0 = javascriptGenerator.valueToCode(block, 'VALUE', javascriptGenerator.ORDER_ATOMIC) || '0';
     const varName = block.getField('VAR').getText();
-    return `try { ${varName} = ${argument0}; actions.push({type: 'SET', var: '${varName}', val: ${varName}}); } catch(e) { console.error(e); }\n`;
+    return `try { ${varName} = ${argument0}; actions.push({type: 'SET', id: "${block.id}", var: '${varName}', val: ${varName}}); } catch(e) { console.error(e); }\n`;
   };
 
-  // Text Print
   if (!Blockly.Blocks['text_print']) {
     Blockly.defineBlocksWithJsonArray([{
       "type": "text_print", "message0": "afficher %1", "args0": [{ "type": "input_value", "name": "TEXT" }],
@@ -80,23 +92,19 @@ export const registerAllBlocks = () => {
   }
   javascriptGenerator.forBlock['text_print'] = (block) => {
     const msg = javascriptGenerator.valueToCode(block, 'TEXT', javascriptGenerator.ORDER_NONE) || "''";
-    return `actions.push({type: 'PRINT', msg: ${msg}});\n`;
+    return `actions.push({type: 'PRINT', id: "${block.id}", msg: ${msg}});\n`;
   };
 
-  // System Var Get
   if (!Blockly.Blocks['system_var_get']) {
     Blockly.Blocks['system_var_get'] = {
         init: function() {
-            this.jsonInit({
-                "message0": "%1", "args0": [{ "type": "field_label_serializable", "name": "VAR_NAME", "text": "VAR" }],
-                "output": null, "colour": 60, "tooltip": "Constante", "editable": false
-            });
+            this.jsonInit({ "message0": "%1", "args0": [{ "type": "field_label_serializable", "name": "VAR_NAME", "text": "VAR" }], "output": null, "colour": 60, "editable": false });
         }
     };
   }
   javascriptGenerator.forBlock['system_var_get'] = (block) => [block.getField('VAR_NAME').getText(), javascriptGenerator.ORDER_ATOMIC];
 
-  // Listes (Ta version corrigée)
+  // Listes
   const getListIndex = (block, listName) => {
       const where = block.getFieldValue('WHERE') || 'FROM_START';
       let at = '0';
@@ -136,7 +144,7 @@ export const registerAllBlocks = () => {
       const list = javascriptGenerator.valueToCode(block, 'LIST', javascriptGenerator.ORDER_MEMBER) || '[]';
       const value = javascriptGenerator.valueToCode(block, 'TO', javascriptGenerator.ORDER_ASSIGNMENT) || 'null';
       const at = getListIndex(block, list);
-      return `${list}[${at}] = ${value};\nactions.push({type: 'SET', var: '${list}', val: ${list}});\n`;
+      return `${list}[${at}] = ${value};\nactions.push({type: 'SET', id: "${block.id}", var: '${list}', val: ${list}});\n`;
   };
   javascriptGenerator.forBlock['lists_length'] = (block) => {
       const list = javascriptGenerator.valueToCode(block, 'VALUE', javascriptGenerator.ORDER_MEMBER) || '[]';

@@ -1,9 +1,15 @@
 import React from 'react';
 
-export default function FeedbackModal({ isOpen, stats, token, onReplay, onMenu, onNext }) {
+export default function FeedbackModal({ isOpen, stats, token, status, onReplay, onMenu, onNext }) {
   if (!isOpen) return null;
 
+  const isWin = status === 'WON';
+  const isFail = status === 'FAILED'; // Code fini mais dessin faux
+  const isLost = status === 'LOST';   // Crash (mur)
+
   const renderStars = () => {
+    if (!isWin) return <div style={{fontSize:'40px'}}>😕</div>;
+    
     const stars = [];
     for (let i = 0; i < 3; i++) {
       stars.push(
@@ -19,45 +25,60 @@ export default function FeedbackModal({ isOpen, stats, token, onReplay, onMenu, 
     return stars;
   };
 
+  let title = "Niveau Terminé !";
+  let message = stats.stars === 3 ? "✨ Code Parfait !" : "💡 Tu peux optimiser...";
+  let color = "#27ae60";
+
+  if (isFail) {
+      title = "Presque...";
+      message = "Le résultat ne correspond pas exactement au modèle. Vérifie ton code !";
+      color = "#e67e22";
+  } else if (isLost) {
+      title = "Aïe !";
+      message = "Le robot a rencontré un obstacle.";
+      color = "#c0392b";
+  }
+
   return (
     <div style={styles.overlay}>
       <div style={styles.modal}>
-        <h1 style={{margin: 0, color: '#27ae60'}}>Niveau Terminé !</h1>
+        <h1 style={{margin: 0, color: color}}>{title}</h1>
         
         <div style={{margin: '10px 0'}}>
           {renderStars()}
         </div>
 
         <div style={styles.stats}>
-          <p>🧱 Blocs utilisés : <strong>{stats.blockCount}</strong> / {stats.target}</p>
-          <p>{stats.stars === 3 ? "✨ Code Parfait !" : "💡 Tu peux optimiser..."}</p>
+          {isWin ? (
+             <p>🧱 Blocs utilisés : <strong>{stats.blockCount}</strong> / {stats.target}</p>
+          ) : (
+             <p style={{fontWeight:'bold', color:'#555'}}>Essaie encore !</p>
+          )}
+          <p>{message}</p>
         </div>
 
-        <div style={styles.proofSection}>
-          <p style={{fontSize: '0.9em', marginBottom: '5px'}}>🔑 Code de preuve (à donner au prof) :</p>
-          <div style={styles.tokenBox}>
-            {token}
-          </div>
-          <button 
-            onClick={() => navigator.clipboard.writeText(token)}
-            style={styles.copyBtn}
-          >
-            Copier le code
-          </button>
-        </div>
+        {isWin && (
+            <div style={styles.proofSection}>
+            <p style={{fontSize: '0.9em', marginBottom: '5px'}}>🔑 Code de preuve :</p>
+            <div style={styles.tokenBox}>
+                {token}
+            </div>
+            <button onClick={() => navigator.clipboard.writeText(token)} style={styles.copyBtn}>
+                Copier le code
+            </button>
+            </div>
+        )}
 
         <div style={styles.actions}>
           <button onClick={onReplay} style={styles.replayBtn}>
-            🔄 Rejouer pour améliorer
+            🔄 Recommencer
           </button>
           
-          {/* NOUVEAU : Bouton Menu */}
           <button onClick={onMenu} style={{...styles.replayBtn, background: '#95a5a6', marginLeft: '10px'}}>
-                   ☰ Menu
+             ☰ Menu
           </button>
 
-          {/* NOUVEAU : Bouton Suivant (seulement si onNext existe) */}
-          {onNext && (
+          {isWin && onNext && (
             <button onClick={onNext} style={{...styles.replayBtn, background: '#27ae60', marginLeft: '10px'}}>
               ⏩ Suivant
             </button>

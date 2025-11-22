@@ -6,42 +6,9 @@ export const MazePlugin = {
   id: 'MAZE',
   RenderComponent: MazeRender,
 
-  // CORRECTION : Utilisation de defineBlocksWithJsonArray (Plus robuste)
+  // On laisse l'enregistrement au Core, mais on garde la fonction pour compatibilité si besoin
   registerBlocks: (Blockly, javascriptGenerator) => {
-    
-    // Définition des blocs en JSON Array (Écrase les anciennes définitions si elles existent)
-    Blockly.defineBlocksWithJsonArray([
-      {
-        "type": "maze_move_forward",
-        "message0": "Avancer ⬆️",
-        "previousStatement": null,
-        "nextStatement": null,
-        "colour": 160,
-        "tooltip": "Avance d'une case"
-      },
-      {
-        "type": "maze_turn",
-        "message0": "Tourner %1 ↪️",
-        "args0": [
-          {
-            "type": "field_dropdown",
-            "name": "DIR",
-            "options": [["à gauche ↺", "LEFT"], ["à droite ↻", "RIGHT"]]
-          }
-        ],
-        "previousStatement": null,
-        "nextStatement": null,
-        "colour": 160
-      }
-    ]);
-
-    // Générateurs JavaScript
-    javascriptGenerator.forBlock['maze_move_forward'] = () => 'actions.push("MOVE");\n';
-    
-    javascriptGenerator.forBlock['maze_turn'] = (block) => {
-      const dir = block.getFieldValue('DIR');
-      return `actions.push("TURN_${dir}");\n`;
-    };
+     // Les blocs sont désormais définis dans src/core/BlockRegistry.js
   },
 
   getToolboxXML: (allowedBlocks, levelInputs, hiddenVars, lockedVars) => {
@@ -58,7 +25,11 @@ export const MazePlugin = {
     let { x, y, dir } = state;
     let status = 'RUNNING';
 
-    if (action === 'MOVE') {
+    // --- CORRECTION CRITIQUE ICI ---
+    // On récupère la commande, qu'elle soit une String (vieux) ou un Objet (nouveau avec ID)
+    const cmd = (typeof action === 'object' && action.type) ? action.type : action;
+
+    if (cmd === 'MOVE') {
       let nextX = x, nextY = y;
       if (dir === 0) nextY--; else if (dir === 1) nextX++; else if (dir === 2) nextY++; else if (dir === 3) nextX--;
       
@@ -69,8 +40,8 @@ export const MazePlugin = {
       } else {
         status = 'LOST';
       }
-    } else if (action.startsWith('TURN_')) {
-      const side = action.split('_')[1];
+    } else if (cmd && cmd.startsWith('TURN_')) {
+      const side = cmd.split('_')[1];
       dir = (side === 'LEFT') ? (dir + 3) % 4 : (dir + 1) % 4;
     }
 
