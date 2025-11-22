@@ -24,7 +24,7 @@ export default function TurtleEditor({ levelData, onUpdate }) {
   const toCanvasX = (mathX) => PREVIEW_SIZE / 2 + mathX;
   const toCanvasY = (mathY) => PREVIEW_SIZE / 2 - mathY;
   
-  const rotation = -startDir;
+  const rotation = startDir - 90; // Même logique que le renderer principal
 
   return (
     <div style={{display:'flex', flexDirection:'column', gap:'20px'}}>
@@ -94,10 +94,10 @@ export default function TurtleEditor({ levelData, onUpdate }) {
                 style={{width: '100%', cursor:'pointer'}}
             />
             <div style={{display:'flex', justifyContent:'space-between', fontSize:'0.7rem', color:'#999'}}>
-                <span>0° (Est)</span>
-                <span>90° (Nord)</span>
-                <span>180° (Ouest)</span>
-                <span>270° (Sud)</span>
+                <span>0° (Nord)</span>
+                <span>90° (Est)</span>
+                <span>180° (Sud)</span>
+                <span>270° (Ouest)</span>
             </div>
         </div>
       </div>

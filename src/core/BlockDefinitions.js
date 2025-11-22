@@ -68,19 +68,18 @@ export const BLOCK_DEFINITIONS = {
   // --- INTERACTIONS ---
   'text_print': '<block type="text_print"></block>',
   'text_prompt_ext': '<block type="text_prompt_ext"><value name="TEXT"><shadow type="text"><field name="TEXT">?</field></shadow></value></block>',
-  
-  // Note : variables_set est géré dynamiquement
 };
 
-// --- TRADUCTION FRANÇAISE ---
+// --- TRADUCTION FRANÇAISE UNIQUE & ÉDITION ---
 export const BLOCK_LABELS = {
-  // Maze
-  'maze_move_forward': 'Avancer',
-  'maze_turn': 'Tourner',
+  // Maze (Modifié selon ta demande)
+  'maze_move_forward': 'Avancer ✥', 
+  'maze_turn': 'Pivoter 🗘',
   
-  // Turtle
+  // Turtle (On garde cohérent ou on laisse "Tourner" ?)
+  // Pour l'instant je mets Pivoter aussi pour la cohérence pédagogique
   'turtle_move': 'Avancer 🐢',
-  'turtle_turn': 'Tourner 🐢',
+  'turtle_turn': 'Pivoter 🐢',
   'turtle_pen': 'Stylo ✏️',
   'turtle_color': 'Couleur 🎨',
   
@@ -109,6 +108,7 @@ export const BLOCK_LABELS = {
   'text_prompt_ext': 'Demander saisie'
 };
 
+// Configuration des catégories
 export const CATEGORIES_BY_TYPE = {
   'MAZE': ['Mouvements', 'Logique'],
   'TURTLE': ['Tortue', 'Logique', 'Mathématiques', 'Variables'],
@@ -121,16 +121,16 @@ export const CATEGORY_CONTENTS = {
   'Logique': ['controls_repeat_ext', 'controls_whileUntil', 'controls_if', 'logic_compare', 'logic_operation'],
   'Mathématiques': ['math_number', 'math_arithmetic', 'math_modulo', 'math_random_int'],
   'Listes': ['lists_create_with', 'lists_getIndex', 'lists_setIndex', 'lists_length'],
-  'Variables': ['variables_set'], // <--- C'ÉTAIT L'OUBLI !
+  'Variables': ['variables_set'],
   'Interactions': ['text_print', 'text_prompt_ext']
 };
 
-// Générateur pour l'ÉLÈVE
+// --- GÉNÉRATEURS ---
+
 export const generateToolbox = (allowedBlocks, levelInputs, hiddenVars = [], lockedVars = []) => {
   return buildToolboxXML(allowedBlocks, levelInputs, hiddenVars, lockedVars);
 };
 
-// Générateur pour le PROF (donne TOUT)
 export const generateMasterToolbox = (type, levelInputs, hiddenVars = [], lockedVars = []) => {
   const categories = CATEGORIES_BY_TYPE[type] || [];
   let allBlocks = []; 
@@ -163,8 +163,6 @@ const buildToolboxXML = (allowedBlocks, levelInputs, hiddenVars, lockedVars, for
               }
           });
           
-          // Mode dossier pour variables si écriture activée ou mode Prof (forceFull)
-          // Note : forceFull permet au prof de voir le dossier Variables même s'il l'a décoché pour l'élève
           if (remainingBlocks.has('variables_set') || (forceFull && variableXml)) {
              xmlContent += `<category name="Variables" colour="330">${variableXml}</category>`;
              hasCategories = true;
@@ -180,14 +178,9 @@ const buildToolboxXML = (allowedBlocks, levelInputs, hiddenVars, lockedVars, for
     const selectedInCat = catBlockList.filter(b => remainingBlocks.has(b));
     if (selectedInCat.length === 0 && !forceFull) return;
 
-    // Mode Prof : Affiche tout si la catégorie est pertinente pour ce type de jeu
-    const currentTypeCats = Object.values(CATEGORIES_BY_TYPE).flat(); 
-    // Petite astuce : on ne veut pas afficher "Tortue" dans "Maze" même en mode Prof
-    // La fonction appelante filtre déjà via CATEGORIES_BY_TYPE, donc on peut y aller.
-
     const isFullCategory = forceFull || (selectedInCat.length === catBlockList.length);
 
-    if (isFullCategory && selectedInCat.length > 0) {
+    if (isFullCategory && (forceFull || selectedInCat.length > 0)) {
       let colour = '0'; 
       if (catName === 'Mouvements') colour = '120';
       if (catName === 'Tortue') colour = '160';
@@ -197,7 +190,9 @@ const buildToolboxXML = (allowedBlocks, levelInputs, hiddenVars, lockedVars, for
       if (catName === 'Interactions') colour = '160';
 
       xmlContent += `<category name="${catName}" colour="${colour}">`;
-      selectedInCat.forEach(blockType => {
+      const blocksToAdd = forceFull ? catBlockList : Array.from(selectedInCat);
+      
+      blocksToAdd.forEach(blockType => {
         if (BLOCK_DEFINITIONS[blockType]) {
           xmlContent += BLOCK_DEFINITIONS[blockType];
           remainingBlocks.delete(blockType);
@@ -219,7 +214,7 @@ const buildToolboxXML = (allowedBlocks, levelInputs, hiddenVars, lockedVars, for
   // 4. FINAL
   if (hasCategories) {
       if (orphansXml) {
-          xmlContent += `<category name="⭐ Actions" colour="0">${orphansXml}</category>`;
+          xmlContent += `<category name="⭐ Divers" colour="0">${orphansXml}</category>`;
       }
   } else {
       xmlContent += orphansXml;

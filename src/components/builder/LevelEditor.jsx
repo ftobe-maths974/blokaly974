@@ -8,8 +8,13 @@ import { MazePlugin } from '../../plugins/MazePlugin';
 import { MathPlugin } from '../../plugins/MathPlugin';
 import { TurtlePlugin } from '../../plugins/TurtlePlugin';
 import { registerAllBlocks } from '../../core/BlockRegistry';
-import { generateToolbox, generateMasterToolbox, CATEGORIES_BY_TYPE, CATEGORY_CONTENTS } from '../../core/BlockDefinitions'; 
-// AJOUT : Import de la config par défaut du Maze pour le reset
+import { 
+    generateToolbox, 
+    generateMasterToolbox, 
+    CATEGORIES_BY_TYPE, 
+    CATEGORY_CONTENTS,
+    BLOCK_LABELS // <--- Import des traductions/icônes centralisées
+} from '../../core/BlockDefinitions'; 
 import { MAZE_CONFIG } from '../../core/adapters/MazeAdapter';
 
 export default function LevelEditor({ levelData, onUpdate }) {
@@ -29,39 +34,32 @@ export default function LevelEditor({ levelData, onUpdate }) {
 
   const editorConfig = { scrollbars: true, trashcan: true, readOnly: false };
   
-  // --- CORRECTION ICI : RESET INTELLIGENT ---
   const handleTypeChange = (newType) => {
     let newDefaults = {};
-
-    // Si on passe en mode MAZE, on force une position valide et une grille par défaut
     if (newType === 'MAZE') {
         newDefaults = {
-            grid: MAZE_CONFIG.defaultGrid, // Remet la grille propre
-            startPos: { x: 1, y: 1, dir: 1 }, // Position du drapeau par défaut
+            grid: MAZE_CONFIG.defaultGrid,
+            startPos: { x: 1, y: 1, dir: 1 },
             maxBlocks: 10
         };
-    } 
-    // Si on passe en mode TURTLE, on se met au centre (0,0)
-    else if (newType === 'TURTLE') {
+    } else if (newType === 'TURTLE') {
         newDefaults = {
-            startPos: { x: 0, y: 0, dir: 0 }, // Centre, regard vers l'Est
+            startPos: { x: 0, y: 0, dir: 0 },
             maxBlocks: 10,
-            grid: undefined // On nettoie la grille qui ne sert pas
+            grid: undefined 
         };
-    }
-    // Si on passe en mode MATH
-    else if (newType === 'MATH') {
+    } else if (newType === 'MATH') {
         newDefaults = {
             maxBlocks: 20,
-            startPos: undefined // Pas de position en maths
+            startPos: undefined
         };
     }
 
     onUpdate({ 
         ...levelData, 
         type: newType, 
-        allowedBlocks: undefined, // On reset la toolbox
-        ...newDefaults // On applique les valeurs par défaut
+        allowedBlocks: undefined,
+        ...newDefaults
     });
   };
 
@@ -167,7 +165,6 @@ export default function LevelEditor({ levelData, onUpdate }) {
                 const allChecked = categoryBlocks.every(type => currentAllowed.includes(type));
                 const isIndeterminate = categoryBlocks.some(type => currentAllowed.includes(type)) && !allChecked;
 
-                // Cacher variables si vide
                 if (catName === 'Variables' && (!levelData.inputs || Object.keys(levelData.inputs).length === 0)) return null;
 
                 return (
@@ -186,7 +183,8 @@ export default function LevelEditor({ levelData, onUpdate }) {
                           <div key={blockType} style={{margin: '4px 0'}}>
                             <label style={{cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#666'}}>
                               <input type="checkbox" checked={currentAllowed.includes(blockType)} onChange={() => toggleBlock(blockType)} style={{marginRight: '6px'}} />
-                              {blockType.replace(/_/g, ' ')}
+                              {/* C'EST ICI QUE C'EST CORRIGÉ : ON UTILISE LA TRADUCTION */}
+                              {BLOCK_LABELS[blockType] || blockType}
                             </label>
                           </div>
                         ))}

@@ -17,8 +17,9 @@ export default function TurtleRender({ state, playerPos, playerDir, modelLines }
   
   const lines = state?.lines || [];
 
+  // Conversion Math (0,0 centre) -> Canvas (0,0 haut-gauche)
   const toCanvasX = (mathX) => WIDTH / 2 + mathX;
-  const toCanvasY = (mathY) => HEIGHT / 2 - mathY;
+  const toCanvasY = (mathY) => HEIGHT / 2 - mathY; // Y Math+ vers le haut
 
   const drawLines = (ctx, linesToDraw, overrideColor = null) => {
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
@@ -55,14 +56,17 @@ export default function TurtleRender({ state, playerPos, playerDir, modelLines }
     }
   }, [lines]);
 
-  // Rotation CSS (0° = Est)
-  // On inverse la direction car en CSS la rotation est horaire, en trigo anti-horaire
-  const rotation = -dir; 
+  // --- CORRECTION ROTATION VISUELLE ---
+  // Notre système logique : 0° = N, 90° = E, 180° = S.
+  // Le SVG de la tortue pointe vers la DROITE par défaut (Est).
+  // Donc si dir = 0 (Nord), il faut tourner de -90deg.
+  // Si dir = 90 (Est), il faut tourner de 0deg.
+  const rotation = dir - 90; 
 
   return (
     <div style={{ position: 'relative', width: WIDTH, height: HEIGHT, background: 'white', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>
       
-      {/* GRILLE & AXES */}
+      {/* GRILLE */}
       <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, zIndex: 1 }}>
         <defs>
           <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
@@ -74,18 +78,17 @@ export default function TurtleRender({ state, playerPos, playerDir, modelLines }
         <line x1="0" y1={HEIGHT/2} x2={WIDTH} y2={HEIGHT/2} stroke="#ddd" strokeWidth="1" />
       </svg>
 
-      {/* CALQUES DESSIN */}
       <canvas ref={modelCanvasRef} width={WIDTH} height={HEIGHT} style={{ position: 'absolute', top: 0, left: 0, zIndex: 2, pointerEvents: 'none' }} />
       <canvas ref={canvasRef} width={WIDTH} height={HEIGHT} style={{ position: 'absolute', top: 0, left: 0, zIndex: 3 }} />
 
-      {/* AVATAR STYLE "BLOCKLY GAMES" (o>) */}
+      {/* AVATAR "o>" */}
       <div 
         style={{
           position: 'absolute',
           left: toCanvasX(x),
           top: toCanvasY(y),
           width: '40px', height: '40px', 
-          marginLeft: '-20px', marginTop: '-20px', // Centrage du conteneur
+          marginLeft: '-20px', marginTop: '-20px',
           transform: `rotate(${rotation}deg)`,
           transformOrigin: 'center center', 
           zIndex: 4,
@@ -93,11 +96,8 @@ export default function TurtleRender({ state, playerPos, playerDir, modelLines }
           pointerEvents: 'none'
         }}
       >
-        {/* Le SVG est dessiné pointant vers la DROITE (0°) */}
         <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-          {/* Cercle (Corps) */}
           <circle cx="20" cy="20" r="12" stroke="#2c3e50" strokeWidth="3" fill="rgba(255,255,255,0.8)" />
-          {/* Triangle (Tête) */}
           <path d="M 34 20 L 26 15 L 26 25 Z" fill="#2c3e50" />
         </svg>
       </div>
