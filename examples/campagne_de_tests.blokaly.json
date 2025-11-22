@@ -75,7 +75,10 @@
         ]
       },
       "instruction": "Utilise des blocs $Avancer$ pour atteindre l'arrivée.",
-      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><block type=\"controls_repeat_ext\" id=\"~sm_{P]%K2,6_/!?rYT5\" x=\"32\" y=\"21\"><value name=\"TIMES\"><shadow type=\"math_number\" id=\"|v!`qLFFpbAi-NOd%of%\"><field name=\"NUM\">4</field></shadow></value><statement name=\"DO\"><block type=\"turtle_move\" id=\"IxFkx`Amp23XXFbuj]+|\"><value name=\"VALUE\"><shadow type=\"math_number\" id=\"qiw+6KMd(M**^{)vQ|kw\"><field name=\"NUM\">50</field></shadow></value><next><block type=\"turtle_turn\" id=\"bEv:eW2}CyFt84;qD@al\"><field name=\"DIR\">LEFT</field><value name=\"VALUE\"><shadow type=\"math_number\" id=\"[i*LiOf~C!G%P,2I9!lv\"><field name=\"NUM\">90</field></shadow></value></block></next></block></statement></block></xml>"
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><block type=\"controls_repeat_ext\" id=\"~sm_{P]%K2,6_/!?rYT5\" x=\"32\" y=\"21\"><value name=\"TIMES\"><shadow type=\"math_number\" id=\"|v!`qLFFpbAi-NOd%of%\"><field name=\"NUM\">4</field></shadow></value><statement name=\"DO\"><block type=\"turtle_move\" id=\"IxFkx`Amp23XXFbuj]+|\"><value name=\"VALUE\"><shadow type=\"math_number\" id=\"qiw+6KMd(M**^{)vQ|kw\"><field name=\"NUM\">50</field></shadow></value><next><block type=\"turtle_turn\" id=\"bEv:eW2}CyFt84;qD@al\"><field name=\"DIR\">LEFT</field><value name=\"VALUE\"><shadow type=\"math_number\" id=\"[i*LiOf~C!G%P,2I9!lv\"><field name=\"NUM\">90</field></shadow></value></block></next></block></statement></block></xml>",
+      "allowedBlocks": [
+        "maze_move_forward"
+      ]
     },
     {
       "id": 2,
