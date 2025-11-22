@@ -1,6 +1,9 @@
 export const BLOCK_DEFINITIONS = {
   // --- MAZE ---
   'maze_move_forward': '<block type="maze_move_forward"></block>',
+  'maze_forever': '<block type="maze_forever"></block>',
+  'maze_if': '<block type="maze_if"></block>',
+  'maze_if_else': '<block type="maze_if_else"></block>',
   'maze_turn': `
     <block type="maze_turn"><field name="DIR">LEFT</field></block>
     <block type="maze_turn"><field name="DIR">RIGHT</field></block>
@@ -110,13 +113,14 @@ export const BLOCK_LABELS = {
 
 // Configuration des catégories
 export const CATEGORIES_BY_TYPE = {
-  'MAZE': ['Mouvements', 'Logique'],
+  'MAZE': ['Mouvements', 'Capteurs', 'Logique'],
   'TURTLE': ['Tortue', 'Logique', 'Mathématiques', 'Variables'],
   'MATH': ['Mathématiques', 'Listes', 'Variables', 'Interactions', 'Logique']
 };
 
 export const CATEGORY_CONTENTS = {
   'Mouvements': ['maze_move_forward', 'maze_turn'],
+  'Capteurs': ['maze_if', 'maze_if_else', 'maze_forever'],
   'Tortue': ['turtle_move', 'turtle_turn', 'turtle_pen', 'turtle_color'],
   'Logique': ['controls_repeat_ext', 'controls_whileUntil', 'controls_if', 'logic_compare', 'logic_operation'],
   'Mathématiques': ['math_number', 'math_arithmetic', 'math_modulo', 'math_random_int'],

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import * as Blockly from 'blockly';
 import { javascriptGenerator } from 'blockly/javascript';
 import { generateProofToken } from '../core/validation';
+import { MAZE_CONFIG } from '../core/adapters/MazeAdapter';
 
 export function useGameRunner(workspaceRef, plugin, safeData) {
   // --- ÉTATS ---
@@ -29,8 +30,10 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
         const headlessWs = new Blockly.Workspace();
         const xml = Blockly.utils.xml.textToDom(safeData.solutionBlocks);
         Blockly.Xml.domToWorkspace(xml, headlessWs);
+        
         javascriptGenerator.init(headlessWs);
         const code = javascriptGenerator.workspaceToCode(headlessWs);
+        
         const actions = [];
         new Function('actions', code)(actions);
         
@@ -90,9 +93,7 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
     if (step >= actions.length) return false; 
 
     const action = actions[step];
-    if (action.id && workspaceRef.current) {
-        workspaceRef.current.highlightBlock(action.id);
-    }
+    if (action.id && workspaceRef.current) workspaceRef.current.highlightBlock(action.id);
 
     let actionForPlugin = action;
     if (plugin.id === 'MAZE' && typeof action === 'object' && action.type) {
@@ -115,21 +116,14 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
 
     if (stepRef.current >= actions.length) {
         if (workspaceRef.current) workspaceRef.current.highlightBlock(null);
-        
         setTimeout(() => {
             let success = false;
-            if (plugin.checkVictory) {
-                success = plugin.checkVictory(currentStateRef.current, safeData, solutionLines);
-            }
-            
+            if (plugin.checkVictory) success = plugin.checkVictory(currentStateRef.current, safeData, solutionLines);
             if (success) handleWin(workspaceRef.current.getAllBlocks(false).length);
             else handleFail();
-            
         }, 500);
-
         return false; 
     }
-
     return true; 
   }, [plugin, safeData, solutionLines, handleWin, handleFail, workspaceRef]);
 
@@ -141,7 +135,8 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
     }
   }, [executeSingleStep, speed]);
 
-  // --- COMMANDES ---
+  // --- 4. COMMANDES PUBLIQUES (AVEC API RADAR) ---
+
   const run = useCallback(() => {
     if (!workspaceRef.current) return;
     if (gameState === 'PAUSED') {
@@ -154,19 +149,54 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
     javascriptGenerator.init(workspaceRef.current);
     const userCode = javascriptGenerator.workspaceToCode(workspaceRef.current);
     
-    // --- CORRECTION TYPAGE ICI ---
     let initCode = "";
     if (safeData.inputs) {
         Object.entries(safeData.inputs).forEach(([key, val]) => {
-            // JSON.stringify garantit que les nombres restent des nombres et les chaînes des chaînes
             initCode += `var ${key} = ${JSON.stringify(val)};\n`;
         });
     }
-    // -----------------------------
+
+    // --- API SIMULATION RADAR ---
+    let simState = { 
+        x: safeData.startPos.x, 
+        y: safeData.startPos.y, 
+        dir: safeData.startPos.dir 
+    };
+    let loopCount = 0;
+
+    const api = {
+        move: () => {
+            let nextX = simState.x, nextY = simState.y;
+            if (simState.dir === 0) nextY--; else if (simState.dir === 1) nextX++; 
+            else if (simState.dir === 2) nextY++; else if (simState.dir === 3) nextX--;
+            
+            // On met à jour l'état virtuel même si c'est un mur (pour que la simu soit fidèle au crash)
+            // MAIS pour le radar, on veut juste savoir où on *serait*.
+            // Le `executeStep` réel gérera le crash.
+            // Ici on suppose que si c'est pas un mur, on avance.
+            if (MAZE_CONFIG.checkMove(safeData.grid, nextX, nextY) !== 'WALL') {
+                simState.x = nextX; simState.y = nextY;
+            }
+        },
+        turn: (d) => { 
+            const side = d; // 'LEFT' ou 'RIGHT'
+            simState.dir = (side === 'LEFT') ? (simState.dir + 3) % 4 : (simState.dir + 1) % 4;
+        },
+        isPath: (d) => MAZE_CONFIG.look(safeData.grid, simState.x, simState.y, simState.dir, d),
+        isDone: () => MAZE_CONFIG.checkMove(safeData.grid, simState.x, simState.y) === 'WIN',
+        safeCheck: () => { 
+            loopCount++; 
+            // On augmente la limite pour les grands labyrinthes
+            if (loopCount > 10000) throw new Error("Boucle infinie !"); 
+            return true; 
+        }
+    };
 
     try {
       const generatedActions = [];
-      new Function('actions', initCode + userCode)(generatedActions);
+      const fn = new Function('actions', 'api', initCode + userCode);
+      fn(generatedActions, api); // Injection de l'API
+      
       actionsRef.current = generatedActions;
       stepRef.current = 0;
       currentStateRef.current = null;
@@ -174,7 +204,7 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
       setGameState('RUNNING');
       runLoop();
     } catch (e) {
-      alert("Erreur code : " + e.message);
+      alert("Erreur exécution : " + e.message);
       setGameState('IDLE');
     }
   }, [workspaceRef, safeData, runLoop, reset, gameState]);
@@ -189,37 +219,36 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
           if (!workspaceRef.current) return;
           javascriptGenerator.init(workspaceRef.current);
           const userCode = javascriptGenerator.workspaceToCode(workspaceRef.current);
-          
-          // --- CORRECTION TYPAGE ICI AUSSI ---
           let initCode = "";
-          if (safeData.inputs) {
-              Object.entries(safeData.inputs).forEach(([key, val]) => {
-                  initCode += `var ${key} = ${JSON.stringify(val)};\n`;
-              });
-          }
-          // -----------------------------------
+          if (safeData.inputs) { Object.entries(safeData.inputs).forEach(([k, v]) => initCode += `var ${k} = ${JSON.stringify(v)};\n`); }
+          
+          // Initialisation API pour le stepForward aussi (cas "Démarrer en pas à pas")
+          let simState = { x: safeData.startPos.x, y: safeData.startPos.y, dir: safeData.startPos.dir };
+          let loopCount = 0;
+          const api = {
+            move: () => { let nextX = simState.x, nextY = simState.y; if (simState.dir === 0) nextY--; else if (simState.dir === 1) nextX++; else if (simState.dir === 2) nextY++; else if (simState.dir === 3) nextX--; if (MAZE_CONFIG.checkMove(safeData.grid, nextX, nextY) !== 'WALL') { simState.x = nextX; simState.y = nextY; } },
+            turn: (d) => { simState.dir = (d === 'LEFT') ? (simState.dir + 3) % 4 : (simState.dir + 1) % 4; },
+            isPath: (d) => MAZE_CONFIG.look(safeData.grid, simState.x, simState.y, simState.dir, d),
+            isDone: () => MAZE_CONFIG.checkMove(safeData.grid, simState.x, simState.y) === 'WIN',
+            safeCheck: () => { loopCount++; if (loopCount > 10000) throw new Error("Boucle infinie !"); return true; }
+          };
 
           try {
-            const generatedActions = [];
-            new Function('actions', initCode + userCode)(generatedActions);
-            actionsRef.current = generatedActions;
+            const gen = [];
+            const fn = new Function('actions', 'api', initCode + userCode);
+            fn(gen, api);
+            actionsRef.current = gen;
             stepRef.current = 0;
             currentStateRef.current = null;
-            
             setGameState('PAUSED');
-            executeSingleStep(); 
-          } catch(e) { alert("Erreur : " + e.message); }
+            executeSingleStep();
+          } catch(e) { alert(e.message); }
       } else {
           if (gameState === 'RUNNING') pause();
-          executeSingleStep(); 
+          executeSingleStep();
           if (gameState !== 'WON' && gameState !== 'FAILED' && gameState !== 'LOST') setGameState('PAUSED');
       }
   }, [gameState, safeData, executeSingleStep, pause, workspaceRef]);
 
-  return {
-    speed, setSpeed,
-    engineState, gameState,
-    solutionLines, gameStats, proofToken,
-    run, reset, pause, stepForward
-  };
+  return { speed, setSpeed, engineState, gameState, solutionLines, gameStats, proofToken, run, reset, pause, stepForward };
 }

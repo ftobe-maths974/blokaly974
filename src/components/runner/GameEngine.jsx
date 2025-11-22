@@ -20,7 +20,8 @@ const workspaceConfig = {
   rtl: false, scrollbars: true, oneBasedIndex: true,
 };
 
-export default function GameEngine({ levelData, onWin }) {
+// AJOUT : Récupération de levelIndex dans les props
+export default function GameEngine({ levelData, onWin, levelIndex }) {
   const plugin = PLUGINS[levelData?.type] || MazePlugin;
   const GameView = plugin.RenderComponent;
 
@@ -74,13 +75,10 @@ export default function GameEngine({ levelData, onWin }) {
     return () => clearTimeout(timer);
   }, []);
 
-  // --- CORRECTION CRITIQUE ICI ---
   const currentToolbox = useMemo(() => {
       const result = plugin.getToolboxXML(
         safeData.allowedBlocks, safeData.inputs, safeData.hiddenVars, safeData.lockedVars 
       );
-      // Si c'est un objet { xml, hasCategories }, on prend .xml
-      // Si c'est déjà une string, on la prend telle quelle
       return result.xml || result;
   }, [plugin, safeData]);
 
@@ -94,13 +92,21 @@ export default function GameEngine({ levelData, onWin }) {
            Blockly.Xml.domToWorkspace(xmlDom, newWorkspace);
        } catch (e) {}
     }
-    // Petit fix d'affichage au chargement
     window.setTimeout(() => Blockly.svgResize(newWorkspace), 0);
   };
 
   useEffect(() => {
     if (workspaceRef.current && isReady) workspaceRef.current.updateToolbox(currentToolbox);
   }, [currentToolbox, isReady]); 
+
+  // Gestion du resize pour le panneau
+  useEffect(() => {
+    if (!workspaceRef.current) return;
+    const timer = setTimeout(() => {
+        Blockly.svgResize(workspaceRef.current);
+    }, 350); 
+    return () => clearTimeout(timer);
+  }, [isPanelOpen]);
 
   const renderProps = {
       grid: safeData.grid,
@@ -112,21 +118,14 @@ export default function GameEngine({ levelData, onWin }) {
       modelLines: solutionLines
   };
 
-  // --- AJOUT : Gestion du Redimensionnement (Panel) ---
-  useEffect(() => {
-    // Si le workspace n'est pas encore là, on ne fait rien
-    if (!workspaceRef.current) return;
-
-    // On attend la fin de la transition CSS (300ms généralement)
-    // On déclenche un resize juste après pour que Blockly remplisse l'espace
-    const timer = setTimeout(() => {
-        Blockly.svgResize(workspaceRef.current);
-    }, 350); // 300ms de transition + 50ms de sécurité
-
-    return () => clearTimeout(timer);
-  }, [isPanelOpen]); // Se déclenche à chaque ouverture/fermeture
-
   if (!isReady) return <div style={{padding: 20}}>Chargement...</div>;
+
+  // CALCUL DU TITRE AFFICHER
+  // Si levelIndex est fourni (par le Runner), on l'utilise (+1).
+  // Sinon (ex: mode test isolé), on retombe sur l'ID ou "Test".
+  const displayTitle = levelIndex !== undefined 
+    ? `Niveau ${levelIndex + 1}` 
+    : (typeof safeData.id === 'number' && safeData.id < 1000000 ? `Niveau ${safeData.id}` : "Niveau Test");
 
   return (
     <div style={{display: 'flex', height: '100%', flexDirection: 'column'}}>
@@ -155,7 +154,8 @@ export default function GameEngine({ levelData, onWin }) {
 
       <div style={{display: 'flex', flex: 1, overflow: 'hidden'}}>
         <InstructionPanel 
-            title={`Niveau ${safeData.id || ""}`} content={safeData.instruction}
+            title={displayTitle} // UTILISATION DU NOUVEAU TITRE
+            content={safeData.instruction}
             isCollapsed={!isPanelOpen} onToggle={() => setIsPanelOpen(!isPanelOpen)}
         />
 

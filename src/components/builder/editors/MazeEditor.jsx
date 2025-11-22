@@ -4,77 +4,78 @@ import { MAZE_CONFIG } from '../../../core/adapters/MazeAdapter';
 export default function MazeEditor({ levelData, onUpdate }) {
   const [selectedTool, setSelectedTool] = useState(4); // Mur par défaut
 
+  // Configuration initiale si absente
+  const startPos = levelData.startPos || { x: 1, y: 1, dir: 1 };
+  const grid = levelData.grid || MAZE_CONFIG.defaultGrid;
+
   const tools = [
     { id: 1, label: "Chemin", icon: "⬜" },
     { id: 4, label: "Mur", icon: "🧱" },
-    { id: 2, label: "Départ", icon: "🏁" },
-    { id: 3, label: "Arrivée", icon: "🏆" },
+    // On sépare le départ des autres outils de dessin
+    { id: 3, label: "Arrivée", icon: "🏁" },
   ];
 
   const handleCellClick = (rIndex, cIndex) => {
-    const currentGrid = levelData.grid || MAZE_CONFIG.defaultGrid;
-    // Copie profonde pour éviter les mutations directes
-    const newGrid = currentGrid.map(row => [...row]);
+    const newGrid = grid.map(row => [...row]);
     
-    // LOGIQUE "UN SEUL DÉPART"
-    if (selectedTool === 2) { // 2 = Départ 🏁
-      // 1. On nettoie l'ancien départ s'il existe
-      for (let y = 0; y < newGrid.length; y++) {
-        for (let x = 0; x < newGrid[y].length; x++) {
-          if (newGrid[y][x] === 2) {
-            newGrid[y][x] = 1; // On remplace par du chemin blanc
-          }
+    // Si on veut placer le départ (Robot)
+    if (selectedTool === 2) {
+        // 1. On efface l'ancien départ (le remplace par du chemin)
+        for(let y=0; y<newGrid.length; y++) {
+            for(let x=0; x<newGrid[y].length; x++) {
+                if(newGrid[y][x] === 2) newGrid[y][x] = 1;
+            }
         }
-      }
-      
-      // 2. On place le nouveau départ
-      newGrid[rIndex][cIndex] = 2;
-
-      // 3. CRUCIAL : On met à jour startPos pour que le robot suive !
-      // On garde la direction existante (ou 1 par défaut)
-      const newStartPos = { 
-        x: cIndex, 
-        y: rIndex, 
-        dir: levelData.startPos?.dir || 1 
-      };
-
-      onUpdate({ 
-        ...levelData, 
-        grid: newGrid,
-        startPos: newStartPos 
-      });
-
+        // 2. On place le nouveau
+        newGrid[rIndex][cIndex] = 2;
+        
+        // 3. On met à jour la position
+        onUpdate({ 
+            ...levelData, 
+            grid: newGrid,
+            startPos: { ...startPos, x: cIndex, y: rIndex } // On garde la direction actuelle
+        });
     } else {
-      // Cas normal (Mur, Chemin, Arrivée)
-      
-      // Si on écrase le départ, attention : le robot n'a plus de maison.
-      // (Optionnel : on pourrait empêcher d'écraser le départ sans le déplacer)
-      if (newGrid[rIndex][cIndex] === 2) {
-         // Si on efface le départ, on ne met pas à jour startPos tout de suite
-         // ou on pourrait le mettre à null, mais gardons ça simple.
-      }
-
-      newGrid[rIndex][cIndex] = selectedTool;
-      onUpdate({ ...levelData, grid: newGrid });
+        // Outils classiques
+        if (newGrid[rIndex][cIndex] === 2) {
+            // Si on écrase le départ, attention... (on laisse faire pour l'instant)
+        }
+        newGrid[rIndex][cIndex] = selectedTool;
+        onUpdate({ ...levelData, grid: newGrid });
     }
   };
 
-  // Sécurité
-  const gridToRender = levelData.grid || MAZE_CONFIG.defaultGrid;
+  const updateDirection = (newDir) => {
+      onUpdate({
+          ...levelData,
+          startPos: { ...startPos, dir: parseInt(newDir) }
+      });
+  };
 
   return (
     <div>
-      <div className="editor-toolbar" style={{marginBottom:'10px'}}>
+      {/* BARRE D'OUTILS */}
+      <div className="editor-toolbar" style={{marginBottom:'15px', display:'flex', flexWrap:'wrap', gap:'10px', justifyContent:'center'}}>
+        {/* Outil Spécial Départ */}
+        <button
+            onClick={() => setSelectedTool(2)}
+            className={`tool-btn ${selectedTool === 2 ? 'active' : ''}`}
+            style={{
+                border: selectedTool === 2 ? '2px solid #27ae60' : '1px solid #ccc',
+                background: selectedTool === 2 ? '#eafaf1' : 'white',
+            }}
+        >
+            🤖 Départ
+        </button>
+
         {tools.map((tool) => (
           <button
             key={tool.id}
             onClick={() => setSelectedTool(tool.id)}
             className={`tool-btn ${selectedTool === tool.id ? 'active' : ''}`}
             style={{
-                marginRight:'5px', padding:'5px 10px', 
                 border: selectedTool === tool.id ? '2px solid #3498db' : '1px solid #ccc',
                 background: selectedTool === tool.id ? '#e1f0fa' : 'white',
-                cursor: 'pointer'
             }}
           >
             {tool.icon} {tool.label}
@@ -82,29 +83,67 @@ export default function MazeEditor({ levelData, onUpdate }) {
         ))}
       </div>
 
-      <div className="editor-grid" style={{display:'inline-block', border:'2px solid #333'}}>
-        {gridToRender.map((row, rIndex) => (
-          <div key={rIndex} className="editor-row" style={{display:'flex'}}>
-            {row.map((cell, cIndex) => (
-              <div 
-                key={`${rIndex}-${cIndex}`}
-                className="editor-cell"
-                onClick={() => handleCellClick(rIndex, cIndex)}
-                style={{ 
-                    width:'40px', height:'40px', display:'flex', justifyContent:'center', alignItems:'center',
-                    fontSize:'24px', cursor:'pointer', border:'1px solid #eee',
-                    background: cell === 4 ? '#34495e' : '#ecf0f1' 
-                }}
-              >
-                {MAZE_CONFIG.THEME[cell]}
-              </div>
+      {/* SLIDER DIRECTION (Visible seulement si on configure le départ ou toujours ?) */}
+      <div style={{background: '#f8f9fa', padding: '10px', borderRadius: '8px', marginBottom: '15px', textAlign:'center', border:'1px solid #eee'}}>
+          <label style={{fontWeight:'bold', marginRight:'10px', color:'#2c3e50'}}>Orientation du Robot :</label>
+          <input 
+            type="range" min="0" max="3" step="1"
+            value={startPos.dir}
+            onChange={(e) => updateDirection(e.target.value)}
+            style={{cursor: 'pointer', verticalAlign: 'middle'}}
+          />
+          <span style={{marginLeft:'10px', fontWeight:'bold', color:'#27ae60'}}>
+            {['⬆️ Nord', '➡️ Est', '⬇️ Sud', '⬅️ Ouest'][startPos.dir]}
+          </span>
+      </div>
+
+      {/* GRILLE AVEC ROBOT */}
+      <div style={{display:'flex', justifyContent:'center'}}>
+        <div className="editor-grid" style={{display:'inline-block', border:'4px solid #34495e', position:'relative'}}>
+            {grid.map((row, rIndex) => (
+            <div key={rIndex} className="editor-row" style={{display:'flex'}}>
+                {row.map((cell, cIndex) => {
+                    // On vérifie si c'est la case départ pour afficher le robot
+                    const isStart = (cell === 2); // Ou on pourrait comparer avec startPos.x/y
+                    
+                    return (
+                        <div 
+                            key={`${rIndex}-${cIndex}`}
+                            className="editor-cell"
+                            onClick={() => handleCellClick(rIndex, cIndex)}
+                            style={{ 
+                                width:'40px', height:'40px', display:'flex', justifyContent:'center', alignItems:'center',
+                                fontSize:'24px', cursor:'pointer', border:'1px solid #ecf0f1',
+                                background: cell === 4 ? '#2c3e50' : (cell === 2 ? '#2ecc71' : '#fff'),
+                                position: 'relative'
+                            }}
+                        >
+                            {/* Fond de case (Mur, Arrivée...) */}
+                            <span style={{opacity: isStart ? 0.3 : 1}}>
+                                {cell === 2 ? '' : MAZE_CONFIG.THEME[cell]}
+                            </span>
+
+                            {/* Robot par dessus le départ */}
+                            {isStart && (
+                                <div style={{
+                                    position: 'absolute', 
+                                    transform: `rotate(${startPos.dir * 90}deg)`,
+                                    fontSize: '28px',
+                                    transition: 'transform 0.2s'
+                                }}>
+                                    {MAZE_CONFIG.THEME.PLAYER}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
             ))}
-          </div>
-        ))}
+        </div>
       </div>
       
-      <p style={{fontSize: '0.8rem', color: '#666', marginTop: '10px'}}>
-        💡 Astuce : Placer le drapeau "Départ" 🏁 déplace automatiquement le robot.
+      <p style={{fontSize: '0.8rem', color: '#95a5a6', marginTop: '10px', textAlign:'center'}}>
+        Cliquez sur "Départ" puis sur la grille pour placer le robot. Utilisez le curseur pour le tourner.
       </p>
     </div>
   );

@@ -133,3 +133,57 @@
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(142, 68, 173, 0.5);
 }
+
+/* =========================================
+   ANIMATION CAPTEURS BLOKALY
+   ========================================= */
+
+/* 1. Définition de l'animation (double onde qui s'étend et disparaît) */
+@keyframes sensor-pulse-light {
+  0% {
+    /* Au départ : petit point blanc opaque */
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
+  }
+  70% {
+    /* À 70% : première onde large et transparente */
+    box-shadow: 0 0 0 15px rgba(255, 255, 255, 0);
+  }
+  100% {
+    /* Fin : état final transparent pour boucler proprement */
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+  }
+}
+
+/* 2. Ciblage des blocs spécifiques dans le SVG Blockly */
+/* On utilise un sélecteur d'attribut qui cherche les classes générées par Blockly */
+
+/* Bloc : Répéter jusqu'à 🏁 */
+.blocklyDraggable[class*="blockly-block-maze_forever"] .blocklyText,
+/* Bloc : Si chemin... ❓ */
+.blocklyDraggable[class*="blockly-block-maze_if"] .blocklyText {
+  position: relative; /* Nécessaire pour positionner l'animation */
+}
+
+/* 3. Ajout de l'élément animé juste après le texte du bloc */
+.blocklyDraggable[class*="blockly-block-maze_forever"] .blocklyText::after,
+.blocklyDraggable[class*="blockly-block-maze_if"] .blocklyText::after {
+  content: '';
+  position: absolute;
+  /* Positionnement : au milieu verticalement, à droite du texte */
+  top: 50%;
+  right: -8px; 
+  transform: translateY(-50%);
+  
+  /* Le point central */
+  width: 6px;
+  height: 6px;
+  background-color: rgba(255, 255, 255, 0.9); /* Blanc légèrement transparent */
+  border-radius: 50%; /* Cercle */
+  
+  /* L'animation */
+  /* On lance l'animation définie plus haut, en boucle infinie */
+  animation: sensor-pulse-light 2s infinite ease-out;
+  
+  /* Important : ne pas bloquer les clics de souris */
+  pointer-events: none;
+}
