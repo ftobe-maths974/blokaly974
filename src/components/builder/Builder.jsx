@@ -34,6 +34,9 @@ export default function Builder() {
   // État pour le Drag & Drop
   const dragItem = useRef(null);
   const dragOverItem = useRef(null);
+  
+  // Référence pour l'input file (Import)
+  const fileInputRef = useRef(null);
 
   // 2. SAUVEGARDE AUTO
   useEffect(() => {
@@ -43,7 +46,6 @@ export default function Builder() {
   // --- GESTION DRAG & DROP ---
   const handleDragStart = (e, position) => {
     dragItem.current = position;
-    // Effet visuel (optionnel)
     e.dataTransfer.effectAllowed = "move";
   };
 
@@ -58,34 +60,67 @@ export default function Builder() {
 
     if (startIdx !== null && endIdx !== null && startIdx !== endIdx) {
         const newLevels = [...campaign.levels];
-        
-        // On déplace l'élément
         const draggedLevel = newLevels[startIdx];
         newLevels.splice(startIdx, 1);
         newLevels.splice(endIdx, 0, draggedLevel);
 
-        // Mise à jour de l'index sélectionné pour qu'il suive le niveau
-        if (currentLevelIndex === startIdx) {
-            setCurrentLevelIndex(endIdx);
-        } else if (currentLevelIndex > startIdx && currentLevelIndex <= endIdx) {
-            setCurrentLevelIndex(currentLevelIndex - 1);
-        } else if (currentLevelIndex < startIdx && currentLevelIndex >= endIdx) {
-            setCurrentLevelIndex(currentLevelIndex + 1);
-        }
+        if (currentLevelIndex === startIdx) setCurrentLevelIndex(endIdx);
+        else if (currentLevelIndex > startIdx && currentLevelIndex <= endIdx) setCurrentLevelIndex(currentLevelIndex - 1);
+        else if (currentLevelIndex < startIdx && currentLevelIndex >= endIdx) setCurrentLevelIndex(currentLevelIndex + 1);
 
         setCampaign({ ...campaign, levels: newLevels });
     }
-
-    // Reset
     dragItem.current = null;
     dragOverItem.current = null;
+  };
+
+  // --- ACTIONS IMPORT / EXPORT ---
+
+  const handleExport = () => {
+    const dataStr = JSON.stringify(campaign, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.download = `${campaign.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.blokaly.json`;
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportClick = () => {
+    if (fileInputRef.current) fileInputRef.current.click();
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        try {
+            const json = JSON.parse(event.target.result);
+            if (!json.levels || !Array.isArray(json.levels)) {
+                throw new Error("Format de fichier invalide (pas de niveaux)");
+            }
+            
+            if (confirm(`Charger la campagne "${json.title || 'Sans titre'}" ? Cela remplacera votre travail actuel.`)) {
+                setCampaign(json);
+                setCurrentLevelIndex(0);
+            }
+        } catch (err) {
+            alert("Erreur lors de l'importation : " + err.message);
+        }
+    };
+    reader.readAsText(file);
+    e.target.value = null; 
   };
 
   // --- ACTIONS CRUD ---
 
   const addLevel = () => {
     const newLevel = {
-      id: Date.now(), // ID unique basé sur le temps pour éviter les conflits
+      id: Date.now(), 
       type: 'MAZE',
       grid: MAZE_CONFIG.defaultGrid,
       startPos: {x: 1, y: 1},
@@ -99,7 +134,6 @@ export default function Builder() {
     if (campaign.levels.length <= 1) return alert("Il faut au moins un niveau !");
     const newLevels = campaign.levels.filter((_, i) => i !== index);
     
-    // Si on supprime le niveau en cours ou un avant, on décale l'index
     if (index < currentLevelIndex) setCurrentLevelIndex(currentLevelIndex - 1);
     else if (index === currentLevelIndex) setCurrentLevelIndex(Math.max(0, index - 1));
     
@@ -112,14 +146,21 @@ export default function Builder() {
     setCampaign({ ...campaign, levels: newLevels });
   };
 
+  // --- CORRECTION ICI ---
   const generateLink = () => {
     const json = JSON.stringify(campaign);
     const compressed = LZString.compressToEncodedURIComponent(json);
-    const url = `${window.location.origin}/?data=${compressed}`;
     
-    navigator.clipboard.writeText(url);
+    // On utilise l'URL actuelle complète pour garder le dossier /blokaly974/
+    const url = new URL(window.location.href);
+    url.search = `?data=${compressed}`;
+    url.hash = ''; // On nettoie le hash au cas où
+    
+    const finalUrl = url.toString();
+    
+    navigator.clipboard.writeText(finalUrl);
     alert("Lien copié ! Ouverture du test...");
-    window.location.href = url;
+    window.location.href = finalUrl;
   };
 
   return (
@@ -141,12 +182,12 @@ export default function Builder() {
         <div style={{flex: 1, overflowY: 'auto'}}>
           {campaign.levels.map((lvl, index) => (
             <div 
-              key={lvl.id} // Utiliser l'ID unique, pas l'index, pour éviter les bugs de rendu
+              key={lvl.id} 
               draggable
               onDragStart={(e) => handleDragStart(e, index)}
               onDragEnter={(e) => handleDragEnter(e, index)}
               onDragEnd={handleDragEnd}
-              onDragOver={(e) => e.preventDefault()} // Nécessaire pour autoriser le drop
+              onDragOver={(e) => e.preventDefault()} 
               onClick={() => setCurrentLevelIndex(index)}
               style={{
                 padding: '15px', 
@@ -158,14 +199,10 @@ export default function Builder() {
               }}
             >
               <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
-                  {/* Poignée de drag (visuel) */}
                   <span style={{color: '#555', fontSize: '1.2rem'}}>⋮</span>
-                  
-                  {/* Icône du type */}
                   <span style={{fontSize: '1.2rem'}} title={lvl.type}>
                     {LEVEL_ICONS[lvl.type] || '❓'}
                   </span>
-                  
                   <span style={{fontWeight: index === currentLevelIndex ? 'bold' : 'normal'}}>
                     Niveau {index + 1}
                   </span>
@@ -185,13 +222,38 @@ export default function Builder() {
         </div>
 
         {/* BOUTONS D'ACTION */}
-        <div style={{padding: '10px', borderTop: '1px solid #34495e', background: '#222'}}>
+        <div style={{padding: '10px', borderTop: '1px solid #34495e', background: '#222', display:'flex', flexDirection:'column', gap:'10px'}}>
             <button 
                 onClick={addLevel} 
-                style={{width: '100%', padding: '12px', background: '#27ae60', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold', marginBottom: '10px', borderRadius: '4px'}}
+                style={{width: '100%', padding: '10px', background: '#27ae60', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold', borderRadius: '4px'}}
             >
             + Nouveau Niveau
             </button>
+
+            <div style={{display:'flex', gap:'10px'}}>
+                <button 
+                    onClick={handleExport} 
+                    style={{flex:1, padding: '8px', background: '#34495e', color: 'white', border: '1px solid #7f8c8d', cursor: 'pointer', fontSize: '0.8rem', borderRadius: '4px'}}
+                    title="Sauvegarder en JSON"
+                >
+                📤 Export
+                </button>
+                
+                <button 
+                    onClick={handleImportClick} 
+                    style={{flex:1, padding: '8px', background: '#34495e', color: 'white', border: '1px solid #7f8c8d', cursor: 'pointer', fontSize: '0.8rem', borderRadius: '4px'}}
+                    title="Charger un JSON"
+                >
+                📥 Import
+                </button>
+                <input 
+                    type="file" 
+                    accept=".json" 
+                    ref={fileInputRef} 
+                    style={{display: 'none'}} 
+                    onChange={handleFileChange} 
+                />
+            </div>
 
             <button 
                 onClick={() => {
@@ -202,7 +264,7 @@ export default function Builder() {
                 }} 
                 style={{width: '100%', padding: '8px', background: 'none', border: '1px solid #c0392b', color: '#c0392b', cursor: 'pointer', fontSize: '0.8rem', borderRadius: '4px'}}
             >
-            🗑️ Reset Campagne
+            🗑️ Reset
             </button>
         </div>
       </div>
@@ -217,14 +279,13 @@ export default function Builder() {
              </span>
           </h2>
           <button onClick={generateLink} className="generate-btn" style={{margin: 0, width: 'auto', fontSize: '0.9rem', background: 'linear-gradient(135deg, #3498db, #2980b9)', padding: '8px 15px', boxShadow:'none'}}>
-            🚀 GÉNÉRER & TESTER
+            🚀 TESTER / PARTAGER
           </button>
         </div>
 
         <div style={{flex: 1, overflowY: 'auto', padding: '20px', background: '#f4f4f4'}}>
           {campaign.levels[currentLevelIndex] ? (
             <LevelEditor 
-                // Clé unique pour forcer le re-montage si on change de niveau
                 key={campaign.levels[currentLevelIndex].id}
                 levelData={campaign.levels[currentLevelIndex]} 
                 onUpdate={updateCurrentLevel} 
@@ -234,7 +295,6 @@ export default function Builder() {
           )}
         </div>
       </div>
-
     </div>
   );
 }
