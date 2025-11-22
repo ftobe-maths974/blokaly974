@@ -68,55 +68,86 @@ export const BLOCK_DEFINITIONS = {
   // --- INTERACTIONS ---
   'text_print': '<block type="text_print"></block>',
   'text_prompt_ext': '<block type="text_prompt_ext"><value name="TEXT"><shadow type="text"><field name="TEXT">?</field></shadow></value></block>',
+  
+  // Note : variables_set est géré dynamiquement
 };
 
-// Configuration des catégories par type de jeu
-// Exporté pour être utilisé par l'UI de l'éditeur (les checkboxes)
+// --- TRADUCTION FRANÇAISE ---
+export const BLOCK_LABELS = {
+  // Maze
+  'maze_move_forward': 'Avancer',
+  'maze_turn': 'Tourner',
+  
+  // Turtle
+  'turtle_move': 'Avancer 🐢',
+  'turtle_turn': 'Tourner 🐢',
+  'turtle_pen': 'Stylo ✏️',
+  'turtle_color': 'Couleur 🎨',
+  
+  // Logique
+  'controls_repeat_ext': 'Répéter N fois',
+  'controls_whileUntil': 'Répéter tant que',
+  'controls_if': 'Si... Alors',
+  'logic_compare': 'Comparaison (= < >)',
+  'logic_operation': 'Opérateur (ET / OU)',
+  
+  // Maths
+  'math_number': 'Nombre',
+  'math_arithmetic': 'Calcul (+ - * /)',
+  'math_modulo': 'Reste (Modulo)',
+  'math_random_int': 'Aléatoire',
+  
+  // Listes
+  'lists_create_with': 'Créer liste',
+  'lists_getIndex': 'Lire élément',
+  'lists_setIndex': 'Modifier élément',
+  'lists_length': 'Longueur liste',
+  
+  // Variables & Divers
+  'variables_set': 'Définir variable',
+  'text_print': 'Afficher message',
+  'text_prompt_ext': 'Demander saisie'
+};
+
 export const CATEGORIES_BY_TYPE = {
   'MAZE': ['Mouvements', 'Logique'],
   'TURTLE': ['Tortue', 'Logique', 'Mathématiques', 'Variables'],
   'MATH': ['Mathématiques', 'Listes', 'Variables', 'Interactions', 'Logique']
 };
 
-// Contenu de chaque catégorie
 export const CATEGORY_CONTENTS = {
   'Mouvements': ['maze_move_forward', 'maze_turn'],
   'Tortue': ['turtle_move', 'turtle_turn', 'turtle_pen', 'turtle_color'],
   'Logique': ['controls_repeat_ext', 'controls_whileUntil', 'controls_if', 'logic_compare', 'logic_operation'],
   'Mathématiques': ['math_number', 'math_arithmetic', 'math_modulo', 'math_random_int'],
   'Listes': ['lists_create_with', 'lists_getIndex', 'lists_setIndex', 'lists_length'],
+  'Variables': ['variables_set'], // <--- C'ÉTAIT L'OUBLI !
   'Interactions': ['text_print', 'text_prompt_ext']
 };
 
-// Générateur pour l'ÉLÈVE (filtre selon allowedBlocks)
+// Générateur pour l'ÉLÈVE
 export const generateToolbox = (allowedBlocks, levelInputs, hiddenVars = [], lockedVars = []) => {
   return buildToolboxXML(allowedBlocks, levelInputs, hiddenVars, lockedVars);
 };
 
-// Générateur pour le PROF (donne TOUT pour un type donné)
+// Générateur pour le PROF (donne TOUT)
 export const generateMasterToolbox = (type, levelInputs, hiddenVars = [], lockedVars = []) => {
-  // 1. Récupérer toutes les catégories pour ce type
   const categories = CATEGORIES_BY_TYPE[type] || [];
-  
-  // 2. Récupérer tous les blocs de ces catégories + variables_set (toujours dispo pour le prof)
-  let allBlocks = ['variables_set']; 
+  let allBlocks = []; 
   categories.forEach(cat => {
     if (CATEGORY_CONTENTS[cat]) {
       allBlocks = [...allBlocks, ...CATEGORY_CONTENTS[cat]];
     }
   });
-
-  // 3. Générer la toolbox complète
   return buildToolboxXML(allBlocks, levelInputs, hiddenVars, lockedVars, true);
 };
 
-// Fonction interne de construction
 const buildToolboxXML = (allowedBlocks, levelInputs, hiddenVars, lockedVars, forceFull = false) => {
   let xmlContent = '';
   let remainingBlocks = new Set(allowedBlocks || []);
   let hasCategories = false;
 
-  // --- 1. VARIABLES ---
+  // 1. VARIABLES
   let variableXml = '';
   if (levelInputs && Object.keys(levelInputs).length > 0) {
       const visibleKeys = Object.keys(levelInputs).filter(k => !hiddenVars.includes(k));
@@ -132,7 +163,9 @@ const buildToolboxXML = (allowedBlocks, levelInputs, hiddenVars, lockedVars, for
               }
           });
           
-          if (remainingBlocks.has('variables_set')) {
+          // Mode dossier pour variables si écriture activée ou mode Prof (forceFull)
+          // Note : forceFull permet au prof de voir le dossier Variables même s'il l'a décoché pour l'élève
+          if (remainingBlocks.has('variables_set') || (forceFull && variableXml)) {
              xmlContent += `<category name="Variables" colour="330">${variableXml}</category>`;
              hasCategories = true;
              variableXml = ''; 
@@ -142,16 +175,19 @@ const buildToolboxXML = (allowedBlocks, levelInputs, hiddenVars, lockedVars, for
       remainingBlocks.delete('variables_get');
   }
 
-  // --- 2. CATÉGORIES ---
+  // 2. CATÉGORIES
   Object.entries(CATEGORY_CONTENTS).forEach(([catName, catBlockList]) => {
     const selectedInCat = catBlockList.filter(b => remainingBlocks.has(b));
-    if (selectedInCat.length === 0) return;
+    if (selectedInCat.length === 0 && !forceFull) return;
 
-    // Mode Prof (forceFull) : On crée toujours le dossier
-    // Mode Élève : On crée le dossier SEULEMENT si tout est coché
+    // Mode Prof : Affiche tout si la catégorie est pertinente pour ce type de jeu
+    const currentTypeCats = Object.values(CATEGORIES_BY_TYPE).flat(); 
+    // Petite astuce : on ne veut pas afficher "Tortue" dans "Maze" même en mode Prof
+    // La fonction appelante filtre déjà via CATEGORIES_BY_TYPE, donc on peut y aller.
+
     const isFullCategory = forceFull || (selectedInCat.length === catBlockList.length);
 
-    if (isFullCategory) {
+    if (isFullCategory && selectedInCat.length > 0) {
       let colour = '0'; 
       if (catName === 'Mouvements') colour = '120';
       if (catName === 'Tortue') colour = '160';
@@ -172,7 +208,7 @@ const buildToolboxXML = (allowedBlocks, levelInputs, hiddenVars, lockedVars, for
     }
   });
 
-  // --- 3. ORPHELINS ---
+  // 3. ORPHELINS
   let orphansXml = variableXml; 
   remainingBlocks.forEach(blockType => {
      if (BLOCK_DEFINITIONS[blockType]) {
@@ -180,7 +216,7 @@ const buildToolboxXML = (allowedBlocks, levelInputs, hiddenVars, lockedVars, for
      }
   });
 
-  // --- 4. FINAL ---
+  // 4. FINAL
   if (hasCategories) {
       if (orphansXml) {
           xmlContent += `<category name="⭐ Actions" colour="0">${orphansXml}</category>`;

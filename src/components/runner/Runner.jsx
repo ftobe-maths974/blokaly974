@@ -1,38 +1,40 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'; // <--- Ajout de useCallback
 import GameEngine from './GameEngine';
 import CampaignMenu from './CampaignMenu';
 
 export default function Runner({ campaign }) {
-  // Si 'campaign' n'a pas de champ 'levels' (vieux format), on le normalise
+  // Normalisation des données de campagne
   const normalizedCampaign = campaign.levels ? campaign : { title: "Campagne", levels: [campaign] };
 
-  // Index du niveau en cours (-1 = Menu)
   const [activeLevelIndex, setActiveLevelIndex] = useState(-1);
-  
-  // Progression (Lecture depuis LocalStorage)
   const [progress, setProgress] = useState({});
 
   useEffect(() => {
-    // Charger la progression unique pour cette campagne (basée sur le titre ou un ID si on en avait un)
     const saveKey = `blokaly_save_${normalizedCampaign.title.replace(/\s/g, '_')}`;
     const saved = localStorage.getItem(saveKey);
     if (saved) {
-      setProgress(JSON.parse(saved));
+      try {
+        setProgress(JSON.parse(saved));
+      } catch (e) { console.error("Erreur chargement save", e); }
     }
   }, [normalizedCampaign]);
 
-  const handleLevelWin = (stats) => {
-    // 1. Mettre à jour la progression
-    const newProgress = { 
-      ...progress, 
-      [activeLevelIndex]: { stars: stats.stars } 
-    };
-    setProgress(newProgress);
-    
-    // 2. Sauvegarder
-    const saveKey = `blokaly_save_${normalizedCampaign.title.replace(/\s/g, '_')}`;
-    localStorage.setItem(saveKey, JSON.stringify(newProgress));
-  };
+  // --- CORRECTION ICI : useCallback pour stabiliser la fonction ---
+  const handleLevelWin = useCallback((stats) => {
+    // 1. On utilise la version fonctionnelle de setProgress pour éviter les dépendances cycliques
+    setProgress(prevProgress => {
+        const newProgress = { 
+          ...prevProgress, 
+          [activeLevelIndex]: { stars: stats.stars } 
+        };
+        
+        // 2. Sauvegarde (Effet de bord)
+        const saveKey = `blokaly_save_${normalizedCampaign.title.replace(/\s/g, '_')}`;
+        localStorage.setItem(saveKey, JSON.stringify(newProgress));
+        
+        return newProgress;
+    });
+  }, [activeLevelIndex, normalizedCampaign.title]); // Dépendances minimales
 
   const handleBackToMenu = () => {
     setActiveLevelIndex(-1);
@@ -40,13 +42,12 @@ export default function Runner({ campaign }) {
 
   // --- RENDU ---
 
-  // Cas 1 : Afficher le Menu
   if (activeLevelIndex === -1) {
     return (
       <div style={{minHeight: '100vh', background: '#ecf0f1'}}>
         <div style={{padding: '10px', background: '#333'}}>
           <button onClick={() => window.location.href = '/'} style={{color: 'white', background: 'none', border: 'none', cursor: 'pointer'}}>
-            ⬅ Retour à l'éditeur (Reset URL)
+            ⬅ Retour à l'éditeur
           </button>
         </div>
         <CampaignMenu 
@@ -58,10 +59,8 @@ export default function Runner({ campaign }) {
     );
   }
 
-  // Cas 2 : Afficher le Jeu
   return (
     <div style={{height: '100vh', display: 'flex', flexDirection: 'column'}}>
-      {/* Header du Jeu */}
       <div style={{height: '40px', background: '#2c3e50', color: 'white', display: 'flex', alignItems: 'center', padding: '0 20px', justifyContent: 'space-between'}}>
         <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
           <button onClick={handleBackToMenu} style={{background: '#e74c3c', border: 'none', color: 'white', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer'}}>
@@ -75,7 +74,7 @@ export default function Runner({ campaign }) {
       <GameEngine
         key={activeLevelIndex}
         levelData={normalizedCampaign.levels[activeLevelIndex]} 
-        onWin={handleLevelWin} // Callback quand l'élève gagne
+        onWin={handleLevelWin} // Cette fonction est maintenant stable !
       />
     </div>
   );

@@ -8,14 +8,19 @@ import { MazePlugin } from '../../plugins/MazePlugin';
 import { MathPlugin } from '../../plugins/MathPlugin';
 import { TurtlePlugin } from '../../plugins/TurtlePlugin';
 import { registerAllBlocks } from '../../core/BlockRegistry';
-import { generateToolbox, generateMasterToolbox, CATEGORIES_BY_TYPE, CATEGORY_CONTENTS } from '../../core/BlockDefinitions'; 
+import { 
+    generateToolbox, 
+    generateMasterToolbox, 
+    CATEGORIES_BY_TYPE, 
+    CATEGORY_CONTENTS,
+    BLOCK_LABELS // <--- Import des traductions
+} from '../../core/BlockDefinitions'; 
 
 export default function LevelEditor({ levelData, onUpdate }) {
   const workspaceRef = useRef(null);
-  const [codeMode, setCodeMode] = useState('START'); // 'START' (Élève) ou 'SOLUTION' (Prof)
+  const [codeMode, setCodeMode] = useState('START');
   const [isReady, setIsReady] = useState(false);
 
-  // Init unique
   useEffect(() => {
     const timer = setTimeout(() => {
         try {
@@ -33,9 +38,6 @@ export default function LevelEditor({ levelData, onUpdate }) {
   };
   const currentType = levelData.type || 'MAZE';
 
-  // --- 1. CALCUL DES DEUX TOOLBOXES ---
-  
-  // A. La Toolbox "Élève" (Celle qu'on construit avec les checkboxes)
   const studentToolboxResult = useMemo(() => generateToolbox(
       levelData.allowedBlocks, 
       levelData.inputs, 
@@ -43,7 +45,6 @@ export default function LevelEditor({ levelData, onUpdate }) {
       levelData.lockedVars
   ), [levelData.allowedBlocks, levelData.inputs, levelData.hiddenVars, levelData.lockedVars]);
 
-  // B. La Toolbox "Maître" (Celle du Prof, toujours complète)
   const masterToolboxResult = useMemo(() => generateMasterToolbox(
       currentType, 
       levelData.inputs, 
@@ -51,17 +52,10 @@ export default function LevelEditor({ levelData, onUpdate }) {
       levelData.lockedVars
   ), [currentType, levelData.inputs, levelData.hiddenVars, levelData.lockedVars]);
 
-  // --- 2. SÉLECTION INTELLIGENTE ---
-  // Si on est sur l'onglet "SOLUTION", on montre tout.
-  // Si on est sur l'onglet "CODE ÉLÈVE", on montre la version restreinte (Preview).
   const activeToolbox = codeMode === 'SOLUTION' ? masterToolboxResult : studentToolboxResult;
   const editorToolboxXML = activeToolbox.xml;
   const hasCategories = activeToolbox.hasCategories;
 
-  // --- 3. CLÉ DE RESET ---
-  // On inclut 'hasCategories' dans la clé. 
-  // Si on passe d'une toolbox "Dossiers" (Prof) à une toolbox "Vrac" (Élève restreint), 
-  // la clé change -> React recrée le composant -> Pas de crash Blockly !
   const workspaceKey = `${levelData.id}-${currentType}-${codeMode}-${hasCategories ? 'CAT' : 'FLY'}`;
 
   const handleInject = (newWorkspace) => {
@@ -69,14 +63,12 @@ export default function LevelEditor({ levelData, onUpdate }) {
     window.setTimeout(() => Blockly.svgResize(newWorkspace), 0);
   };
 
-  // Mise à jour dynamique (ex: cocher une case met à jour la toolbox élève en temps réel)
   useEffect(() => {
     if (workspaceRef.current && isReady) {
         workspaceRef.current.updateToolbox(editorToolboxXML);
     }
   }, [editorToolboxXML, isReady]);
 
-  // --- GESTIONNAIRES UI ---
   const toggleBlock = (blockType) => {
     const currentAllowed = levelData.allowedBlocks || [];
     const newAllowed = currentAllowed.includes(blockType) ? currentAllowed.filter(t => t !== blockType) : [...currentAllowed, blockType];
@@ -96,27 +88,13 @@ export default function LevelEditor({ levelData, onUpdate }) {
 
   const displayedCategories = CATEGORIES_BY_TYPE[currentType] || [];
   const getTabStyle = (isActive) => ({ flex: 1, padding: '6px', border: 'none', borderRadius: '4px', cursor: 'pointer', background: isActive ? 'white' : '#eee', fontWeight: isActive ? 'bold' : 'normal', fontSize: '0.8rem', transition: 'all 0.2s' });
-  
-  // Style des onglets du bas avec indicateur visuel de la toolbox active
-  const tabStyle = (isActive, mode) => {
-      const color = mode === 'SOLUTION' ? '#27ae60' : '#2980b9'; // Vert pour Prof, Bleu pour Élève
-      return { 
-        padding: '10px 20px', cursor: 'pointer', border: 'none', 
-        borderBottom: isActive ? `3px solid ${color}` : '3px solid transparent', 
-        background: isActive ? (mode === 'SOLUTION' ? '#f0fbf4' : '#f0f8ff') : 'transparent', 
-        fontWeight: isActive ? 'bold' : 'normal', 
-        color: isActive ? color : '#7f8c8d', 
-        fontSize: '0.95rem', transition: 'all 0.2s' 
-      };
-  };
+  const tabStyle = (isActive, mode) => ({ padding: '10px 20px', cursor: 'pointer', border: 'none', borderBottom: isActive ? (mode === 'SOLUTION' ? '3px solid #27ae60' : '3px solid #2980b9') : '3px solid transparent', background: isActive ? (mode === 'SOLUTION' ? '#f0fbf4' : '#f0f8ff') : 'transparent', fontWeight: isActive ? 'bold' : 'normal', color: isActive ? (mode === 'SOLUTION' ? '#27ae60' : '#2980b9') : '#7f8c8d', fontSize: '0.95rem', transition: 'all 0.2s' });
 
   if (!isReady) return <div style={{padding: 50, textAlign: 'center', color: '#666'}}>Chargement...</div>;
 
   return (
     <div className="editor-wrapper" style={{display: 'flex', flexDirection: 'column', height: '100%'}}>
       <div style={{display: 'flex', gap: '15px', flex: 1, minHeight: '400px'}}>
-        
-        {/* GAUCHE */}
         <div style={{flex: 3, display: 'flex', flexDirection: 'column'}}>
             <div style={{display: 'flex', marginBottom: '10px', background: '#ecf0f1', padding: '4px', borderRadius: '6px', gap:'5px'}}>
                 <button onClick={() => handleTypeChange('MAZE')} style={getTabStyle(currentType === 'MAZE')}>🏰 Labyrinthe</button>
@@ -130,7 +108,6 @@ export default function LevelEditor({ levelData, onUpdate }) {
             </div>
         </div>
 
-        {/* DROITE */}
         <div style={{flex: 1, minWidth: '220px', background: 'white', padding: '15px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)', overflowY: 'auto', border: '1px solid #eee'}}>
           <h4 style={{marginTop: 0, marginBottom: '10px', color: '#2c3e50', borderBottom:'2px solid #eee', paddingBottom:'5px'}}>⚙️ Propriétés</h4>
           
@@ -158,6 +135,9 @@ export default function LevelEditor({ levelData, onUpdate }) {
                 const allChecked = categoryBlocks.every(type => currentAllowed.includes(type));
                 const isIndeterminate = categoryBlocks.some(type => currentAllowed.includes(type)) && !allChecked;
 
+                // Gestion spéciale pour les variables : on cache si pas de variable définie
+                if (catName === 'Variables' && (!levelData.inputs || Object.keys(levelData.inputs).length === 0)) return null;
+
                 return (
                   <details key={catName} open={allChecked || isIndeterminate} style={{marginBottom: '5px', border:'1px solid #f0f0f0', borderRadius:'4px'}}>
                     <summary style={{padding: '6px', cursor: 'pointer', background: '#f9f9f9', fontWeight: 'bold', color: '#555', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
@@ -174,7 +154,8 @@ export default function LevelEditor({ levelData, onUpdate }) {
                           <div key={blockType} style={{margin: '4px 0'}}>
                             <label style={{cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#666'}}>
                               <input type="checkbox" checked={currentAllowed.includes(blockType)} onChange={() => toggleBlock(blockType)} style={{marginRight: '6px'}} />
-                              {blockType.replace(/_/g, ' ')}
+                              {/* Utilisation du dictionnaire de traduction */}
+                              {BLOCK_LABELS[blockType] || blockType}
                             </label>
                           </div>
                         ))}
@@ -186,25 +167,17 @@ export default function LevelEditor({ levelData, onUpdate }) {
         </div>
       </div>
 
-      {/* BAS */}
       <div style={{height: '350px', marginTop: '15px', background: 'white', padding: '0', borderRadius: '8px', border: '1px solid #ccc', display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
         <div style={{display: 'flex', background: '#ecf0f1', borderBottom: '1px solid #bdc3c7'}}>
-            <button onClick={() => setCodeMode('START')} style={tabStyle(codeMode === 'START', 'START')}>
-                🧩 Code Élève (Preview)
-            </button>
-            <button onClick={() => setCodeMode('SOLUTION')} style={tabStyle(codeMode === 'SOLUTION', 'SOLUTION')}>
-                ✅ Solution Prof (Complet)
-            </button>
+            <button onClick={() => setCodeMode('START')} style={tabStyle(codeMode === 'START', 'START')}>🧩 Code Élève (Preview)</button>
+            <button onClick={() => setCodeMode('SOLUTION')} style={tabStyle(codeMode === 'SOLUTION', 'SOLUTION')}>✅ Solution Prof (Complet)</button>
         </div>
-        
         <div style={{flex: 1, position: 'relative', background: codeMode === 'SOLUTION' ? '#f0fbf4' : 'white'}}>
-           {/* Indicateur visuel du mode */}
            {codeMode === 'START' && (
                <div style={{position:'absolute', right:10, top:5, zIndex:10, fontSize:'0.75rem', color:'#aaa', background:'rgba(255,255,255,0.8)', padding:'2px 5px', borderRadius:'3px'}}>
-                   Vue : Toolbox Élève (Restreinte)
+                   Vue : Toolbox Élève
                </div>
            )}
-
            <BlocklyWorkspace
               key={workspaceKey}
               className="blockly-div"

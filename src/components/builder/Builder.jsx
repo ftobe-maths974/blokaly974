@@ -1,20 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import LevelEditor from './LevelEditor';
 import LZString from 'lz-string';
 import { MAZE_CONFIG } from '../../core/adapters/MazeAdapter';
 
+// Mapping des icônes par type de jeu
+const LEVEL_ICONS = {
+  'MAZE': '🏰',
+  'TURTLE': '🐢',
+  'MATH': '🧪'
+};
+
 export default function Builder() {
-  // 1. CHARGEMENT : On essaie de lire la sauvegarde, sinon valeur par défaut
+  // 1. CHARGEMENT
   const [campaign, setCampaign] = useState(() => {
     const saved = localStorage.getItem('blokaly_builder_autosave');
     if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error("Erreur de lecture sauvegarde", e);
-      }
+      try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
-    // Valeur par défaut si rien n'est trouvé
     return {
       title: "Ma Nouvelle Campagne",
       levels: [{
@@ -27,40 +29,81 @@ export default function Builder() {
     };
   });
   
-  // Quel niveau est en train d'être édité ? (Index dans le tableau)
-  // On vérifie que l'index existe toujours (cas de suppression)
   const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
+  
+  // État pour le Drag & Drop
+  const dragItem = useRef(null);
+  const dragOverItem = useRef(null);
 
-  // 2. SAUVEGARDE : À chaque changement de 'campaign', on écrit dans le storage
+  // 2. SAUVEGARDE AUTO
   useEffect(() => {
     localStorage.setItem('blokaly_builder_autosave', JSON.stringify(campaign));
   }, [campaign]);
 
-  // --- ACTIONS ---
+  // --- GESTION DRAG & DROP ---
+  const handleDragStart = (e, position) => {
+    dragItem.current = position;
+    // Effet visuel (optionnel)
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragEnter = (e, position) => {
+    dragOverItem.current = position;
+    e.preventDefault();
+  };
+
+  const handleDragEnd = () => {
+    const startIdx = dragItem.current;
+    const endIdx = dragOverItem.current;
+
+    if (startIdx !== null && endIdx !== null && startIdx !== endIdx) {
+        const newLevels = [...campaign.levels];
+        
+        // On déplace l'élément
+        const draggedLevel = newLevels[startIdx];
+        newLevels.splice(startIdx, 1);
+        newLevels.splice(endIdx, 0, draggedLevel);
+
+        // Mise à jour de l'index sélectionné pour qu'il suive le niveau
+        if (currentLevelIndex === startIdx) {
+            setCurrentLevelIndex(endIdx);
+        } else if (currentLevelIndex > startIdx && currentLevelIndex <= endIdx) {
+            setCurrentLevelIndex(currentLevelIndex - 1);
+        } else if (currentLevelIndex < startIdx && currentLevelIndex >= endIdx) {
+            setCurrentLevelIndex(currentLevelIndex + 1);
+        }
+
+        setCampaign({ ...campaign, levels: newLevels });
+    }
+
+    // Reset
+    dragItem.current = null;
+    dragOverItem.current = null;
+  };
+
+  // --- ACTIONS CRUD ---
 
   const addLevel = () => {
     const newLevel = {
-      id: campaign.levels.length + 1,
+      id: Date.now(), // ID unique basé sur le temps pour éviter les conflits
       type: 'MAZE',
-      grid: [
-          [4, 4, 4, 4, 4, 4, 4, 4],
-          [4, 2, 1, 1, 1, 1, 3, 4],
-          [4, 4, 4, 4, 4, 4, 4, 4],
-          [4, 4, 4, 4, 4, 4, 4, 4],
-          [4, 4, 4, 4, 4, 4, 4, 4]
-      ],
+      grid: MAZE_CONFIG.defaultGrid,
       startPos: {x: 1, y: 1},
       maxBlocks: 10
     };
     setCampaign({ ...campaign, levels: [...campaign.levels, newLevel] });
-    setCurrentLevelIndex(campaign.levels.length); // Basculer sur le nouveau
+    setCurrentLevelIndex(campaign.levels.length); 
   };
 
   const deleteLevel = (index) => {
     if (campaign.levels.length <= 1) return alert("Il faut au moins un niveau !");
     const newLevels = campaign.levels.filter((_, i) => i !== index);
+    
+    // Si on supprime le niveau en cours ou un avant, on décale l'index
+    if (index < currentLevelIndex) setCurrentLevelIndex(currentLevelIndex - 1);
+    else if (index === currentLevelIndex) setCurrentLevelIndex(Math.max(0, index - 1));
+    
     setCampaign({ ...campaign, levels: newLevels });
-    setCurrentLevelIndex(0);
   };
 
   const updateCurrentLevel = (newLevelData) => {
@@ -82,74 +125,112 @@ export default function Builder() {
   return (
     <div className="builder-container" style={{display: 'flex', padding: 0, height: '100vh', overflow: 'hidden'}}>
       
-      {/* SIDEBAR GAUCHE : Liste des niveaux */}
+      {/* SIDEBAR GAUCHE */}
       <div style={{width: '250px', background: '#2c3e50', color: 'white', display: 'flex', flexDirection: 'column', borderRight: '1px solid #ccc'}}>
         <div style={{padding: '20px', background: '#1a252f'}}>
-          <h2 style={{fontSize: '1.2rem', margin: 0}}>🗂️ Niveaux</h2>
+          <h2 style={{fontSize: '1.2rem', margin: 0}}>🗂️ Campagne</h2>
+          <input 
+            type="text" 
+            value={campaign.title} 
+            onChange={(e) => setCampaign({...campaign, title: e.target.value})}
+            style={{background: 'transparent', border: 'none', borderBottom: '1px solid #555', color: 'white', width: '100%', marginTop: '10px', fontSize: '0.9rem'}}
+            placeholder="Titre de la campagne..."
+          />
         </div>
         
         <div style={{flex: 1, overflowY: 'auto'}}>
           {campaign.levels.map((lvl, index) => (
             <div 
-              key={index}
+              key={lvl.id} // Utiliser l'ID unique, pas l'index, pour éviter les bugs de rendu
+              draggable
+              onDragStart={(e) => handleDragStart(e, index)}
+              onDragEnter={(e) => handleDragEnter(e, index)}
+              onDragEnd={handleDragEnd}
+              onDragOver={(e) => e.preventDefault()} // Nécessaire pour autoriser le drop
               onClick={() => setCurrentLevelIndex(index)}
               style={{
                 padding: '15px', 
-                cursor: 'pointer',
+                cursor: 'grab',
                 background: index === currentLevelIndex ? '#3498db' : 'transparent',
                 borderBottom: '1px solid #34495e',
-                display: 'flex', justifyContent: 'space-between'
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                transition: 'background 0.2s'
               }}
             >
-              <span>Niveau {index + 1}</span>
+              <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+                  {/* Poignée de drag (visuel) */}
+                  <span style={{color: '#555', fontSize: '1.2rem'}}>⋮</span>
+                  
+                  {/* Icône du type */}
+                  <span style={{fontSize: '1.2rem'}} title={lvl.type}>
+                    {LEVEL_ICONS[lvl.type] || '❓'}
+                  </span>
+                  
+                  <span style={{fontWeight: index === currentLevelIndex ? 'bold' : 'normal'}}>
+                    Niveau {index + 1}
+                  </span>
+              </div>
+
               {campaign.levels.length > 1 && (
-                <button onClick={(e) => { e.stopPropagation(); deleteLevel(index); }} style={{background:'none', border:'none', color:'#e74c3c', cursor:'pointer'}}>🗑️</button>
+                <button 
+                    onClick={(e) => { e.stopPropagation(); deleteLevel(index); }} 
+                    style={{background:'none', border:'none', color:'#e74c3c', cursor:'pointer', fontSize:'0.8rem', opacity: 0.7}}
+                    title="Supprimer"
+                >
+                    🗑️
+                </button>
               )}
             </div>
           ))}
         </div>
 
-        {/* BOUTONS D'ACTION (Dans la sidebar) */}
-        <div style={{padding: '10px', borderTop: '1px solid #34495e'}}>
+        {/* BOUTONS D'ACTION */}
+        <div style={{padding: '10px', borderTop: '1px solid #34495e', background: '#222'}}>
             <button 
                 onClick={addLevel} 
                 style={{width: '100%', padding: '12px', background: '#27ae60', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold', marginBottom: '10px', borderRadius: '4px'}}
             >
-            + Ajouter un niveau
+            + Nouveau Niveau
             </button>
 
             <button 
                 onClick={() => {
-                    if(confirm("Attention, cela va effacer votre travail actuel et recharger la page !")) {
+                    if(confirm("Tout effacer ? Cette action est irréversible.")) {
                     localStorage.removeItem('blokaly_builder_autosave');
                     window.location.reload();
                     }
                 }} 
-                style={{width: '100%', padding: '8px', background: 'none', border: '1px solid #e74c3c', color: '#e74c3c', cursor: 'pointer', fontSize: '0.8rem', borderRadius: '4px'}}
+                style={{width: '100%', padding: '8px', background: 'none', border: '1px solid #c0392b', color: '#c0392b', cursor: 'pointer', fontSize: '0.8rem', borderRadius: '4px'}}
             >
-            🗑️ Tout effacer (Reset)
+            🗑️ Reset Campagne
             </button>
         </div>
       </div>
 
-      {/* ZONE CENTRALE : Éditeur */}
+      {/* ZONE CENTRALE */}
       <div style={{flex: 1, display: 'flex', flexDirection: 'column', height: '100%'}}>
         <div style={{padding: '10px 20px', borderBottom: '1px solid #ddd', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background:'white'}}>
-          <h2 style={{margin:0}}>Édition Niveau {currentLevelIndex + 1}</h2>
-          <button onClick={generateLink} className="generate-btn" style={{margin: 0, width: 'auto', fontSize: '0.9rem'}}>
-            🚀 GÉNÉRER CAMPAGNE
+          <h2 style={{margin:0, color: '#2c3e50'}}>
+             Édition Niveau {currentLevelIndex + 1} 
+             <span style={{fontSize: '0.6em', color: '#777', marginLeft: '10px', fontWeight: 'normal'}}>
+               ({campaign.levels[currentLevelIndex]?.type})
+             </span>
+          </h2>
+          <button onClick={generateLink} className="generate-btn" style={{margin: 0, width: 'auto', fontSize: '0.9rem', background: 'linear-gradient(135deg, #3498db, #2980b9)', padding: '8px 15px', boxShadow:'none'}}>
+            🚀 GÉNÉRER & TESTER
           </button>
         </div>
 
         <div style={{flex: 1, overflowY: 'auto', padding: '20px', background: '#f4f4f4'}}>
-          {/* Sécurité : on s'assure que le niveau existe avant de l'afficher */}
           {campaign.levels[currentLevelIndex] ? (
             <LevelEditor 
+                // Clé unique pour forcer le re-montage si on change de niveau
+                key={campaign.levels[currentLevelIndex].id}
                 levelData={campaign.levels[currentLevelIndex]} 
                 onUpdate={updateCurrentLevel} 
             />
           ) : (
-            <div style={{padding: 20}}>Sélectionnez un niveau...</div>
+            <div style={{padding: 20, textAlign: 'center', color: '#777'}}>Sélectionnez ou créez un niveau...</div>
           )}
         </div>
       </div>

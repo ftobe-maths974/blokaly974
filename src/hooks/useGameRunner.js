@@ -55,25 +55,18 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
   // --- 2. LOGIQUE DE FIN ---
 
   const handleWin = useCallback((currentBlocks) => {
-    const targetBlocks = safeData.maxBlocks || 5; // Valeur par défaut si oubli
-    
-    // Logique de scoring gamifiée
+    const targetBlocks = safeData.maxBlocks || 5; 
     let stars = 1;
-    if (currentBlocks <= targetBlocks) {
-        stars = 3; // Parfait
-    } else if (currentBlocks <= Math.ceil(targetBlocks * 1.5)) {
-        stars = 2; // Bien, mais peut optimiser
-    }
-    
+    if (currentBlocks <= targetBlocks) stars = 3;
+    else if (currentBlocks <= Math.ceil(targetBlocks * 1.5)) stars = 2;
+
     setGameStats({ stars, blockCount: currentBlocks, target: targetBlocks });
-    
     const token = generateProofToken(safeData.id || 1, { stars, blocks: currentBlocks });
     setProofToken(token);
-    setGameState('WON');
+    setGameState('WON'); 
   }, [safeData]);
 
   const handleFail = useCallback(() => {
-    // Programme fini mais objectif non atteint
     setGameStats({ stars: 0, blockCount: workspaceRef.current?.getAllBlocks(false).length || 0, target: safeData.maxBlocks });
     setGameState('FAILED');
   }, [safeData]);
@@ -94,46 +87,35 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
     const actions = actionsRef.current;
     const step = stepRef.current;
 
-    // Si on a dépassé la fin (ne devrait pas arriver si on gère bien l'index)
-    if (step >= actions.length) {
-        return false; 
-    }
+    if (step >= actions.length) return false; 
 
-    // 1. Highlight
     const action = actions[step];
     if (action.id && workspaceRef.current) {
         workspaceRef.current.highlightBlock(action.id);
     }
 
-    // 2. Adaptateur Plugin (Compatibilité Maze)
     let actionForPlugin = action;
     if (plugin.id === 'MAZE' && typeof action === 'object' && action.type) {
-        if (action.type.startsWith('TURN')) actionForPlugin = action.type; // "TURN_LEFT"
-        else actionForPlugin = action.type; // "MOVE"
+        if (action.type.startsWith('TURN')) actionForPlugin = action.type; 
+        else actionForPlugin = action.type; 
     }
 
-    // 3. Exécution Logique
     const result = plugin.executeStep(currentStateRef.current, actionForPlugin, safeData);
     currentStateRef.current = result.newState;
     setEngineState(result.newState);
-    stepRef.current += 1; // On avance l'index
+    stepRef.current += 1; 
 
-    // 4. Vérification Immédiate (Crash mur ou Case Arrivée)
     if (result.status === 'WIN') {
-        // Délai pour voir l'animation d'arrivée
         setTimeout(() => handleWin(workspaceRef.current.getAllBlocks(false).length), 500);
-        return false; // Stop
+        return false; 
     } else if (result.status === 'LOST') {
         setTimeout(() => setGameState('LOST'), 500);
-        return false; // Stop
+        return false; 
     }
 
-    // 5. Vérification Fin de Programme (Est-ce la dernière instruction ?)
     if (stepRef.current >= actions.length) {
         if (workspaceRef.current) workspaceRef.current.highlightBlock(null);
         
-        // On lance la validation finale (Pixel Match pour Tortue)
-        // Avec un délai pour laisser le dernier trait se dessiner
         setTimeout(() => {
             let success = false;
             if (plugin.checkVictory) {
@@ -141,17 +123,16 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
             }
             
             if (success) handleWin(workspaceRef.current.getAllBlocks(false).length);
-            else handleFail(); // <--- FEEDBACK "ESSAYE ENCORE"
+            else handleFail();
             
         }, 500);
 
-        return false; // Stop boucle
+        return false; 
     }
 
-    return true; // Continue
+    return true; 
   }, [plugin, safeData, solutionLines, handleWin, handleFail, workspaceRef]);
 
-  // BOUCLE
   const runLoop = useCallback(() => {
     const shouldContinue = executeSingleStep();
     if (shouldContinue) {
@@ -172,12 +153,16 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
     
     javascriptGenerator.init(workspaceRef.current);
     const userCode = javascriptGenerator.workspaceToCode(workspaceRef.current);
+    
+    // --- CORRECTION TYPAGE ICI ---
     let initCode = "";
     if (safeData.inputs) {
         Object.entries(safeData.inputs).forEach(([key, val]) => {
+            // JSON.stringify garantit que les nombres restent des nombres et les chaînes des chaînes
             initCode += `var ${key} = ${JSON.stringify(val)};\n`;
         });
     }
+    // -----------------------------
 
     try {
       const generatedActions = [];
@@ -201,16 +186,19 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
 
   const stepForward = useCallback(() => {
       if (gameState === 'IDLE' || gameState === 'WON' || gameState === 'LOST' || gameState === 'FAILED') {
-          // Démarrage à froid en mode pas à pas
           if (!workspaceRef.current) return;
           javascriptGenerator.init(workspaceRef.current);
           const userCode = javascriptGenerator.workspaceToCode(workspaceRef.current);
+          
+          // --- CORRECTION TYPAGE ICI AUSSI ---
           let initCode = "";
           if (safeData.inputs) {
               Object.entries(safeData.inputs).forEach(([key, val]) => {
                   initCode += `var ${key} = ${JSON.stringify(val)};\n`;
               });
           }
+          // -----------------------------------
+
           try {
             const generatedActions = [];
             new Function('actions', initCode + userCode)(generatedActions);
@@ -219,14 +207,12 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
             currentStateRef.current = null;
             
             setGameState('PAUSED');
-            // Exécute le PREMIER pas tout de suite
             executeSingleStep(); 
           } catch(e) { alert("Erreur : " + e.message); }
       } else {
-          // Pas suivant
           if (gameState === 'RUNNING') pause();
-          executeSingleStep(); // La vérif de fin est intégrée dedans !
-          if (gameState !== 'WON' && gameState !== 'FAILED') setGameState('PAUSED');
+          executeSingleStep(); 
+          if (gameState !== 'WON' && gameState !== 'FAILED' && gameState !== 'LOST') setGameState('PAUSED');
       }
   }, [gameState, safeData, executeSingleStep, pause, workspaceRef]);
 

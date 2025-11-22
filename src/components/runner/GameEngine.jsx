@@ -10,7 +10,6 @@ import InstructionPanel from './InstructionPanel';
 import { MAZE_CONFIG } from '../../core/adapters/MazeAdapter';
 import { registerAllBlocks } from '../../core/BlockRegistry';
 import { useGameRunner } from '../../hooks/useGameRunner';
-import { generateToolbox } from '../../core/BlockDefinitions';
 
 const PLUGINS = { 'MAZE': MazePlugin, 'MATH': MathPlugin, 'TURTLE': TurtlePlugin };
 
@@ -49,13 +48,12 @@ export default function GameEngine({ levelData, onWin }) {
     maxBlocks: levelData?.maxBlocks
   }), [levelData]); 
 
-  // Utilisation du nouveau Hook
   const {
     speed, setSpeed,
     engineState, gameState,
     solutionLines,
     gameStats, proofToken,
-    run, reset, pause, stepForward // <--- Nouvelles actions
+    run, reset, pause, stepForward 
   } = useGameRunner(workspaceRef, plugin, safeData);
 
   const initialPlayerState = useMemo(() => ({
@@ -76,12 +74,14 @@ export default function GameEngine({ levelData, onWin }) {
     return () => clearTimeout(timer);
   }, []);
 
+  // --- CORRECTION CRITIQUE ICI ---
   const currentToolbox = useMemo(() => {
-      // On récupère juste la propriété .xml de l'objet retourné
-      const { xml } = generateToolbox(
+      const result = plugin.getToolboxXML(
         safeData.allowedBlocks, safeData.inputs, safeData.hiddenVars, safeData.lockedVars 
       );
-      return xml;
+      // Si c'est un objet { xml, hasCategories }, on prend .xml
+      // Si c'est déjà une string, on la prend telle quelle
+      return result.xml || result;
   }, [plugin, safeData]);
 
   const handleInject = (newWorkspace) => {
@@ -94,6 +94,8 @@ export default function GameEngine({ levelData, onWin }) {
            Blockly.Xml.domToWorkspace(xmlDom, newWorkspace);
        } catch (e) {}
     }
+    // Petit fix d'affichage au chargement
+    window.setTimeout(() => Blockly.svgResize(newWorkspace), 0);
   };
 
   useEffect(() => {
@@ -110,14 +112,26 @@ export default function GameEngine({ levelData, onWin }) {
       modelLines: solutionLines
   };
 
+  // --- AJOUT : Gestion du Redimensionnement (Panel) ---
+  useEffect(() => {
+    // Si le workspace n'est pas encore là, on ne fait rien
+    if (!workspaceRef.current) return;
+
+    // On attend la fin de la transition CSS (300ms généralement)
+    // On déclenche un resize juste après pour que Blockly remplisse l'espace
+    const timer = setTimeout(() => {
+        Blockly.svgResize(workspaceRef.current);
+    }, 350); // 300ms de transition + 50ms de sécurité
+
+    return () => clearTimeout(timer);
+  }, [isPanelOpen]); // Se déclenche à chaque ouverture/fermeture
+
   if (!isReady) return <div style={{padding: 20}}>Chargement...</div>;
 
   return (
     <div style={{display: 'flex', height: '100%', flexDirection: 'column'}}>
-      {/* TOOLBAR */}
       <div style={{padding: '10px', background: '#eee', display: 'flex', alignItems: 'center', gap: '10px', borderBottom:'1px solid #ccc'}}>
         
-        {/* Bouton PLAY / RESUME */}
         {gameState === 'RUNNING' ? (
             <button onClick={pause} style={{...btnStyle, background: '#f39c12'}}>⏸️ Pause</button>
         ) : (
@@ -126,15 +140,12 @@ export default function GameEngine({ levelData, onWin }) {
             </button>
         )}
 
-        {/* Bouton PAS À PAS */}
         <button onClick={stepForward} style={{...btnStyle, background: '#3498db'}} title="Exécuter le prochain bloc">
             👣 Pas à pas
         </button>
         
-        {/* Bouton STOP */}
         <button onClick={reset} style={{...btnStyle, background: '#e74c3c'}}>🔄 Stop</button>
         
-        {/* Slider Vitesse */}
         <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto', background: 'white', padding: '5px 10px', borderRadius: '20px', border: '1px solid #ddd'}}>
             <span style={{fontSize: '1.2rem'}}>🐢</span>
             <input type="range" min="0" max="100" value={speed} onChange={(e) => setSpeed(Number(e.target.value))} style={{width: '100px', cursor: 'pointer'}} title={`Vitesse : ${speed}%`} />
@@ -147,6 +158,7 @@ export default function GameEngine({ levelData, onWin }) {
             title={`Niveau ${safeData.id || ""}`} content={safeData.instruction}
             isCollapsed={!isPanelOpen} onToggle={() => setIsPanelOpen(!isPanelOpen)}
         />
+
         <div className="blocklyContainer" style={{flex: 1, position: 'relative', minWidth: '0'}}>
           <BlocklyWorkspace
             key={`${safeData.id}-${plugin.id}`} 
@@ -156,14 +168,15 @@ export default function GameEngine({ levelData, onWin }) {
             onInject={handleInject}
           />
         </div>
+      
         <div style={{width: '40%', background: '#2c3e50', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow:'hidden'}}>
           <GameView {...renderProps} />
         </div>
+
         <FeedbackModal 
           isOpen={gameState === 'WON' || gameState === 'LOST' || gameState === 'FAILED'} 
-          status={gameState} // <--- On passe l'état brut (WON, LOST, FAILED)
-          stats={gameStats} 
-          token={proofToken} 
+          status={gameState}
+          stats={gameStats} token={proofToken} 
           onReplay={() => { reset(); }} 
           onMenu={() => window.location.reload()}
         />
