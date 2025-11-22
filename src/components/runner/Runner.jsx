@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react'; // <--- Ajout de useCallback
+import React, { useState, useEffect, useCallback } from 'react';
 import GameEngine from './GameEngine';
 import CampaignMenu from './CampaignMenu';
 
 export default function Runner({ campaign }) {
-  // Normalisation des données de campagne
   const normalizedCampaign = campaign.levels ? campaign : { title: "Campagne", levels: [campaign] };
 
   const [activeLevelIndex, setActiveLevelIndex] = useState(-1);
@@ -19,34 +18,34 @@ export default function Runner({ campaign }) {
     }
   }, [normalizedCampaign]);
 
-  // --- CORRECTION ICI : useCallback pour stabiliser la fonction ---
   const handleLevelWin = useCallback((stats) => {
-    // 1. On utilise la version fonctionnelle de setProgress pour éviter les dépendances cycliques
     setProgress(prevProgress => {
         const newProgress = { 
           ...prevProgress, 
           [activeLevelIndex]: { stars: stats.stars } 
         };
         
-        // 2. Sauvegarde (Effet de bord)
         const saveKey = `blokaly_save_${normalizedCampaign.title.replace(/\s/g, '_')}`;
         localStorage.setItem(saveKey, JSON.stringify(newProgress));
         
         return newProgress;
     });
-  }, [activeLevelIndex, normalizedCampaign.title]); // Dépendances minimales
+  }, [activeLevelIndex, normalizedCampaign.title]);
 
   const handleBackToMenu = () => {
     setActiveLevelIndex(-1);
   };
 
-  // --- RENDU ---
-
+  // --- RENDU DU MENU DE CAMPAGNE ---
   if (activeLevelIndex === -1) {
     return (
       <div style={{minHeight: '100vh', background: '#ecf0f1'}}>
         <div style={{padding: '10px', background: '#333'}}>
-          <button onClick={() => window.location.href = '/'} style={{color: 'white', background: 'none', border: 'none', cursor: 'pointer'}}>
+          {/* CORRECTION ICI : On redirige vers le pathname actuel pour garder le sous-dossier */}
+          <button 
+            onClick={() => window.location.href = window.location.pathname} 
+            style={{color: 'white', background: 'none', border: 'none', cursor: 'pointer'}}
+          >
             ⬅ Retour à l'éditeur
           </button>
         </div>
@@ -59,6 +58,7 @@ export default function Runner({ campaign }) {
     );
   }
 
+  // --- RENDU DU JEU ---
   return (
     <div style={{height: '100vh', display: 'flex', flexDirection: 'column'}}>
       <div style={{height: '40px', background: '#2c3e50', color: 'white', display: 'flex', alignItems: 'center', padding: '0 20px', justifyContent: 'space-between'}}>
@@ -74,7 +74,7 @@ export default function Runner({ campaign }) {
       <GameEngine
         key={activeLevelIndex}
         levelData={normalizedCampaign.levels[activeLevelIndex]} 
-        onWin={handleLevelWin} // Cette fonction est maintenant stable !
+        onWin={handleLevelWin} 
       />
     </div>
   );
