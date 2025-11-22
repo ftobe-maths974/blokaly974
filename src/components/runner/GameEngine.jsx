@@ -20,7 +20,6 @@ const workspaceConfig = {
   rtl: false, scrollbars: true, oneBasedIndex: true,
 };
 
-// AJOUT : Récupération de levelIndex dans les props
 export default function GameEngine({ levelData, onWin, levelIndex }) {
   const plugin = PLUGINS[levelData?.type] || MazePlugin;
   const GameView = plugin.RenderComponent;
@@ -54,8 +53,16 @@ export default function GameEngine({ levelData, onWin, levelIndex }) {
     engineState, gameState,
     solutionLines,
     gameStats, proofToken,
-    run, reset, pause, stepForward 
+    run, reset, pause, stepForward,
+    lastAction // <--- 1. ON RÉCUPÈRE L'ACTION ICI
   } = useGameRunner(workspaceRef, plugin, safeData);
+
+  // DEBUG : Vérifier si le moteur envoie l'action
+  useEffect(() => {
+      if (lastAction && lastAction.type === 'SCAN') {
+          console.log("📡 MOTEUR: SCAN ENVOYÉ ->", lastAction);
+      }
+  }, [lastAction]);
 
   const initialPlayerState = useMemo(() => ({
     x: safeData.startPos.x, y: safeData.startPos.y, dir: safeData.startPos.dir
@@ -99,7 +106,6 @@ export default function GameEngine({ levelData, onWin, levelIndex }) {
     if (workspaceRef.current && isReady) workspaceRef.current.updateToolbox(currentToolbox);
   }, [currentToolbox, isReady]); 
 
-  // Gestion du resize pour le panneau
   useEffect(() => {
     if (!workspaceRef.current) return;
     const timer = setTimeout(() => {
@@ -115,14 +121,12 @@ export default function GameEngine({ levelData, onWin, levelIndex }) {
       state: engineState || { variables: safeData.inputs },
       history: engineState?.logs,
       hiddenVars: safeData.hiddenVars || [],
-      modelLines: solutionLines
+      modelLines: solutionLines,
+      lastAction: lastAction // <--- 2. ON PASSE L'ACTION AU RENDU (C'était l'oubli !)
   };
 
   if (!isReady) return <div style={{padding: 20}}>Chargement...</div>;
 
-  // CALCUL DU TITRE AFFICHER
-  // Si levelIndex est fourni (par le Runner), on l'utilise (+1).
-  // Sinon (ex: mode test isolé), on retombe sur l'ID ou "Test".
   const displayTitle = levelIndex !== undefined 
     ? `Niveau ${levelIndex + 1}` 
     : (typeof safeData.id === 'number' && safeData.id < 1000000 ? `Niveau ${safeData.id}` : "Niveau Test");
@@ -154,7 +158,7 @@ export default function GameEngine({ levelData, onWin, levelIndex }) {
 
       <div style={{display: 'flex', flex: 1, overflow: 'hidden'}}>
         <InstructionPanel 
-            title={displayTitle} // UTILISATION DU NOUVEAU TITRE
+            title={displayTitle}
             content={safeData.instruction}
             isCollapsed={!isPanelOpen} onToggle={() => setIsPanelOpen(!isPanelOpen)}
         />

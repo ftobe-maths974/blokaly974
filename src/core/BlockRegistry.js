@@ -1,44 +1,63 @@
 import * as Blockly from 'blockly';
 import { javascriptGenerator } from 'blockly/javascript';
 
+// ICÔNES ANIMÉES (SVG en Base64)
+// Radar qui pulse (Blanc)
+const ICON_RADAR = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgdmlld0JveD0iMCAwIDIwIDIwIj48Y2lyY2xlIGN4PSIxMCIgY3k9IjEwIiByPSIzIiBmaWxsPSJ3aGl0ZSIvPjxjaXJjbGUgY3g9IjEwIiBjeT0iMTAiIHI9IjEwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIG9wYWNpdHk9IjAuNSI+PGFuaW1hdGUgYXR0cmlidXRlTmFtZT0iciIgZnJvbT0iMyIgdG89IjEwIiBkdXI9IjEuNXMiIHJlcGVhdENvdW50PSJpbmRlZmluaXRlIi8+PGFuaW1hdGUgYXR0cmlidXRlTmFtZT0ib3BhY2l0eSIgZnJvbT0iMSIgdG89IjAiIGR1cj0iMS41cyIgcmVwZWF0Q291bnQ9ImluZGVmaW5pdGUiLz48L2NpcmNsZT48L3N2Zz4=";
+
+// Drapeau Damier
+const ICON_FLAG = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgdmlld0JveD0iMCAwIDIwIDIwIj48cGF0aCBkPSZNMiwyIFYxOCBNMiwyIEgxMiBMOSw1IEwxMiw4IEgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiLz48L3N2Zz4=";
+
 let isRegistered = false;
 
 export const registerAllBlocks = () => {
   if (isRegistered) return;
   isRegistered = true;
 
-  console.log("🏗️ Enregistrement global des blocs (Radar Update)...");
+  console.log("🏗️ Enregistrement global des blocs (V3 Animée)...");
 
   // --- 1. MAZE ---
   Blockly.defineBlocksWithJsonArray([
     {
-      "type": "maze_move_forward", "message0": "Avancer ✥",
+      "type": "maze_move_forward", 
+      "message0": "Avancer ✥",
       "previousStatement": null, "nextStatement": null, "colour": 160
     },
     {
-      "type": "maze_turn", "message0": "Pivoter %1 🗘",
+      "type": "maze_turn", 
+      "message0": "Pivoter %1 🗘",
       "args0": [ { "type": "field_dropdown", "name": "DIR", "options": [["à gauche ↺", "LEFT"], ["à droite ↻", "RIGHT"]] } ],
       "previousStatement": null, "nextStatement": null, "colour": 160
     },
-    // BLOCS RADAR
+    // --- RADAR ANIMÉ ---
     {
-      "type": "maze_forever", "message0": "Répéter jusqu'à 🏁 %1 %2",
-      "args0": [{ "type": "input_dummy" }, { "type": "input_statement", "name": "DO" }],
+      "type": "maze_forever", 
+      // On insère l'image (%2) avant le texte
+      "message0": "Répéter jusqu'à %1 %2 %3",
+      "args0": [
+        { "type": "field_image", "src": ICON_FLAG, "width": 15, "height": 15, "alt": "Flag" },
+        { "type": "input_dummy" }, 
+        { "type": "input_statement", "name": "DO" }
+      ],
       "previousStatement": null, "nextStatement": null, "colour": 120
     },
     {
-      "type": "maze_if", "message0": "Si chemin %1 ❓ %2 faire %3",
+      "type": "maze_if", 
+      "message0": "Si chemin %1 %2 %3 faire %4",
       "args0": [
         { "type": "field_dropdown", "name": "DIR", "options": [["devant ⬆️", "AHEAD"], ["à gauche ↺", "LEFT"], ["à droite ↻", "RIGHT"]] },
+        { "type": "field_image", "src": ICON_RADAR, "width": 15, "height": 15, "alt": "Radar" },
         { "type": "input_dummy" },
         { "type": "input_statement", "name": "DO" }
       ],
       "previousStatement": null, "nextStatement": null, "colour": 210
     },
     {
-      "type": "maze_if_else", "message0": "Si chemin %1 ❓ %2 faire %3 sinon %4",
+      "type": "maze_if_else", 
+      "message0": "Si chemin %1 %2 %3 faire %4 sinon %5",
       "args0": [
         { "type": "field_dropdown", "name": "DIR", "options": [["devant ⬆️", "AHEAD"], ["à gauche ↺", "LEFT"], ["à droite ↻", "RIGHT"]] },
+        { "type": "field_image", "src": ICON_RADAR, "width": 15, "height": 15, "alt": "Radar" },
         { "type": "input_dummy" },
         { "type": "input_statement", "name": "DO" },
         { "type": "input_statement", "name": "ELSE" }
@@ -64,14 +83,16 @@ export const registerAllBlocks = () => {
   javascriptGenerator.forBlock['maze_if'] = (block) => {
     const dir = block.getFieldValue('DIR');
     const branch = javascriptGenerator.statementToCode(block, 'DO');
-    return `if (api.isPath('${dir}')) {\n${branch}}\n`;
+    // On ajoute l'action visuelle SCAN
+    return `actions.push({type: "SCAN", dir: "${dir}", id: "${block.id}"}); if (api.isPath('${dir}')) {\n${branch}}\n`;
   };
 
   javascriptGenerator.forBlock['maze_if_else'] = (block) => {
     const dir = block.getFieldValue('DIR');
     const branch0 = javascriptGenerator.statementToCode(block, 'DO');
     const branch1 = javascriptGenerator.statementToCode(block, 'ELSE');
-    return `if (api.isPath('${dir}')) {\n${branch0}} else {\n${branch1}}\n`;
+    // On ajoute l'action visuelle SCAN
+    return `actions.push({type: "SCAN", dir: "${dir}", id: "${block.id}"}); if (api.isPath('${dir}')) {\n${branch0}} else {\n${branch1}}\n`;
   };
 
   // --- 2. TURTLE (Standard) ---
@@ -130,3 +151,4 @@ export const registerAllBlocks = () => {
   javascriptGenerator.forBlock['lists_setIndex'] = (block) => `${javascriptGenerator.valueToCode(block, 'LIST', javascriptGenerator.ORDER_MEMBER) || '[]'}[${getListIndex(block, javascriptGenerator.valueToCode(block, 'LIST', javascriptGenerator.ORDER_MEMBER) || '[]')}] = ${javascriptGenerator.valueToCode(block, 'TO', javascriptGenerator.ORDER_ASSIGNMENT) || 'null'};\nactions.push({type: 'SET', id: "${block.id}", var: '${javascriptGenerator.valueToCode(block, 'LIST', javascriptGenerator.ORDER_MEMBER) || '[]'}', val: ${javascriptGenerator.valueToCode(block, 'LIST', javascriptGenerator.ORDER_MEMBER) || '[]'}});\n`;
   javascriptGenerator.forBlock['lists_length'] = (block) => [`${javascriptGenerator.valueToCode(block, 'VALUE', javascriptGenerator.ORDER_MEMBER) || '[]'}.length`, javascriptGenerator.ORDER_MEMBER];
 };
+

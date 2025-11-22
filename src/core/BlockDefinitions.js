@@ -78,6 +78,11 @@ export const BLOCK_LABELS = {
   // Maze (Modifié selon ta demande)
   'maze_move_forward': 'Avancer ✥', 
   'maze_turn': 'Pivoter 🗘',
+
+  // Radar
+  'maze_if': 'Si chemin... 📡',
+  'maze_if_else': 'Si... Sinon... 📡',
+  'maze_forever': 'Répéter jusqu\'à Arrivée 🏁',
   
   // Turtle (On garde cohérent ou on laisse "Tourner" ?)
   // Pour l'instant je mets Pivoter aussi pour la cohérence pédagogique
