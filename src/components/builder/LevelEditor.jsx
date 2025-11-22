@@ -8,13 +8,9 @@ import { MazePlugin } from '../../plugins/MazePlugin';
 import { MathPlugin } from '../../plugins/MathPlugin';
 import { TurtlePlugin } from '../../plugins/TurtlePlugin';
 import { registerAllBlocks } from '../../core/BlockRegistry';
-import { 
-    generateToolbox, 
-    generateMasterToolbox, 
-    CATEGORIES_BY_TYPE, 
-    CATEGORY_CONTENTS,
-    BLOCK_LABELS // <--- Import des traductions
-} from '../../core/BlockDefinitions'; 
+import { generateToolbox, generateMasterToolbox, CATEGORIES_BY_TYPE, CATEGORY_CONTENTS } from '../../core/BlockDefinitions'; 
+// AJOUT : Import de la config par défaut du Maze pour le reset
+import { MAZE_CONFIG } from '../../core/adapters/MazeAdapter';
 
 export default function LevelEditor({ levelData, onUpdate }) {
   const workspaceRef = useRef(null);
@@ -33,9 +29,42 @@ export default function LevelEditor({ levelData, onUpdate }) {
 
   const editorConfig = { scrollbars: true, trashcan: true, readOnly: false };
   
+  // --- CORRECTION ICI : RESET INTELLIGENT ---
   const handleTypeChange = (newType) => {
-    onUpdate({ ...levelData, type: newType, allowedBlocks: undefined });
+    let newDefaults = {};
+
+    // Si on passe en mode MAZE, on force une position valide et une grille par défaut
+    if (newType === 'MAZE') {
+        newDefaults = {
+            grid: MAZE_CONFIG.defaultGrid, // Remet la grille propre
+            startPos: { x: 1, y: 1, dir: 1 }, // Position du drapeau par défaut
+            maxBlocks: 10
+        };
+    } 
+    // Si on passe en mode TURTLE, on se met au centre (0,0)
+    else if (newType === 'TURTLE') {
+        newDefaults = {
+            startPos: { x: 0, y: 0, dir: 0 }, // Centre, regard vers l'Est
+            maxBlocks: 10,
+            grid: undefined // On nettoie la grille qui ne sert pas
+        };
+    }
+    // Si on passe en mode MATH
+    else if (newType === 'MATH') {
+        newDefaults = {
+            maxBlocks: 20,
+            startPos: undefined // Pas de position en maths
+        };
+    }
+
+    onUpdate({ 
+        ...levelData, 
+        type: newType, 
+        allowedBlocks: undefined, // On reset la toolbox
+        ...newDefaults // On applique les valeurs par défaut
+    });
   };
+
   const currentType = levelData.type || 'MAZE';
 
   const studentToolboxResult = useMemo(() => generateToolbox(
@@ -95,6 +124,8 @@ export default function LevelEditor({ levelData, onUpdate }) {
   return (
     <div className="editor-wrapper" style={{display: 'flex', flexDirection: 'column', height: '100%'}}>
       <div style={{display: 'flex', gap: '15px', flex: 1, minHeight: '400px'}}>
+        
+        {/* GAUCHE */}
         <div style={{flex: 3, display: 'flex', flexDirection: 'column'}}>
             <div style={{display: 'flex', marginBottom: '10px', background: '#ecf0f1', padding: '4px', borderRadius: '6px', gap:'5px'}}>
                 <button onClick={() => handleTypeChange('MAZE')} style={getTabStyle(currentType === 'MAZE')}>🏰 Labyrinthe</button>
@@ -108,6 +139,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
             </div>
         </div>
 
+        {/* DROITE */}
         <div style={{flex: 1, minWidth: '220px', background: 'white', padding: '15px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)', overflowY: 'auto', border: '1px solid #eee'}}>
           <h4 style={{marginTop: 0, marginBottom: '10px', color: '#2c3e50', borderBottom:'2px solid #eee', paddingBottom:'5px'}}>⚙️ Propriétés</h4>
           
@@ -135,7 +167,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
                 const allChecked = categoryBlocks.every(type => currentAllowed.includes(type));
                 const isIndeterminate = categoryBlocks.some(type => currentAllowed.includes(type)) && !allChecked;
 
-                // Gestion spéciale pour les variables : on cache si pas de variable définie
+                // Cacher variables si vide
                 if (catName === 'Variables' && (!levelData.inputs || Object.keys(levelData.inputs).length === 0)) return null;
 
                 return (
@@ -154,8 +186,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
                           <div key={blockType} style={{margin: '4px 0'}}>
                             <label style={{cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#666'}}>
                               <input type="checkbox" checked={currentAllowed.includes(blockType)} onChange={() => toggleBlock(blockType)} style={{marginRight: '6px'}} />
-                              {/* Utilisation du dictionnaire de traduction */}
-                              {BLOCK_LABELS[blockType] || blockType}
+                              {blockType.replace(/_/g, ' ')}
                             </label>
                           </div>
                         ))}

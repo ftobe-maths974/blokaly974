@@ -130,6 +130,25 @@ export default function Builder() {
     setCurrentLevelIndex(campaign.levels.length); 
   };
 
+  // NOUVEAU : Fonction de duplication
+  const duplicateLevel = (index) => {
+    const levelToCopy = campaign.levels[index];
+    
+    // Copie profonde pour ne pas garder de références vers l'ancien objet
+    const newLevel = {
+        ...JSON.parse(JSON.stringify(levelToCopy)),
+        id: Date.now() // On génère un nouvel ID unique
+    };
+    
+    const newLevels = [...campaign.levels];
+    // On insère la copie juste après l'original
+    newLevels.splice(index + 1, 0, newLevel);
+    
+    setCampaign({ ...campaign, levels: newLevels });
+    // On bascule sur la copie pour l'éditer tout de suite
+    setCurrentLevelIndex(index + 1);
+  };
+
   const deleteLevel = (index) => {
     if (campaign.levels.length <= 1) return alert("Il faut au moins un niveau !");
     const newLevels = campaign.levels.filter((_, i) => i !== index);
@@ -146,18 +165,16 @@ export default function Builder() {
     setCampaign({ ...campaign, levels: newLevels });
   };
 
-  // --- CORRECTION ICI ---
   const generateLink = () => {
     const json = JSON.stringify(campaign);
     const compressed = LZString.compressToEncodedURIComponent(json);
     
-    // On utilise l'URL actuelle complète pour garder le dossier /blokaly974/
+    // Fix 404 : on garde le chemin actuel (ex: /blokaly974/)
     const url = new URL(window.location.href);
     url.search = `?data=${compressed}`;
-    url.hash = ''; // On nettoie le hash au cas où
+    url.hash = ''; 
     
     const finalUrl = url.toString();
-    
     navigator.clipboard.writeText(finalUrl);
     alert("Lien copié ! Ouverture du test...");
     window.location.href = finalUrl;
@@ -208,15 +225,26 @@ export default function Builder() {
                   </span>
               </div>
 
-              {campaign.levels.length > 1 && (
-                <button 
-                    onClick={(e) => { e.stopPropagation(); deleteLevel(index); }} 
-                    style={{background:'none', border:'none', color:'#e74c3c', cursor:'pointer', fontSize:'0.8rem', opacity: 0.7}}
-                    title="Supprimer"
-                >
-                    🗑️
-                </button>
-              )}
+              <div style={{display: 'flex', gap: '5px'}}>
+                  {/* BOUTON DUPLIQUER */}
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); duplicateLevel(index); }}
+                    style={{background:'none', border:'none', cursor:'pointer', fontSize:'0.8rem', opacity: 0.7}}
+                    title="Dupliquer"
+                  >
+                    📑
+                  </button>
+
+                  {campaign.levels.length > 1 && (
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); deleteLevel(index); }} 
+                        style={{background:'none', border:'none', color:'#e74c3c', cursor:'pointer', fontSize:'0.8rem', opacity: 0.7}}
+                        title="Supprimer"
+                    >
+                        🗑️
+                    </button>
+                  )}
+              </div>
             </div>
           ))}
         </div>
