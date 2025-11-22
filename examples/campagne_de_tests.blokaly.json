@@ -362,7 +362,7 @@
         "c": "@a",
         "d": "@b"
       },
-      "instruction": "affecte la valeur de $a$ à $c$ et celle de $b$ à $c$.",
+      "instruction": "affecte la valeur de $a$ à $c$ et celle de $b$ à $d$.",
       "allowedBlocks": [
         "variables_set"
       ]
