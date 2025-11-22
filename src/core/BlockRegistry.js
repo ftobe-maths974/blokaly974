@@ -1,31 +1,40 @@
 import * as Blockly from 'blockly';
 import { javascriptGenerator } from 'blockly/javascript';
 
-// Variable globale pour éviter le rechargement
+// Variable pour éviter les doubles chargements (Warnings)
 let isRegistered = false;
 
 export const registerAllBlocks = () => {
-  if (isRegistered) return; // On arrête si déjà fait
+  if (isRegistered) return;
   isRegistered = true;
-  
-  console.log("🏗️ Enregistrement global des blocs (Unique)...");
+
+  console.log("🏗️ Enregistrement global des blocs (Design v2)...");
 
   // --- 1. MAZE ---
   Blockly.defineBlocksWithJsonArray([
     {
-      "type": "maze_move_forward", "message0": "Avancer ⬆️",
-      "previousStatement": null, "nextStatement": null, "colour": 160
+      "type": "maze_move_forward", 
+      "message0": "Avancer ✥", // Icône Move
+      "previousStatement": null, 
+      "nextStatement": null, 
+      "colour": 160,
+      "tooltip": "Avance d'une case dans la direction actuelle"
     },
     {
-      "type": "maze_turn", "message0": "Tourner %1 ↪️",
+      "type": "maze_turn", 
+      "message0": "Pivoter %1 🗘", // Icône Refresh/Rotation
       "args0": [
         { "type": "field_dropdown", "name": "DIR", "options": [["à gauche ↺", "LEFT"], ["à droite ↻", "RIGHT"]] }
       ],
-      "previousStatement": null, "nextStatement": null, "colour": 160
+      "previousStatement": null, 
+      "nextStatement": null, 
+      "colour": 160
     }
   ]);
   
-  javascriptGenerator.forBlock['maze_move_forward'] = (block) => `actions.push({type: "MOVE", id: "${block.id}"});\n`;
+  javascriptGenerator.forBlock['maze_move_forward'] = (block) => 
+    `actions.push({type: "MOVE", id: "${block.id}"});\n`;
+  
   javascriptGenerator.forBlock['maze_turn'] = (block) => {
     const dir = block.getFieldValue('DIR');
     return `actions.push({type: "TURN_${dir}", id: "${block.id}"});\n`;
@@ -34,12 +43,14 @@ export const registerAllBlocks = () => {
   // --- 2. TURTLE ---
   Blockly.defineBlocksWithJsonArray([
     {
-      "type": "turtle_move", "message0": "avancer de %1",
+      "type": "turtle_move", 
+      "message0": "avancer ✥ de %1", // Cohérence avec Maze
       "args0": [{ "type": "input_value", "name": "VALUE", "check": "Number" }],
       "previousStatement": null, "nextStatement": null, "colour": 160
     },
     {
-      "type": "turtle_turn", "message0": "tourner %1 de %2 degrés",
+      "type": "turtle_turn", 
+      "message0": "pivoter à %1 de %2 degrés 🗘", // Cohérence avec Maze
       "args0": [
         { "type": "field_dropdown", "name": "DIR", "options": [["↺ gauche", "LEFT"], ["↻ droite", "RIGHT"]] },
         { "type": "input_value", "name": "VALUE", "check": "Number" }
@@ -77,7 +88,6 @@ export const registerAllBlocks = () => {
     `actions.push({type: 'COLOR', id: "${block.id}", color: '${block.getFieldValue('COLOR')}'});\n`;
 
   // --- 3. STANDARDS ---
-  
   javascriptGenerator.forBlock['variables_set'] = (block) => {
     const argument0 = javascriptGenerator.valueToCode(block, 'VALUE', javascriptGenerator.ORDER_ATOMIC) || '0';
     const varName = block.getField('VAR').getText();
