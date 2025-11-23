@@ -44,7 +44,11 @@ export const TurtlePlugin = {
     else if (action.type === 'TURN') {
       // Rotation Horaire (Clockwise) : +angle = Tourner à Droite
       dir += parseFloat(action.angle);
-      dir = dir % 360;
+      
+      // SUPPRIMER OU COMMENTER CETTE LIGNE :
+      // dir = dir % 360; 
+      
+      // On laisse dir grandir/diminuer librement pour que l'animation CSS soit fluide
     }
     else if (action.type === 'PEN') penDown = (action.state === 'DOWN');
     else if (action.type === 'COLOR') color = action.color;
