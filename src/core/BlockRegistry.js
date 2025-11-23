@@ -29,10 +29,8 @@ export const registerAllBlocks = () => {
     // --- RADAR ANIMÉ ---
     {
       "type": "maze_forever", 
-      "message0": "Répéter jusqu'à %1 %2 %3",
+      "message0": "Répéter jusqu'à 🏁 %1",
       "args0": [
-        { "type": "field_image", "src": ICON_FLAG, "width": 15, "height": 15, "alt": "Flag" },
-        { "type": "input_dummy" }, 
         { "type": "input_statement", "name": "DO" }
       ],
       "previousStatement": null, "nextStatement": null, "colour": 120

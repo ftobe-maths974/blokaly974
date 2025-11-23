@@ -10,9 +10,9 @@ export const MAZE_CONFIG = {
   THEME: {
     0: '⬛', // Vide (Noir)
     1: '⬜', // Chemin (Blanc)
-    2: '🟩', // Départ (Sol Vert) -> Le Robot sera posé dessus
-    3: '🏁', // Arrivée (Drapeau) - Plus logique que la coupe
-    4: '🧱', // Mur (Brique)
+    2: '🟩', // Départ
+    3: '🏁', // Arrivée
+    4: '🧱', // Mur
     PLAYER: '🤖' // Robot
   },
 
@@ -24,23 +24,38 @@ export const MAZE_CONFIG = {
     return 'OK';
   },
 
-  // --- MISE À JOUR CONVENTION (0=Est, 1=Sud, 2=Ouest, 3=Nord) ---
   look: (grid, x, y, currentDir, lookDir) => {
       let testDir = currentDir;
-      
-      // Gestion de la rotation relative (reste inchangée : +1 = Droite, +3 = Gauche)
+      // +1 = Droite, +3 = Gauche
       if (lookDir === 'LEFT') testDir = (currentDir + 3) % 4;
       else if (lookDir === 'RIGHT') testDir = (currentDir + 1) % 4;
       
       let tx = x, ty = y;
-      
-      // NOUVEAU MAPPING DIRECTIONNEL
-      if (testDir === 0) tx++;      // 0 = Est  (x + 1)
-      else if (testDir === 1) ty++; // 1 = Sud  (y + 1)
-      else if (testDir === 2) tx--; // 2 = Ouest (x - 1)
-      else if (testDir === 3) ty--; // 3 = Nord (y - 1)
+      // 0=Est, 1=Sud, 2=Ouest, 3=Nord
+      if (testDir === 0) tx++;      
+      else if (testDir === 1) ty++; 
+      else if (testDir === 2) tx--; 
+      else if (testDir === 3) ty--; 
 
       const result = MAZE_CONFIG.checkMove(grid, tx, ty);
       return result !== 'WALL'; 
+  },
+
+  // --- NOUVEAU : Redimensionnement intelligent ---
+  resizeGrid: (oldGrid, newRows, newCols) => {
+    const newGrid = [];
+    for (let r = 0; r < newRows; r++) {
+        const row = [];
+        for (let c = 0; c < newCols; c++) {
+            // Si la case existe on la garde, sinon on met un Mur (4)
+            if (oldGrid[r] && oldGrid[r][c] !== undefined) {
+                row.push(oldGrid[r][c]);
+            } else {
+                row.push(4);
+            }
+        }
+        newGrid.push(row);
+    }
+    return newGrid;
   }
 };
