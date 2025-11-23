@@ -1,4 +1,4 @@
-// Petit wrapper SCORM 1.2 (Le standard le plus supporté)
+// Petit wrapper SCORM 1.2 (Le standard le plus supporté) 
 const ScormService = {
   api: null,
   isActive: false,
