@@ -1,12 +1,11 @@
 import React from 'react';
 import { MAZE_CONFIG } from '../../core/adapters/MazeAdapter';
 
-// CSS Animation pour le scan (Pulse)
 const pulseStyle = {
   position: 'absolute',
   width: '100%', height: '100%',
   top: 0, left: 0,
-  backgroundColor: 'rgba(46, 204, 113, 0.5)', // Vert semi-transparent
+  backgroundColor: 'rgba(46, 204, 113, 0.5)', 
   borderRadius: '50%',
   animation: 'radarPing 0.5s ease-out forwards',
   zIndex: 5
@@ -20,30 +19,35 @@ const stylesCSS = `
 `;
 
 export default function MazeRender({ grid, playerPos, playerDir, lastAction }) {
-  // Conversion direction joueur
-  const rotation = playerDir * 90; 
+  const rotation = playerDir * 90 + 90; 
 
-  // Est-ce qu'on est en train de scanner ?
-  // lastAction contient { type: "SCAN", dir: "LEFT" ... }
   const isScanning = lastAction && lastAction.type === 'SCAN';
   let scanTarget = null;
 
+  // Helper normalisation (pour le radar)
+  const normalizeDir = (d) => ((d % 4) + 4) % 4;
+
   if (isScanning) {
-      // Calculer quelle case est scannée
-      // dir = AHEAD, LEFT, RIGHT
-      // playerDir = 0(N), 1(E), 2(S), 3(W)
-      let lookDirIdx = playerDir;
-      if (lastAction.dir === 'LEFT') lookDirIdx = (playerDir + 3) % 4;
-      if (lastAction.dir === 'RIGHT') lookDirIdx = (playerDir + 1) % 4;
+      // CAS 1 : Scan sur soi-même (Répéter jusqu'à Arrivée)
+      if (lastAction.dir === 'SELF') {
+          scanTarget = { x: playerPos.x, y: playerPos.y };
+      } 
+      // CAS 2 : Scan directionnel (Si chemin...)
+      else {
+          const currentDirNorm = normalizeDir(playerDir);
+          let lookDirIdx = currentDirNorm;
 
-      // Coordonnées relatives
-      let dx = 0, dy = 0;
-      if (lookDirIdx === 0) dy = -1;
-      if (lookDirIdx === 1) dx = 1;
-      if (lookDirIdx === 2) dy = 1;
-      if (lookDirIdx === 3) dx = -1;
+          if (lastAction.dir === 'LEFT') lookDirIdx = (currentDirNorm + 3) % 4;
+          if (lastAction.dir === 'RIGHT') lookDirIdx = (currentDirNorm + 1) % 4;
 
-      scanTarget = { x: playerPos.x + dx, y: playerPos.y + dy };
+          let dx = 0, dy = 0;
+          if (lookDirIdx === 0) dx = 1;  // Est
+          if (lookDirIdx === 1) dy = 1;  // Sud
+          if (lookDirIdx === 2) dx = -1; // Ouest
+          if (lookDirIdx === 3) dy = -1; // Nord
+
+          scanTarget = { x: playerPos.x + dx, y: playerPos.y + dy };
+      }
   }
 
   return (
@@ -56,8 +60,6 @@ export default function MazeRender({ grid, playerPos, playerDir, lastAction }) {
         {grid.map((row, rowIndex) => (
           row.map((cell, colIndex) => {
             const isPlayerHere = playerPos.x === colIndex && playerPos.y === rowIndex;
-            
-            // Est-ce que cette case est celle qu'on scanne ?
             const isScanned = scanTarget && scanTarget.x === colIndex && scanTarget.y === rowIndex;
 
             return (
@@ -66,20 +68,14 @@ export default function MazeRender({ grid, playerPos, playerDir, lastAction }) {
                   {MAZE_CONFIG.THEME[cell] || '❓'}
                 </span>
 
-                {/* Robot */}
                 {isPlayerHere && (
                   <div style={{...styles.player, transform: `rotate(${rotation}deg)`}}>
                     {MAZE_CONFIG.THEME.PLAYER}
-                    {/* Si on scanne "AHEAD" (tout droit) ou "SELF", on peut mettre l'anim ici aussi */}
                   </div>
                 )}
 
-                {/* Animation Radar sur la case visée */}
                 {isScanned && (
-                    <div 
-                        key={lastAction._uid} // <--- LE SECRET EST ICI
-                        style={pulseStyle}
-                    ></div>
+                    <div key={lastAction._uid} style={pulseStyle}></div>
                 )}
               </div>
             );
@@ -100,7 +96,7 @@ const styles = {
   },
   cell: {
     width: '40px', height: '40px', display: 'flex', justifyContent: 'center', alignItems: 'center',
-    fontSize: '24px', position: 'relative', background: '#ecf0f1', overflow: 'visible' // Important pour que l'onde dépasse un peu
+    fontSize: '24px', position: 'relative', background: '#ecf0f1', overflow: 'visible'
   },
   floor: { zIndex: 1 },
   player: {

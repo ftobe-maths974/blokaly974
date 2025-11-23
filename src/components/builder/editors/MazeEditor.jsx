@@ -52,6 +52,12 @@ export default function MazeEditor({ levelData, onUpdate }) {
       });
   };
 
+  // --- CORRECTION ROTATION VISUELLE (+90deg) ---
+  // L'emoji 🤖 regarde en Haut (Nord) par défaut.
+  // Notre système : 0° = Est.
+  // Donc pour regarder à l'Est, l'emoji doit tourner de +90°.
+  const visualRotation = startPos.dir * 90 + 90;
+
   return (
     <div>
       {/* BARRE D'OUTILS */}
@@ -93,7 +99,7 @@ export default function MazeEditor({ levelData, onUpdate }) {
             style={{cursor: 'pointer', verticalAlign: 'middle'}}
           />
           <span style={{marginLeft:'10px', fontWeight:'bold', color:'#27ae60'}}>
-            {['⬆️ Nord', '➡️ Est', '⬇️ Sud', '⬅️ Ouest'][startPos.dir]}
+            {['➡️ Est', '⬇️ Sud', '⬅️ Ouest', '⬆️ Nord'][startPos.dir]}
           </span>
       </div>
 
@@ -127,7 +133,7 @@ export default function MazeEditor({ levelData, onUpdate }) {
                             {isStart && (
                                 <div style={{
                                     position: 'absolute', 
-                                    transform: `rotate(${startPos.dir * 90}deg)`,
+                                    transform: `rotate(${visualRotation}deg)`, // CORRIGÉ ICI
                                     fontSize: '28px',
                                     transition: 'transform 0.2s'
                                 }}>

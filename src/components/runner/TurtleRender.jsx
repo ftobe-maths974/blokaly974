@@ -56,12 +56,11 @@ export default function TurtleRender({ state, playerPos, playerDir, modelLines }
     }
   }, [lines]);
 
-  // --- CORRECTION ROTATION VISUELLE ---
-  // Notre système logique : 0° = N, 90° = E, 180° = S.
-  // Le SVG de la tortue pointe vers la DROITE par défaut (Est).
-  // Donc si dir = 0 (Nord), il faut tourner de -90deg.
-  // Si dir = 90 (Est), il faut tourner de 0deg.
-  const rotation = dir - 90; 
+  // --- ROTATION HARMONISÉE ---
+  // Le SVG pointe vers l'Est (Droite).
+  // Notre convention est 0° = Est.
+  // Donc aucune correction n'est nécessaire.
+  const rotation = dir; 
 
   return (
     <div style={{ position: 'relative', width: WIDTH, height: HEIGHT, background: 'white', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>

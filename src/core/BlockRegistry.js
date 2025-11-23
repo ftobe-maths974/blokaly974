@@ -2,10 +2,7 @@ import * as Blockly from 'blockly';
 import { javascriptGenerator } from 'blockly/javascript';
 
 // ICÔNES ANIMÉES (SVG en Base64)
-// Radar qui pulse (Blanc)
 const ICON_RADAR = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgdmlld0JveD0iMCAwIDIwIDIwIj48Y2lyY2xlIGN4PSIxMCIgY3k9IjEwIiByPSIzIiBmaWxsPSJ3aGl0ZSIvPjxjaXJjbGUgY3g9IjEwIiBjeT0iMTAiIHI9IjEwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIG9wYWNpdHk9IjAuNSI+PGFuaW1hdGUgYXR0cmlidXRlTmFtZT0iciIgZnJvbT0iMyIgdG89IjEwIiBkdXI9IjEuNXMiIHJlcGVhdENvdW50PSJpbmRlZmluaXRlIi8+PGFuaW1hdGUgYXR0cmlidXRlTmFtZT0ib3BhY2l0eSIgZnJvbT0iMSIgdG89IjAiIGR1cj0iMS41cyIgcmVwZWF0Q291bnQ9ImluZGVmaW5pdGUiLz48L2NpcmNsZT48L3N2Zz4=";
-
-// Drapeau Damier
 const ICON_FLAG = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgdmlld0JveD0iMCAwIDIwIDIwIj48cGF0aCBkPSZNMiwyIFYxOCBNMiwyIEgxMiBMOSw1IEwxMiw4IEgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiLz48L3N2Zz4=";
 
 let isRegistered = false;
@@ -32,7 +29,6 @@ export const registerAllBlocks = () => {
     // --- RADAR ANIMÉ ---
     {
       "type": "maze_forever", 
-      // On insère l'image (%2) avant le texte
       "message0": "Répéter jusqu'à %1 %2 %3",
       "args0": [
         { "type": "field_image", "src": ICON_FLAG, "width": 15, "height": 15, "alt": "Flag" },
@@ -75,15 +71,21 @@ export const registerAllBlocks = () => {
     return `actions.push({type: "TURN_${dir}", id: "${block.id}"}); api.turn('${dir}');\n`;
   };
 
+  // --- MODIFICATION ICI : Action neutre "LOOP_CHECK" ---
   javascriptGenerator.forBlock['maze_forever'] = (block) => {
     const branch = javascriptGenerator.statementToCode(block, 'DO');
-    return `while (!api.isDone() && api.safeCheck()) {\n${branch}}\n`;
+    // On ajoute une action LOOP_CHECK qui provoquera une pause visuelle + highlight
+    // Mais comme le type n'est pas "SCAN", MazeRender n'affichera pas de radar.
+    return `while (!api.isDone() && api.safeCheck()) {
+      actions.push({type: "LOOP_CHECK", id: "${block.id}"}); 
+      ${branch}
+    }\n`;
   };
 
   javascriptGenerator.forBlock['maze_if'] = (block) => {
     const dir = block.getFieldValue('DIR');
     const branch = javascriptGenerator.statementToCode(block, 'DO');
-    // On ajoute l'action visuelle SCAN
+    // Ici on garde SCAN car c'est un capteur, donc on veut le radar
     return `actions.push({type: "SCAN", dir: "${dir}", id: "${block.id}"}); if (api.isPath('${dir}')) {\n${branch}}\n`;
   };
 
@@ -91,11 +93,12 @@ export const registerAllBlocks = () => {
     const dir = block.getFieldValue('DIR');
     const branch0 = javascriptGenerator.statementToCode(block, 'DO');
     const branch1 = javascriptGenerator.statementToCode(block, 'ELSE');
-    // On ajoute l'action visuelle SCAN
+    // Ici aussi SCAN
     return `actions.push({type: "SCAN", dir: "${dir}", id: "${block.id}"}); if (api.isPath('${dir}')) {\n${branch0}} else {\n${branch1}}\n`;
   };
 
-  // --- 2. TURTLE (Standard) ---
+  // ... (Le reste du fichier pour Turtle et Standards reste inchangé) ...
+  // Je remets les définitions Turtle pour être complet mais sans changement
   Blockly.defineBlocksWithJsonArray([
     { "type": "turtle_move", "message0": "avancer ✥ de %1", "args0": [{ "type": "input_value", "name": "VALUE", "check": "Number" }], "previousStatement": null, "nextStatement": null, "colour": 160 },
     { "type": "turtle_turn", "message0": "pivoter %1 de %2 degrés 🗘", "args0": [ { "type": "field_dropdown", "name": "DIR", "options": [["↺ gauche", "LEFT"], ["↻ droite", "RIGHT"]] }, { "type": "input_value", "name": "VALUE", "check": "Number" } ], "previousStatement": null, "nextStatement": null, "colour": 160 },
@@ -112,7 +115,6 @@ export const registerAllBlocks = () => {
   javascriptGenerator.forBlock['turtle_pen'] = (block) => `actions.push({type: 'PEN', id: "${block.id}", state: '${block.getFieldValue('STATE')}'});\n`;
   javascriptGenerator.forBlock['turtle_color'] = (block) => `actions.push({type: 'COLOR', id: "${block.id}", color: '${block.getFieldValue('COLOR')}'});\n`;
 
-  // --- 3. STANDARDS ---
   javascriptGenerator.forBlock['variables_set'] = (block) => {
     const argument0 = javascriptGenerator.valueToCode(block, 'VALUE', javascriptGenerator.ORDER_ATOMIC) || '0';
     const varName = block.getField('VAR').getText();
@@ -151,4 +153,3 @@ export const registerAllBlocks = () => {
   javascriptGenerator.forBlock['lists_setIndex'] = (block) => `${javascriptGenerator.valueToCode(block, 'LIST', javascriptGenerator.ORDER_MEMBER) || '[]'}[${getListIndex(block, javascriptGenerator.valueToCode(block, 'LIST', javascriptGenerator.ORDER_MEMBER) || '[]')}] = ${javascriptGenerator.valueToCode(block, 'TO', javascriptGenerator.ORDER_ASSIGNMENT) || 'null'};\nactions.push({type: 'SET', id: "${block.id}", var: '${javascriptGenerator.valueToCode(block, 'LIST', javascriptGenerator.ORDER_MEMBER) || '[]'}', val: ${javascriptGenerator.valueToCode(block, 'LIST', javascriptGenerator.ORDER_MEMBER) || '[]'}});\n`;
   javascriptGenerator.forBlock['lists_length'] = (block) => [`${javascriptGenerator.valueToCode(block, 'VALUE', javascriptGenerator.ORDER_MEMBER) || '[]'}.length`, javascriptGenerator.ORDER_MEMBER];
 };
-

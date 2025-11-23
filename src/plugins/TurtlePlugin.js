@@ -14,7 +14,7 @@ export const TurtlePlugin = {
     const state = currentState || { 
       x: levelData.startPos?.x || 0, 
       y: levelData.startPos?.y || 0, 
-      dir: levelData.startPos?.dir || 0, // 0 = NORD
+      dir: levelData.startPos?.dir !== undefined ? levelData.startPos.dir : 0, // 0 = EST (Standard)
       penDown: true, 
       color: '#2c3e50', 
       lines: [] 
@@ -26,37 +26,14 @@ export const TurtlePlugin = {
     if (action.type === 'MOVE') {
       const dist = parseFloat(action.dist);
       
-      // --- CORRECTION ANGLE ---
-      // 0° = Nord.
-      // Dans le cercle trigonométrique standard : 0° = Est.
-      // Pour que 0° pointe vers le Nord (Haut), il faut décaler de -90°.
-      // De plus, l'axe Y mathématique monte (+), mais l'axe Y Canvas descend (+).
-      // MAIS TurtleRender gère l'inversion Y (toCanvasY).
-      // Donc on reste en logique mathématique pure (Y+ = Haut).
-      
-      // Angle corrigé pour Math.cos/sin : (dir - 90)
-      const rad = (dir - 90) * (Math.PI / 180);
-      
-      const newX = x + dist * Math.cos(rad);
-      const newY = y - dist * Math.sin(rad); // Y inversé car dans Canvas Y va vers le bas
-      
-      // ATTENTION : Dans TurtleRender, on a : toCanvasY = HEIGHT/2 - mathY.
-      // Cela signifie que si mathY augmente, on monte à l'écran.
-      // Donc on doit utiliser +sin(rad) si on veut monter.
-      // Sauf que (dir-90) à 0° donne -90°. sin(-90) = -1.
-      // Donc pour monter il faut soustraire ? Non.
-      // Reprenons :
-      // 0° (Nord) -> rad = -90. cos=0, sin=-1.
-      // On veut aller vers le HAUT.
-      // Dans notre repère logique (x,y), Y+ est le haut.
-      // Donc newY doit augmenter.
-      // newY = y - (dist * -1) = y + dist. C'est correct !
-      // SAUF qu'en Canvas, Y+ est en bas.
-      // Dans TurtleRender on a : const toCanvasY = (mathY) => HEIGHT / 2 - mathY;
-      // Donc Y+ est bien vers le HAUT visuellement.
+      // --- CONVENTION STANDARD (0° = EST, Horaire) ---
+      // Plus besoin de décalage -90. cos(0) = 1 (Est).
+      const rad = dir * (Math.PI / 180);
       
       const finalX = x + dist * Math.cos(rad);
-      const finalY = y - dist * Math.sin(rad); // Correction : Moins car sin(-90)=-1, donc -(-1)=+1 (Monte)
+      // Y Mathématique (Y+ vers le haut). 
+      // Avec rotation horaire : Sud (90°) -> sin(90)=1. On veut descendre (diminuer Y), donc on soustrait.
+      const finalY = y - dist * Math.sin(rad); 
       
       if (penDown) {
         newLines.push({ x1: x, y1: y, x2: finalX, y2: finalY, color });
@@ -65,13 +42,8 @@ export const TurtlePlugin = {
       y = finalY;
     } 
     else if (action.type === 'TURN') {
-      // En mode boussole :
-      // Tourner à droite (horaire) ajoute des degrés
-      // Tourner à gauche (anti-horaire) retire des degrés
-      // C'est l'inverse de la trigo standard, mais c'est intuitif pour une boussole (N=0, E=90)
+      // Rotation Horaire (Clockwise) : +angle = Tourner à Droite
       dir += parseFloat(action.angle);
-      
-      // Normalisation 0-360 pour être propre (optionnel mais mieux pour le debug)
       dir = dir % 360;
     }
     else if (action.type === 'PEN') penDown = (action.state === 'DOWN');
@@ -120,9 +92,8 @@ export const TurtlePlugin = {
         }
     }
 
-    // Tolérance de 85% (dessin "assez" proche)
+    // Tolérance de 85%
     const accuracy = 1 - (diff / (total || 1));
-    // console.log(`Précision: ${(accuracy*100).toFixed(1)}%`);
     return accuracy > 0.85;
   }
 };

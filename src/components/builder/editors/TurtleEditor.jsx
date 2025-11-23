@@ -19,12 +19,15 @@ export default function TurtleEditor({ levelData, onUpdate }) {
     onUpdate({ ...levelData, startPos: newStartPos });
   };
 
-  // Conversion simple pour l'aperçu (échelle réduite si besoin, ici 1:1 sur une zone plus petite)
-  // On centre 0,0 au milieu de la zone de preview
+  // Conversion simple pour l'aperçu
   const toCanvasX = (mathX) => PREVIEW_SIZE / 2 + mathX;
   const toCanvasY = (mathY) => PREVIEW_SIZE / 2 - mathY;
   
-  const rotation = startDir - 90; // Même logique que le renderer principal
+  // --- CORRECTION APERÇU ---
+  // Nouvelle convention : 0° = Est.
+  // Le sprite regarde vers l'Est par défaut.
+  // Donc aucune rotation additionnelle n'est requise.
+  const rotation = startDir; 
 
   return (
     <div style={{display:'flex', flexDirection:'column', gap:'20px'}}>
@@ -93,11 +96,12 @@ export default function TurtleEditor({ levelData, onUpdate }) {
                 onChange={(e) => updateStartPos('dir', e.target.value)} 
                 style={{width: '100%', cursor:'pointer'}}
             />
+            {/* MISE À JOUR DES LABELS (0=Est) */}
             <div style={{display:'flex', justifyContent:'space-between', fontSize:'0.7rem', color:'#999'}}>
-                <span>0° (Nord)</span>
-                <span>90° (Est)</span>
-                <span>180° (Sud)</span>
-                <span>270° (Ouest)</span>
+                <span>0° (Est)</span>
+                <span>90° (Sud)</span>
+                <span>180° (Ouest)</span>
+                <span>270° (Nord)</span>
             </div>
         </div>
       </div>

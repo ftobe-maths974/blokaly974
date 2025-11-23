@@ -16,8 +16,6 @@ export const MAZE_CONFIG = {
     PLAYER: '🤖' // Robot
   },
 
-  // ... (Garde le reste : checkMove, look) ...
-  
   checkMove: (grid, x, y) => {
     if (!grid || !grid[y] || typeof grid[y][x] === 'undefined') return 'WALL';
     const cell = grid[y][x];
@@ -26,16 +24,21 @@ export const MAZE_CONFIG = {
     return 'OK';
   },
 
+  // --- MISE À JOUR CONVENTION (0=Est, 1=Sud, 2=Ouest, 3=Nord) ---
   look: (grid, x, y, currentDir, lookDir) => {
       let testDir = currentDir;
+      
+      // Gestion de la rotation relative (reste inchangée : +1 = Droite, +3 = Gauche)
       if (lookDir === 'LEFT') testDir = (currentDir + 3) % 4;
       else if (lookDir === 'RIGHT') testDir = (currentDir + 1) % 4;
       
       let tx = x, ty = y;
-      if (testDir === 0) ty--; // Nord
-      else if (testDir === 1) tx++; // Est
-      else if (testDir === 2) ty++; // Sud
-      else if (testDir === 3) tx--; // Ouest
+      
+      // NOUVEAU MAPPING DIRECTIONNEL
+      if (testDir === 0) tx++;      // 0 = Est  (x + 1)
+      else if (testDir === 1) ty++; // 1 = Sud  (y + 1)
+      else if (testDir === 2) tx--; // 2 = Ouest (x - 1)
+      else if (testDir === 3) ty--; // 3 = Nord (y - 1)
 
       const result = MAZE_CONFIG.checkMove(grid, tx, ty);
       return result !== 'WALL'; 
