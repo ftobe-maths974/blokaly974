@@ -169,15 +169,13 @@ export default function Builder() {
     const json = JSON.stringify(campaign);
     const compressed = LZString.compressToEncodedURIComponent(json);
     
-    // Fix 404 : on garde le chemin actuel (ex: /blokaly974/)
     const url = new URL(window.location.href);
-    url.search = `?data=${compressed}`;
+    // AJOUT DE &preview=1
+    url.search = `?data=${compressed}&preview=1`; 
     url.hash = ''; 
     
-    const finalUrl = url.toString();
-    navigator.clipboard.writeText(finalUrl);
-    alert("Lien copié ! Ouverture du test...");
-    window.location.href = finalUrl;
+    // On ouvre directement dans le même onglet pour tester
+    window.location.href = url.toString();
   };
 
   return (
