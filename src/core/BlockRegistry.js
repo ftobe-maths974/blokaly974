@@ -99,9 +99,18 @@ export const registerAllBlocks = () => {
 
   // ... (Le reste du fichier pour Turtle et Standards reste inchangé) ...
   // Je remets les définitions Turtle pour être complet mais sans changement
+  // --- 2. TURTLE (Standard) ---
   Blockly.defineBlocksWithJsonArray([
-    // On ajoute "pas" à la fin du message
-    { "type": "turtle_move", "message0": "avancer ✥ de %1 pas", "args0": [{ "type": "input_value", "name": "VALUE", "check": "Number" }], "previousStatement": null, "nextStatement": null, "colour": 160 },    { "type": "turtle_turn", "message0": "pivoter %1 de %2 degrés 🗘", "args0": [ { "type": "field_dropdown", "name": "DIR", "options": [["↺ gauche", "LEFT"], ["↻ droite", "RIGHT"]] }, { "type": "input_value", "name": "VALUE", "check": "Number" } ], "previousStatement": null, "nextStatement": null, "colour": 160 },
+    { 
+      "type": "turtle_move", 
+      // MODIFICATION : Ajout de "pas" à la fin
+      "message0": "avancer ✥ de %1 pas", 
+      "args0": [{ "type": "input_value", "name": "VALUE", "check": "Number" }], 
+      "previousStatement": null, 
+      "nextStatement": null, 
+      "colour": 160 
+    },
+    { "type": "turtle_turn", "message0": "pivoter %1 de %2 degrés 🗘", "args0": [ { "type": "field_dropdown", "name": "DIR", "options": [["↺ gauche", "LEFT"], ["↻ droite", "RIGHT"]] }, { "type": "input_value", "name": "VALUE", "check": "Number" } ], "previousStatement": null, "nextStatement": null, "colour": 160 },
     { "type": "turtle_pen", "message0": "stylo %1", "args0": [ { "type": "field_dropdown", "name": "STATE", "options": [["levé ⬆️", "UP"], ["baissé ⬇️", "DOWN"]] } ], "previousStatement": null, "nextStatement": null, "colour": 160 },
     { "type": "turtle_color", "message0": "couleur %1", "args0": [{ "type": "field_colour", "name": "COLOR", "colour": "#ff0000" }], "previousStatement": null, "nextStatement": null, "colour": 160 }
   ]);
