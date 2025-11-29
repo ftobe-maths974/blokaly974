@@ -10,9 +10,8 @@ import InstructionPanel from './InstructionPanel';
 import { MAZE_CONFIG } from '../../core/adapters/MazeAdapter';
 import { registerAllBlocks } from '../../core/BlockRegistry';
 import { useGameRunner } from '../../hooks/useGameRunner';
-
-const PLUGINS = { 'MAZE': MazePlugin, 'MATH': MathPlugin, 'TURTLE': TurtlePlugin };
-
+import { EquationPlugin } from '../../plugins/EquationPlugin';
+const PLUGINS = { 'MAZE': MazePlugin, 'MATH': MathPlugin, 'TURTLE': TurtlePlugin, 'EQUATION': EquationPlugin };
 const workspaceConfig = {
   collapse: true, comments: true, disable: true, maxBlocks: Infinity,
   trashcan: true, horizontalLayout: false, toolboxPosition: 'start',
@@ -118,7 +117,10 @@ export default function GameEngine({ levelData, onWin, levelIndex }) {
       grid: safeData.grid,
       playerPos: engineState ? {x: engineState.x, y: engineState.y} : initialPlayerState,
       playerDir: engineState ? engineState.dir : initialPlayerState.dir,
-      state: engineState || { variables: safeData.inputs },
+      state: engineState || { 
+          variables: safeData.inputs, 
+          ...(safeData.equation || {}) // Injecte lhs, rhs, sign s'ils existent
+      },
       history: engineState?.logs,
       hiddenVars: safeData.hiddenVars || [],
       modelLines: solutionLines,

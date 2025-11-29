@@ -8,7 +8,6 @@ export const BLOCK_DEFINITIONS = {
     <block type="maze_turn"><field name="DIR">LEFT</field></block>
     <block type="maze_turn"><field name="DIR">RIGHT</field></block>
   `,
-
   // --- TURTLE ---
   'turtle_move': `
     <block type="turtle_move">
@@ -27,6 +26,30 @@ export const BLOCK_DEFINITIONS = {
   'turtle_color': `
     <block type="turtle_color"><field name="COLOR">#ff0000</field></block>
   `,
+
+  // Dans BLOCK_DEFINITIONS
+'equation_op_both': `
+  <block type="equation_op_both">
+    <value name="VAL"><shadow type="math_number"><field name="NUM">1</field></shadow></value>
+  </block>
+`,
+
+// Dans BLOCK_LABELS
+'equation_op_both': `
+    <block type="equation_op_both">
+      <value name="VAL">
+        <shadow type="math_number">
+          <field name="NUM">1</field>
+        </shadow>
+      </value>
+    </block>
+  `,
+
+// Dans CATEGORY_CONTENTS, ajoutez une catégorie 'Algèbre'
+'Algèbre': ['equation_op_both', 'math_number'],
+
+// Dans CATEGORIES_BY_TYPE
+'EQUATION': ['Algèbre', 'Logique'],
 
   // --- LOGIQUE ---
   'controls_repeat_ext': `
@@ -120,7 +143,8 @@ export const BLOCK_LABELS = {
 export const CATEGORIES_BY_TYPE = {
   'MAZE': ['Mouvements', 'Capteurs', 'Logique'],
   'TURTLE': ['Tortue', 'Logique', 'Mathématiques', 'Variables'],
-  'MATH': ['Mathématiques', 'Listes', 'Variables', 'Interactions', 'Logique']
+  'MATH': ['Mathématiques', 'Listes', 'Variables', 'Interactions', 'Logique'],
+  'EQUATION': ['Algèbre']
 };
 
 export const CATEGORY_CONTENTS = {
@@ -131,7 +155,8 @@ export const CATEGORY_CONTENTS = {
   'Mathématiques': ['math_number', 'math_arithmetic', 'math_modulo', 'math_random_int'],
   'Listes': ['lists_create_with', 'lists_getIndex', 'lists_setIndex', 'lists_length'],
   'Variables': ['variables_set'],
-  'Interactions': ['text_print', 'text_prompt_ext']
+  'Interactions': ['text_print', 'text_prompt_ext'],
+  'Algèbre': ['equation_op_both', 'math_number']
 };
 
 // --- GÉNÉRATEURS ---
@@ -197,6 +222,7 @@ const buildToolboxXML = (allowedBlocks, levelInputs, hiddenVars, lockedVars, for
       if (catName === 'Mathématiques') colour = '230';
       if (catName === 'Listes') colour = '260';
       if (catName === 'Interactions') colour = '160';
+      if (catName === 'Algèbre') colour = '290'; // Une couleur violette/rose
 
       xmlContent += `<category name="${catName}" colour="${colour}">`;
       const blocksToAdd = forceFull ? catBlockList : Array.from(selectedInCat);

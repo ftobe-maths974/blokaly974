@@ -16,6 +16,7 @@ import {
     BLOCK_LABELS // <--- Import des traductions/icônes centralisées
 } from '../../core/BlockDefinitions'; 
 import { MAZE_CONFIG } from '../../core/adapters/MazeAdapter';
+import EquationEditor from './editors/EquationEditor';
 
 export default function LevelEditor({ levelData, onUpdate }) {
   const workspaceRef = useRef(null);
@@ -53,7 +54,12 @@ export default function LevelEditor({ levelData, onUpdate }) {
             maxBlocks: 20,
             startPos: undefined
         };
-    }
+    } else if (newType === 'EQUATION') {
+    newDefaults = {
+        equation: { a: 2, b: 4, c: 0, d: 10, lhs: "2*x+4", rhs: "10" },
+        maxBlocks: 5
+    };
+}
 
     onUpdate({ 
         ...levelData, 
@@ -129,11 +135,13 @@ export default function LevelEditor({ levelData, onUpdate }) {
                 <button onClick={() => handleTypeChange('MAZE')} style={getTabStyle(currentType === 'MAZE')}>🏰 Labyrinthe</button>
                 <button onClick={() => handleTypeChange('TURTLE')} style={getTabStyle(currentType === 'TURTLE')}>🐢 Tortue</button>
                 <button onClick={() => handleTypeChange('MATH')} style={getTabStyle(currentType === 'MATH')}>🧪 Labo</button>
+                <button onClick={() => handleTypeChange('EQUATION')} style={getTabStyle(currentType === 'EQUATION')}>⚖️ Équation</button>
             </div>
             <div style={{flex: 1, background: 'white', padding: '15px', borderRadius: '8px', border: '1px solid #ddd', overflowY: 'auto'}}>
                 {currentType === 'MAZE' && <MazeEditor levelData={levelData} onUpdate={onUpdate} />}
                 {currentType === 'TURTLE' && <TurtleEditor levelData={levelData} onUpdate={onUpdate} />}
                 {currentType === 'MATH' && <MathEditor levelData={levelData} onUpdate={onUpdate} />}
+                {currentType === 'EQUATION' && <EquationEditor levelData={levelData} onUpdate={onUpdate} />}
             </div>
         </div>
 

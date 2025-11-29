@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import GameEngine from './GameEngine';
 import CampaignMenu from './CampaignMenu';
+import ScormService from '../../core/scorm/ScormService';
 
 export default function Runner({ campaign, ltiConfig, isTeacherMode }) {
   // Normalisation : Si c'est un niveau seul, on en fait une campagne d'un niveau

@@ -69,7 +69,6 @@ export const registerAllBlocks = () => {
     return `actions.push({type: "TURN_${dir}", id: "${block.id}"}); api.turn('${dir}');\n`;
   };
 
-  // --- MODIFICATION ICI : Action neutre "LOOP_CHECK" ---
   javascriptGenerator.forBlock['maze_forever'] = (block) => {
     const branch = javascriptGenerator.statementToCode(block, 'DO');
     // On ajoute une action LOOP_CHECK qui provoquera une pause visuelle + highlight
@@ -95,8 +94,6 @@ export const registerAllBlocks = () => {
     return `actions.push({type: "SCAN", dir: "${dir}", id: "${block.id}"}); if (api.isPath('${dir}')) {\n${branch0}} else {\n${branch1}}\n`;
   };
 
-  // ... (Le reste du fichier pour Turtle et Standards reste inchangé) ...
-  // Je remets les définitions Turtle pour être complet mais sans changement
   // --- 2. TURTLE (Standard) ---
   Blockly.defineBlocksWithJsonArray([
     { 
@@ -145,6 +142,29 @@ export const registerAllBlocks = () => {
   }
   javascriptGenerator.forBlock['system_var_get'] = (block) => [block.getField('VAR_NAME').getText(), javascriptGenerator.ORDER_ATOMIC];
 
+  // --- 3. EQUATION BLOCKS ---
+  Blockly.defineBlocksWithJsonArray([{
+    "type": "equation_op_both",
+    "message0": "Aux deux côtés %1 %2",
+    "args0": [
+      { "type": "field_dropdown", "name": "OP", "options": [["Ajouter +", "ADD"], ["Soustraire -", "SUB"], ["Multiplier ×", "MUL"], ["Diviser /", "DIV"]] },
+      { "type": "input_value", "name": "VAL", "check": "Number" }
+    ],
+    "previousStatement": null,
+    "nextStatement": null,
+    "colour": 230,
+    "tooltip": "Applique une opération aux deux membres de l'équation"
+  }]);
+
+  javascriptGenerator.forBlock['equation_op_both'] = (block) => {
+    const op = block.getFieldValue('OP');
+    const val = javascriptGenerator.valueToCode(block, 'VAL', javascriptGenerator.ORDER_ATOMIC) || '0';
+    
+    const symbolMap = { 'ADD': '+', 'SUB': '-', 'MUL': '*', 'DIV': '/' };
+    return `actions.push({ type: 'OP_BOTH', operator: '${symbolMap[op]}', value: ${val} });\n`;
+  };
+
+  // --- 4. LISTES ---
   const getListIndex = (block, listName) => {
       const where = block.getFieldValue('WHERE') || 'FROM_START';
       let at = '0';
