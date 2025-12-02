@@ -1,0 +1,611 @@
+{
+  "title": "Campagne de tests",
+  "levels": [
+    {
+      "id": 1,
+      "type": "MAZE",
+      "grid": [
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        [
+          4,
+          4,
+          2,
+          1,
+          1,
+          3,
+          4,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ]
+      ],
+      "startPos": {
+        "x": 2,
+        "y": 2,
+        "dir": 0
+      },
+      "maxBlocks": 5,
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><block type=\"maze_move_forward\" id=\"{XhwK9-!]CBZgbWcRw=J\" x=\"75\" y=\"34\"></block></xml>",
+      "inputs": {},
+      "hiddenVars": [],
+      "lockedVars": [],
+      "targets": {
+        "a": "@c",
+        "c": [
+          11,
+          12,
+          13
+        ]
+      },
+      "instruction": "Utilise des blocs $Avancer$ pour atteindre l'arrivée.",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><block type=\"controls_repeat_ext\" id=\"~sm_{P]%K2,6_/!?rYT5\" x=\"32\" y=\"21\"><value name=\"TIMES\"><shadow type=\"math_number\" id=\"|v!`qLFFpbAi-NOd%of%\"><field name=\"NUM\">4</field></shadow></value><statement name=\"DO\"><block type=\"turtle_move\" id=\"IxFkx`Amp23XXFbuj]+|\"><value name=\"VALUE\"><shadow type=\"math_number\" id=\"qiw+6KMd(M**^{)vQ|kw\"><field name=\"NUM\">50</field></shadow></value><next><block type=\"turtle_turn\" id=\"bEv:eW2}CyFt84;qD@al\"><field name=\"DIR\">LEFT</field><value name=\"VALUE\"><shadow type=\"math_number\" id=\"[i*LiOf~C!G%P,2I9!lv\"><field name=\"NUM\">90</field></shadow></value></block></next></block></statement></block></xml>",
+      "allowedBlocks": [
+        "maze_move_forward"
+      ]
+    },
+    {
+      "id": 2,
+      "type": "MAZE",
+      "grid": [
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        [
+          4,
+          2,
+          1,
+          1,
+          1,
+          1,
+          3,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ]
+      ],
+      "startPos": {
+        "x": 1,
+        "y": 1,
+        "dir": 0
+      },
+      "maxBlocks": 10,
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><block type=\"maze_move_forward\" id=\"mtt/N3=3$4SV/gzWOhf^\" x=\"64\" y=\"27\"></block><block type=\"controls_repeat_ext\" id=\"lQ$o|0PxMvt%o8bxVI/|\" x=\"49\" y=\"96\"><value name=\"TIMES\"><shadow type=\"math_number\" id=\"%TSDN1Zw(BH%~[0RMjB2\"><field name=\"NUM\">3</field></shadow></value></block></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "instruction": "Arrange le puzzle pour atteindre l'arrivée.",
+      "allowedBlocks": []
+    },
+    {
+      "id": 1763869930382,
+      "type": "MAZE",
+      "grid": [
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        [
+          4,
+          3,
+          1,
+          1,
+          1,
+          1,
+          1,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          1,
+          4
+        ],
+        [
+          4,
+          2,
+          1,
+          1,
+          1,
+          1,
+          1,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ]
+      ],
+      "startPos": {
+        "x": 1,
+        "y": 3,
+        "dir": 0
+      },
+      "maxBlocks": 10,
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><block type=\"maze_forever\" id=\"hsT76_h?)wf{~mPH?XDa\" x=\"93\" y=\"58\"><statement name=\"DO\"><block type=\"maze_if_else\" id=\"~Y1tIO9@iT}cukEkba{`\"><field name=\"DIR\">AHEAD</field></block></statement></block><block type=\"maze_turn\" id=\"Vv0F:F$~fXMW8ZeQ~,Y$\" x=\"233\" y=\"221\"><field name=\"DIR\">LEFT</field></block><block type=\"maze_move_forward\" id=\"UEst)vl3yIL)SA{|bmKm\" x=\"87\" y=\"232\"></block></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "instruction": "Arrange le puzzle pour atteindre l'arrivée.",
+      "allowedBlocks": [
+        "maze_if",
+        "maze_if_else",
+        "maze_forever",
+        "maze_move_forward",
+        "maze_turn",
+        "controls_repeat_ext",
+        "controls_whileUntil",
+        "controls_if",
+        "logic_compare",
+        "logic_operation"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "TURTLE",
+      "grid": [
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        [
+          4,
+          2,
+          1,
+          1,
+          1,
+          1,
+          3,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ]
+      ],
+      "startPos": {
+        "x": 0,
+        "y": 0,
+        "dir": 270
+      },
+      "maxBlocks": 10,
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><block type=\"controls_repeat_ext\" id=\"V45Bc)6~O(_vxKE!;Y7!\" x=\"61\" y=\"49\"><value name=\"TIMES\"><shadow type=\"math_number\" id=\"+2Q5mdc?F+Z1@;6S(Q0A\"><field name=\"NUM\">4</field></shadow></value><statement name=\"DO\"><block type=\"turtle_move\" id=\"8R5r[.J8aV?3TX^,TVCp\"><value name=\"VALUE\"><shadow type=\"math_number\" id=\"C*=u-nWV$ZM`mzG^@W5t\"><field name=\"NUM\">50</field></shadow></value><next><block type=\"turtle_turn\" id=\"NBJ~a^n;pyY1J0F!ib:B\"><field name=\"DIR\">RIGHT</field><value name=\"VALUE\"><shadow type=\"math_number\" id=\"^|MKd?yHK-3_+cl}BAfV\"><field name=\"NUM\">90</field></shadow></value></block></next></block></statement></block></xml>",
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "instruction": "Aide $Tortue$ à dessiner un carré.",
+      "allowedBlocks": [
+        "turtle_move",
+        "turtle_turn",
+        "controls_repeat_ext"
+      ]
+    },
+    {
+      "id": 6,
+      "type": "MATH",
+      "grid": [
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        [
+          4,
+          2,
+          1,
+          1,
+          1,
+          1,
+          3,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ]
+      ],
+      "startPos": {
+        "x": 1,
+        "y": 1
+      },
+      "maxBlocks": 10,
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><variables><variable id=\"CN~D*eP)k@uaLs%WUOSA\">a</variable></variables><block type=\"math_number\" id=\"=VURidOoeK@N]+=8C?YY\" x=\"121\" y=\"31\"><field name=\"NUM\">0</field></block><block type=\"variables_set\" id=\"P{9%rP~5YN[w(rL(Vpd^\" x=\"9\" y=\"67\"><field name=\"VAR\" id=\"CN~D*eP)k@uaLs%WUOSA\">a</field></block></xml>",
+      "inputs": {
+        "a": 0
+      },
+      "targets": {
+        "a": 3
+      },
+      "instruction": "Affecte la valeur 3 à $a$.",
+      "allowedBlocks": []
+    },
+    {
+      "id": 4,
+      "type": "MATH",
+      "grid": [
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        [
+          4,
+          2,
+          1,
+          1,
+          1,
+          1,
+          3,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ]
+      ],
+      "startPos": {
+        "x": 1,
+        "y": 1
+      },
+      "maxBlocks": 10,
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><block type=\"math_modulo\" id=\"=_BC5G{r{8a(TSDjwGRq\" x=\"56\" y=\"58\"><value name=\"DIVIDEND\"><shadow type=\"math_number\" id=\"$2bnu!|t@)^*NPLVOTvL\"><field name=\"NUM\">10</field></shadow></value><value name=\"DIVISOR\"><shadow type=\"math_number\" id=\"9Au?Z`e7E*I?]1|Ly|my\"><field name=\"NUM\">3</field></shadow></value></block><block type=\"turtle_pen\" id=\"BBl%}fB?X7[,p|:|Fx8?\" x=\"16\" y=\"131\"><field name=\"STATE\">UP</field></block><block type=\"controls_whileUntil\" id=\"$4f%o$)pJ41=9v2z{FoZ\" x=\"183\" y=\"164\"><field name=\"MODE\">WHILE</field></block></xml>",
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><variables><variable id=\"a_T-_xA]1I2|=]W0aI91\">c</variable><variable id=\"B6]c{[iZ4|D+~!{pYajM\">d</variable></variables><block type=\"system_var_get\" id=\"Q)]C.ePR38k[sbzg=EAW\" x=\"-55\" y=\"38\"><field name=\"VAR_NAME\">b</field></block><block type=\"system_var_get\" id=\"$7;8FX;K?DZ0nG,7jyYG\" x=\"-113\" y=\"60\"><field name=\"VAR_NAME\">b</field></block><block type=\"variables_set\" id=\"y*GV,?@]tqV*fx#OLm*N\" x=\"-116\" y=\"111\"><field name=\"VAR\" id=\"a_T-_xA]1I2|=]W0aI91\">c</field></block><block type=\"variables_set\" id=\"A0ozfo*Poqi[}f4e%nE7\" x=\"-127\" y=\"202\"><field name=\"VAR\" id=\"B6]c{[iZ4|D+~!{pYajM\">d</field></block></xml>",
+      "inputs": {
+        "a": 1,
+        "b": 2,
+        "c": 0,
+        "d": 0
+      },
+      "hiddenVars": [],
+      "lockedVars": [
+        "b",
+        "a"
+      ],
+      "targets": {
+        "c": "@a",
+        "d": "@b"
+      },
+      "instruction": "affecte la valeur de $a$ à $c$ et celle de $b$ à $c$.",
+      "allowedBlocks": [
+        "variables_set",
+        "math_arithmetic",
+        "math_modulo",
+        "math_random_int",
+        "math_number"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "MATH",
+      "grid": [
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        [
+          4,
+          2,
+          1,
+          1,
+          1,
+          1,
+          3,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ]
+      ],
+      "startPos": {
+        "x": 1,
+        "y": 1
+      },
+      "maxBlocks": 10,
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><variables><variable id=\"AhO7yOtp/}V;5Qt`4:#q\">a</variable><variable id=\"#M~D(A^CnXy!/:IpQj~_\">c</variable><variable id=\"X71f{L,IjKS:([Rw|[bR\">b</variable></variables><block type=\"variables_get\" id=\"dknuq]ZEf7)*SPyqJe#;\" x=\"104\" y=\"38\"><field name=\"VAR\" id=\"AhO7yOtp/}V;5Qt`4:#q\">a</field></block><block type=\"variables_set\" id=\"X0]!8w(EKU#:6qo*2C,M\" x=\"-18\" y=\"56\"><field name=\"VAR\" id=\"#M~D(A^CnXy!/:IpQj~_\">c</field><next><block type=\"variables_set\" id=\"Ud0UqgMqWzUp;;ke#X7$\"><field name=\"VAR\" id=\"AhO7yOtp/}V;5Qt`4:#q\">a</field><next><block type=\"variables_set\" id=\"%3^A-*p|Ur[[2[:mrUOY\"><field name=\"VAR\" id=\"X71f{L,IjKS:([Rw|[bR\">b</field></block></next></block></next></block><block type=\"variables_get\" id=\"C9J?~tWFBHa*cw)nH!0C\" x=\"112\" y=\"83\"><field name=\"VAR\" id=\"X71f{L,IjKS:([Rw|[bR\">b</field></block><block type=\"variables_get\" id=\"Yi*~w%ifIXl{*=6du.:J\" x=\"113\" y=\"136\"><field name=\"VAR\" id=\"#M~D(A^CnXy!/:IpQj~_\">c</field></block></xml>",
+      "allowedBlocks": [
+        "variables_set",
+        "math_number",
+        "math_arithmetic",
+        "math_modulo",
+        "math_random_int"
+      ],
+      "inputs": {
+        "a": 3,
+        "b": 1,
+        "c": 0
+      },
+      "instruction": "En utilisant c, intervertit les valeurs des variables $a$ et $b$.",
+      "hiddenVars": [],
+      "lockedVars": [],
+      "targets": {
+        "a": 1,
+        "b": 3
+      }
+    },
+    {
+      "id": 1763815329255,
+      "type": "MATH",
+      "grid": [
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        [
+          4,
+          2,
+          1,
+          1,
+          1,
+          1,
+          3,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ]
+      ],
+      "maxBlocks": 20,
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><variables><variable id=\"n*O)%/,}R2Z7-6H3X%I+\">reponse</variable></variables><block type=\"variables_set\" id=\"H*(zy/XK_mWYc8ySuFIO\" x=\"32\" y=\"58\"><field name=\"VAR\" id=\"n*O)%/,}R2Z7-6H3X%I+\">reponse</field><value name=\"VALUE\"><block type=\"text_prompt_ext\" id=\"sH0U2h|]+T|909muMBNL\"><mutation type=\"NUMBER\"></mutation><field name=\"TYPE\">NUMBER</field><value name=\"TEXT\"><shadow type=\"text\" id=\"jdlyvkU!7NtOjiG$wPE8\"><field name=\"TEXT\">Entrer un nombre</field></shadow></value></block></value><next><block type=\"variables_set\" id=\"2,O@Lcvy~L#uJ!mzahaG\"><field name=\"VAR\" id=\"n*O)%/,}R2Z7-6H3X%I+\">reponse</field><value name=\"VALUE\"><block type=\"math_arithmetic\" id=\"#7wn2#4;*9JT.VkOuO/D\"><field name=\"OP\">ADD</field><value name=\"A\"><shadow type=\"math_number\" id=\"I(,zht2cy1V9,]jm}O/A\"><field name=\"NUM\">1</field></shadow><block type=\"variables_get\" id=\"(ib]lKJ^nSzeB{|$lNed\"><field name=\"VAR\" id=\"n*O)%/,}R2Z7-6H3X%I+\">reponse</field></block></value><value name=\"B\"><shadow type=\"math_number\" id=\"VD8WIG`_@|7ziBBE*Dwt\"><field name=\"NUM\">1</field></shadow><block type=\"math_number\" id=\"3^ThOf*BuO4NSV]jNFxW\"><field name=\"NUM\">0</field></block></value></block></value></block></next></block></xml>",
+      "allowedBlocks": [
+        "text_print",
+        "text_prompt_ext",
+        "math_number",
+        "math_arithmetic",
+        "math_random_int",
+        "variables_set",
+        "math_modulo"
+      ],
+      "instruction": "Complète ce programme informatique qui permet de coder ce programme de calcul. Ensuite, teste-le en choisissant la valeur 12.\n\n* Choisir un nombre.\n* Le multiplier par 2.\n* Ajouter 5 au résultat.",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><variables><variable id=\"o-`S8m/}.)sYuyD?4a}x\">résultat</variable></variables><block type=\"text_print\" id=\"jb29:pMrdDay7UwopY88\" x=\"32\" y=\"62\"><value name=\"TEXT\"><block type=\"text_prompt_ext\" id=\"2WzXSnF_Eg6DEAa_o!D9\"><mutation type=\"NUMBER\"></mutation><field name=\"TYPE\">NUMBER</field><value name=\"TEXT\"><shadow type=\"text\" id=\"o6!2!K[6zy8FdzE[7v:n\"><field name=\"TEXT\">Choisis un nombre</field></shadow></value></block></value><next><block type=\"variables_set\" id=\";be$Z1pVY)$BT5{(3*wR\"><field name=\"VAR\" id=\"o-`S8m/}.)sYuyD?4a}x\">résultat</field><next><block type=\"variables_set\" id=\"]4#gQDh!Vh]4SlT;geh4\"><field name=\"VAR\" id=\"o-`S8m/}.)sYuyD?4a}x\">résultat</field><value name=\"VALUE\"><block type=\"math_arithmetic\" id=\"AQk$8yMSb-IN9$M]_iU]\"><field name=\"OP\">MULTIPLY</field><value name=\"A\"><shadow type=\"math_number\" id=\"eN)*RRZMt5YLkPgpb=uG\"><field name=\"NUM\">1</field></shadow><block type=\"variables_get\" id=\"~G_%%ctK{o4AXly.4,/N\"><field name=\"VAR\" id=\"o-`S8m/}.)sYuyD?4a}x\">résultat</field></block></value><value name=\"B\"><shadow type=\"math_number\" id=\"J#^*/P0Jz5yR%-$)|9di\"><field name=\"NUM\">2</field></shadow></value></block></value><next><block type=\"variables_set\" id=\"!G0#]00`vs{+H~G5v;Oz\"><field name=\"VAR\" id=\"o-`S8m/}.)sYuyD?4a}x\">résultat</field><value name=\"VALUE\"><block type=\"math_arithmetic\" id=\"pl4yQ/{gd6qqMI1eI]}@\"><field name=\"OP\">ADD</field><value name=\"A\"><shadow type=\"math_number\" id=\"9~*3Rm71aLC})00W.4Di\"><field name=\"NUM\">1</field></shadow><block type=\"variables_get\" id=\"zO/Cu~6+i?Hjn*b}?zqk\"><field name=\"VAR\" id=\"o-`S8m/}.)sYuyD?4a}x\">résultat</field></block></value><value name=\"B\"><shadow type=\"math_number\" id=\"|)@f0u[v2Yi%9Dsv9*q[\"><field name=\"NUM\">5</field></shadow></value></block></value><next><block type=\"text_print\" id=\"UhZ(9:(aFRwKU?F,vVj,\"><value name=\"TEXT\"><block type=\"variables_get\" id=\"f=k=ho8zvFPqti({flQy\"><field name=\"VAR\" id=\"o-`S8m/}.)sYuyD?4a}x\">résultat</field></block></value></block></next></block></next></block></next></block></next></block></xml>",
+      "inputs": {
+        "reponse": 0
+      },
+      "targets": {
+        "reponse": 29
+      },
+      "hiddenVars": [],
+      "lockedVars": []
+    }
+  ]
+}
