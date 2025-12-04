@@ -6,7 +6,7 @@ export const MazePlugin = {
   id: 'MAZE',
   RenderComponent: MazeRender,
 
-  registerBlocks: () => {}, 
+  registerBlocks: (Blockly, javascriptGenerator) => {},
 
   getToolboxXML: (allowedBlocks, levelInputs, hiddenVars, lockedVars) => {
     return generateToolbox(allowedBlocks, levelInputs, hiddenVars, lockedVars);
@@ -19,13 +19,12 @@ export const MazePlugin = {
       dir: levelData.startPos?.dir !== undefined ? levelData.startPos.dir : 0 
     };
     
-    // --- FIX CRASH TIME TRAVEL : Si pas d'action (reset), on renvoie l'état initial ---
+    // --- FIX CRASH : Si Time Travel (action est null), on renvoie l'état intact ---
     if (!action) return { newState: state, status: 'RUNNING' };
 
     let { x, y, dir } = state;
     let status = 'RUNNING';
 
-    // Sécurisation de l'objet action
     const cmd = (typeof action === 'object' && action.type) ? action.type : action;
 
     const normalizeDir = (d) => ((d % 4) + 4) % 4;

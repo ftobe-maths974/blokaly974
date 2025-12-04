@@ -2,19 +2,17 @@ import React, { useEffect, useState } from 'react';
 import nerdamer from 'nerdamer';
 
 export default function EquationEditor({ levelData, onUpdate }) {
-  // On récupère les params ou on met des défauts
-  const params = levelData.equation || { a: 2, b: 4, c: 0, d: 10, implicit: false, showGraph: false };
+  // On ajoute 'sign' aux paramètres par défaut
+  const params = levelData.equation || { a: 2, b: 4, c: 0, d: 10, sign: '=', implicit: false, showGraph: false };
   
   const [manualMode, setManualMode] = useState(false);
   const [manualEq, setManualEq] = useState("");
 
-  // Initialisation au premier chargement
   useEffect(() => {
     if (!levelData.allowedBlocks || levelData.allowedBlocks.length === 0) {
        updateGlobal({ ...params }, true);
     }
-    // Synchro initiale du champ texte
-    const startEq = `${params.a}*x + ${params.b} = ${params.c}*x + ${params.d}`;
+    const startEq = `${params.a}*x + ${params.b} ${params.sign} ${params.c}*x + ${params.d}`;
     setManualEq(startEq);
   }, []);
 
@@ -24,7 +22,8 @@ export default function EquationEditor({ levelData, onUpdate }) {
     
     const updates = { 
       ...levelData, 
-      equation: { ...newParams, lhs, rhs, sign: '=' }
+      // On s'assure que 'sign' est bien sauvegardé
+      equation: { ...newParams, lhs, rhs, sign: newParams.sign }
     };
 
     if (resetBlocks) {
@@ -36,32 +35,41 @@ export default function EquationEditor({ levelData, onUpdate }) {
   const updateParam = (changes) => {
     const newParams = { ...params, ...changes, manualLhs: null, manualRhs: null };
     updateGlobal(newParams);
-    setManualEq(`${newParams.a}*x + ${newParams.b} = ${newParams.c}*x + ${newParams.d}`);
+    setManualEq(`${newParams.a}*x + ${newParams.b} ${newParams.sign} ${newParams.c}*x + ${newParams.d}`);
   };
 
   const generateRandom = () => {
-      // Algo pour garantir une solution entière
-      const x = Math.floor(Math.random() * 10) - 5; // Solution entre -5 et 5
+      const x = Math.floor(Math.random() * 10) - 5;
       const a = Math.floor(Math.random() * 5) + 2;  
-      const c = Math.floor(Math.random() * a);      // c < a pour garder x positif à gauche au début
+      const c = Math.floor(Math.random() * a);
       const b = Math.floor(Math.random() * 10);
-      
-      // ax + b = cx + d  =>  d = ax + b - cx
       const d = a*x + b - c*x;
+      // On choisit un signe au hasard
+      const signs = ['=', '<', '>', '\\leq', '\\geq'];
+      const randomSign = signs[Math.floor(Math.random() * signs.length)];
 
-      updateParam({ a, b, c, d });
+      updateParam({ a, b, c, d, sign: randomSign });
   };
 
   const handleManualChange = (e) => {
       const val = e.target.value;
       setManualEq(val);
-      const parts = val.split('=');
-      if (parts.length === 2) {
+      // Parsing basique pour détecter le signe central
+      // On cherche =, <, >, <=, >=
+      const match = val.match(/(.*?)(<=|>=|<|>|=)(.*)/);
+      if (match) {
           try {
-            // On vérifie si nerdamer comprend
-            nerdamer(parts[0]); nerdamer(parts[1]);
-            // On met à jour en mode "Manuel"
-            updateGlobal({ ...params, manualLhs: parts[0], manualRhs: parts[1] });
+            const lhs = match[1].trim();
+            const sign = match[2].trim();
+            const rhs = match[3].trim();
+            
+            // Conversion symboles LaTeX si besoin
+            let latexSign = sign;
+            if (sign === '<=') latexSign = '\\leq';
+            if (sign === '>=') latexSign = '\\geq';
+
+            nerdamer(lhs); nerdamer(rhs);
+            updateGlobal({ ...params, manualLhs: lhs, manualRhs: rhs, sign: latexSign });
           } catch(e) {}
       }
   };
@@ -93,11 +101,8 @@ export default function EquationEditor({ levelData, onUpdate }) {
                 value={manualEq} 
                 onChange={handleManualChange}
                 className="w-full p-3 font-mono text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 outline-none text-center text-slate-700"
-                placeholder="3*x + 5 = 2*x - 1"
+                placeholder="3*x + 5 <= 2*x - 1"
               />
-              <p className="text-[10px] text-slate-400 mt-2 text-center">
-                  Utilisez <code className="bg-slate-100 px-1 rounded">*</code> pour multiplier (ex: 3*x).
-              </p>
           </div>
       ) : (
         <div className="space-y-5 animate-in fade-in slide-in-from-top-2 duration-300">
@@ -113,25 +118,36 @@ export default function EquationEditor({ levelData, onUpdate }) {
                     <span className="w-8 text-right font-mono font-bold text-slate-700">{params[p]}</span>
                 </div>
             ))}
+            
+            {/* SÉLECTEUR DE SIGNE */}
+            <div className="flex items-center gap-4 bg-slate-100 p-2 rounded-lg">
+                <label className="w-16 text-xs font-bold text-slate-500 uppercase">Signe :</label>
+                <div className="flex gap-2 flex-1 justify-center">
+                    {['=', '<', '>', '\\leq', '\\geq'].map(s => (
+                        <button
+                            key={s}
+                            onClick={() => updateParam({ sign: s })}
+                            className={`w-10 h-10 flex items-center justify-center rounded font-bold text-lg font-mono transition-all ${params.sign === s ? 'bg-white shadow text-blue-600 ring-2 ring-blue-200' : 'text-slate-400 hover:bg-white hover:text-slate-600'}`}
+                        >
+                            {s === '\\leq' ? '≤' : (s === '\\geq' ? '≥' : s)}
+                        </button>
+                    ))}
+                </div>
+            </div>
         </div>
       )}
 
-      {/* OPTIONS & APERÇU */}
+      {/* OPTIONS */}
       <div className="space-y-3 border-t border-slate-100 pt-4">
         <div className="flex justify-between gap-2">
             <label className="flex-1 flex items-center gap-2 cursor-pointer bg-slate-50 px-3 py-2 rounded-lg border border-slate-100 hover:bg-slate-100 transition-colors">
               <input type="checkbox" checked={params.implicit || false} onChange={(e) => updateParam({ implicit: e.target.checked })} className="w-4 h-4 text-blue-600 rounded" />
               <span className="text-xs font-bold text-slate-600">Implicit (2x)</span>
             </label>
-            
             <label className="flex-1 flex items-center gap-2 cursor-pointer bg-slate-50 px-3 py-2 rounded-lg border border-slate-100 hover:bg-slate-100 transition-colors">
               <input type="checkbox" checked={params.showGraph || false} onChange={(e) => updateParam({ showGraph: e.target.checked })} className="w-4 h-4 text-emerald-600 rounded" />
               <span className="text-xs font-bold text-slate-600">Graphique</span>
             </label>
-        </div>
-
-        <div className="bg-slate-800 text-white p-4 rounded-xl text-center font-mono text-lg shadow-inner overflow-hidden text-ellipsis whitespace-nowrap">
-            {levelData.equation?.lhs} = {levelData.equation?.rhs}
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import { MAZE_CONFIG } from './adapters/MazeAdapter';
 
 export const BLOCK_DEFINITIONS = {
-  // ... (Autres blocs inchangés) ...
+  // ... (MAZE, TURTLE inchangés) ...
   'maze_move_forward': '<block type="maze_move_forward"></block>',
   'maze_forever': '<block type="maze_forever"></block>',
   'maze_if': '<block type="maze_if"></block>',
@@ -17,10 +17,27 @@ export const BLOCK_DEFINITIONS = {
   'equation_op_both': `<block type="equation_op_both"><value name="VAL"><shadow type="math_number"><field name="NUM">1</field></shadow></value></block>`,
   'equation_term_x': `<block type="equation_term_x"><field name="COEFF">1</field></block>`,
   'equation_verify': `<block type="equation_verify"><value name="VAL"><shadow type="math_number"><field name="NUM">1</field></shadow></value></block>`,
-  // NOUVEAU : Bloc de conclusion
   'equation_solution_state': `<block type="equation_solution_state"></block>`,
+  
+  // NOUVEAUX BLOCS CORRIGÉS
+  'equation_solution_s': `<block type="equation_solution_s"></block>`,
+  'equation_interval': `
+    <block type="equation_interval">
+        <value name="MIN">
+            <shadow type="math_infinity">
+                <field name="SIGN">NEG</field> 
+            </shadow>
+        </value>
+        <value name="MAX">
+            <shadow type="math_number">
+                <field name="NUM">0</field>
+            </shadow>
+        </value>
+    </block>
+  `,
+  'math_infinity': `<block type="math_infinity"></block>`,
 
-  // ... (Reste inchangé) ...
+  // ... (Le reste inchangé) ...
   'controls_repeat_ext': `<block type="controls_repeat_ext"><value name="TIMES"><shadow type="math_number"><field name="NUM">5</field></shadow></value></block>`,
   'controls_whileUntil': '<block type="controls_whileUntil"></block>',
   'controls_if': '<block type="controls_if"></block>',
@@ -41,19 +58,14 @@ export const BLOCK_DEFINITIONS = {
 };
 
 export const BLOCK_LABELS = {
-  // ... (Labels existants)
   'maze_move_forward': 'Avancer ✥', 'maze_turn': 'Pivoter 🗘', 'maze_if': 'Si chemin... 📡', 'maze_if_else': 'Si... Sinon... 📡', 'maze_forever': 'Répéter jusqu\'à 🏁',
   'turtle_move': 'Avancer 🐢', 'turtle_turn': 'Pivoter 🐢', 'turtle_pen': 'Stylo ✏️', 'turtle_color': 'Couleur 🎨',
   'controls_repeat_ext': 'Répéter N fois', 'controls_whileUntil': 'Répéter tant que', 'controls_if': 'Si... Alors',
   'logic_compare': 'Comparaison', 'logic_operation': 'Opérateur',
   'math_number': 'Nombre', 'math_arithmetic': 'Calcul', 'math_modulo': 'Reste', 'math_random_int': 'Aléatoire',
   'text_print': 'Afficher', 'text_prompt_ext': 'Demander', 'lists_create_with': 'Créer liste', 'lists_getIndex': 'Lire élément', 'lists_setIndex': 'Modifier élément', 'lists_length': 'Longueur liste', 'variables_set': 'Définir variable', 'variables_get': 'Lire variable',
-  
-  // ALGEBRE
-  'equation_op_both': 'Opération Équation',
-  'equation_term_x': 'Terme X (ax)',
-  'equation_verify': 'Vérifier si x = ?',
-  'equation_solution_state': 'Conclure sur les solutions' // Label
+  'equation_op_both': 'Opération Équation', 'equation_term_x': 'Terme X (ax)', 'equation_verify': 'Vérifier si x = ?', 'equation_solution_state': 'Conclure sur les solutions',
+  'equation_solution_s': 'Solution S = ...', 'equation_interval': 'Intervalle [ ; ]', 'math_infinity': 'Infini (∞)'
 };
 
 export const CATEGORIES_BY_TYPE = {
@@ -72,11 +84,9 @@ export const CATEGORY_CONTENTS = {
   'Listes': ['lists_create_with', 'lists_getIndex', 'lists_setIndex', 'lists_length'],
   'Variables': ['variables_set'],
   'Interactions': ['text_print', 'text_prompt_ext'],
-  // Ajout dans la catégorie
-  'Algèbre': ['equation_op_both', 'equation_term_x', 'equation_verify', 'equation_solution_state', 'math_number']
+  'Algèbre': ['equation_op_both', 'equation_term_x', 'equation_verify', 'equation_solution_state', 'equation_solution_s', 'equation_interval', 'math_infinity', 'math_number']
 };
 
-// ... (Générateur inchangé)
 export const generateToolbox = (allowedBlocks, levelInputs, hiddenVars = [], lockedVars = []) => buildToolboxXML(allowedBlocks, levelInputs, hiddenVars, lockedVars);
 export const generateMasterToolbox = (type, levelInputs, hiddenVars = [], lockedVars = []) => {
   const categories = CATEGORIES_BY_TYPE[type] || [];

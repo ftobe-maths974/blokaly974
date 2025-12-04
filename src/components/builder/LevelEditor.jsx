@@ -19,6 +19,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
   const [codeMode, setCodeMode] = useState('START');
   const [isReady, setIsReady] = useState(false);
 
+  // Initialisation de Blockly
   useEffect(() => {
     const timer = setTimeout(() => {
         try { registerAllBlocks(); setIsReady(true); } catch(e) { console.error(e); }
@@ -33,6 +34,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
   
   const currentType = levelData.type || 'MAZE';
 
+  // --- GÉNÉRATION TOOLBOX ---
   const studentToolboxResult = useMemo(() => generateToolbox(
       levelData.allowedBlocks, levelData.inputs, levelData.hiddenVars, levelData.lockedVars
   ), [levelData.allowedBlocks, levelData.inputs, levelData.hiddenVars, levelData.lockedVars]);
@@ -53,7 +55,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
     if (workspaceRef.current && isReady) workspaceRef.current.updateToolbox(activeToolbox.xml);
   }, [activeToolbox, isReady]);
 
-  // Handlers Toolbox
+  // --- HANDLERS INTERFACE ---
   const toggleBlock = (blockType) => {
     const currentAllowed = levelData.allowedBlocks || [];
     const newAllowed = currentAllowed.includes(blockType) ? currentAllowed.filter(t => t !== blockType) : [...currentAllowed, blockType];
@@ -72,28 +74,30 @@ export default function LevelEditor({ levelData, onUpdate }) {
 
   const displayedCategories = CATEGORIES_BY_TYPE[currentType] || [];
 
-  if (!isReady) return <div className="p-10 text-center text-slate-400 animate-pulse">Chargement...</div>;
+  if (!isReady) return <div className="p-10 text-center text-slate-400 animate-pulse">Chargement de l'éditeur...</div>;
 
   return (
     <div className="flex flex-col h-full gap-4">
       
       {/* --- PARTIE HAUTE : VISUEL + PROPRIÉTÉS --- */}
-      <div className="flex flex-col lg:flex-row gap-4 h-[55%] min-h-[400px]">
+      <div className="flex flex-col lg:flex-row gap-4 h-[60%] min-h-[450px]">
         
-        {/* COLONNE GAUCHE : Éditeur Visuel (Maintenant il prend toute la hauteur disponible) */}
+        {/* COLONNE GAUCHE : Éditeur Visuel (Sans les boutons de type !) */}
         <div className="flex-1 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative flex flex-col">
-            {/* On rend conditionnellement l'éditeur sans la barre d'onglets au-dessus */}
-            {currentType === 'MAZE' && <MazeEditor levelData={levelData} onUpdate={onUpdate} />}
-            {currentType === 'TURTLE' && <TurtleEditor levelData={levelData} onUpdate={onUpdate} />}
-            {currentType === 'MATH' && <MathEditor levelData={levelData} onUpdate={onUpdate} />}
-            {currentType === 'EQUATION' && <EquationEditor levelData={levelData} onUpdate={onUpdate} />}
+            {/* Le contenu prend toute la hauteur disponible */}
+            <div className="flex-1 overflow-hidden relative">
+                {currentType === 'MAZE' && <MazeEditor levelData={levelData} onUpdate={onUpdate} />}
+                {currentType === 'TURTLE' && <TurtleEditor levelData={levelData} onUpdate={onUpdate} />}
+                {currentType === 'MATH' && <MathEditor levelData={levelData} onUpdate={onUpdate} />}
+                {currentType === 'EQUATION' && <EquationEditor levelData={levelData} onUpdate={onUpdate} />}
+            </div>
         </div>
 
         {/* COLONNE DROITE : Propriétés & Toolbox */}
         <div className="w-full lg:w-80 flex-shrink-0 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
           <div className="p-3 border-b border-slate-100 bg-slate-50/50">
             <h4 className="m-0 text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                <span>⚙️</span> Configuration
+                <span>⚙️</span> Propriétés
             </h4>
           </div>
           
@@ -126,7 +130,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
               {/* Toolbox */}
               <div>
                 <h4 className="text-[10px] font-bold text-slate-400 mb-2 uppercase border-t border-slate-100 pt-3">
-                    🧰 Blocs autorisés
+                    🧰 Toolbox Élève
                 </h4>
                 <div className="space-y-1">
                     {displayedCategories.map(catName => {
@@ -135,6 +139,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
                         const allChecked = categoryBlocks.every(type => currentAllowed.includes(type));
                         const isIndeterminate = categoryBlocks.some(type => currentAllowed.includes(type)) && !allChecked;
 
+                        // Masquer "Variables" si pas d'inputs
                         if (catName === 'Variables' && (!levelData.inputs || Object.keys(levelData.inputs).length === 0)) return null;
 
                         return (
