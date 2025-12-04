@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { BlocklyWorkspace } from 'react-blockly';
 import * as Blockly from 'blockly';
 import { javascriptGenerator } from 'blockly/javascript';
+import { pythonGenerator } from 'blockly/python'; 
 import { MazePlugin } from '../../plugins/MazePlugin';
 import { MathPlugin } from '../../plugins/MathPlugin';
 import { TurtlePlugin } from '../../plugins/TurtlePlugin';
@@ -10,6 +11,7 @@ import FeedbackModal from './FeedbackModal';
 import InstructionPanel from './InstructionPanel';
 import { MAZE_CONFIG } from '../../core/adapters/MazeAdapter';
 import { registerAllBlocks } from '../../core/BlockRegistry';
+import { registerPythonDefinitions } from '../../core/PythonDefinitions'; 
 import { useGameRunner } from '../../hooks/useGameRunner';
 
 const PLUGINS = { 'MAZE': MazePlugin, 'MATH': MathPlugin, 'TURTLE': TurtlePlugin, 'EQUATION': EquationPlugin };
@@ -27,13 +29,15 @@ export default function GameEngine({ levelData, onWin, levelIndex, onNextLevel }
   const GameView = plugin.RenderComponent;
 
   const [isPanelOpen, setIsPanelOpen] = useState(true);
+  const [isPythonOpen, setIsPythonOpen] = useState(false); 
+  const [pythonCode, setPythonCode] = useState(""); 
   const [isReady, setIsReady] = useState(false);
-  // État pour la largeur du panneau de droite (Jeu) en pourcentage
   const [gamePanelWidth, setGamePanelWidth] = useState(40);
   const [isDragging, setIsDragging] = useState(false);
 
   const workspaceRef = useRef(null);
   const containerRef = useRef(null);
+  const blocklyContainerRef = useRef(null); 
   
   const safeData = useMemo(() => ({
     ...levelData,
@@ -52,7 +56,8 @@ export default function GameEngine({ levelData, onWin, levelIndex, onNextLevel }
 
   const {
     speed, setSpeed, engineState, gameState, solutionLines,
-    gameStats, proofToken, run, reset, pause, stepForward, lastAction
+    gameStats, proofToken, run, reset, pause, stepForward, lastAction,
+    currentStep, totalSteps, goToStep, clearSimulation // On récupère clearSimulation
   } = useGameRunner(workspaceRef, plugin, safeData);
 
   const initialPlayerState = useMemo(() => ({
@@ -64,7 +69,13 @@ export default function GameEngine({ levelData, onWin, levelIndex, onNextLevel }
   }, [gameState, onWin, gameStats]);
 
   useEffect(() => {
-    const timer = setTimeout(() => { try { registerAllBlocks(); setIsReady(true); } catch(e){} }, 10);
+    const timer = setTimeout(() => { 
+        try { 
+            registerAllBlocks(); 
+            registerPythonDefinitions(); 
+            setIsReady(true); 
+        } catch(e){} 
+    }, 10);
     return () => clearTimeout(timer);
   }, []);
 
@@ -73,9 +84,33 @@ export default function GameEngine({ levelData, onWin, levelIndex, onNextLevel }
       return result.xml || result;
   }, [plugin, safeData]);
 
+  const updatePythonCode = () => {
+      if(workspaceRef.current) {
+          try {
+              const code = pythonGenerator.workspaceToCode(workspaceRef.current);
+              setPythonCode(code || "# Ajoute des blocs pour voir le code...");
+          } catch(e) {
+              setPythonCode("# Erreur génération : " + e.message);
+          }
+      }
+  };
+
   const handleInject = (newWorkspace) => {
     workspaceRef.current = newWorkspace;
-    javascriptGenerator.init(newWorkspace); 
+    javascriptGenerator.init(newWorkspace);
+    
+    // LISTENER UNIFIÉ
+    newWorkspace.addChangeListener((e) => {
+        // Si c'est un événement UI (clic, sélection), on ne fait rien
+        if (e.type === Blockly.Events.UI || e.type === Blockly.Events.FINISHED_LOADING) return;
+
+        // Si le code change vraiment (création, déplacement, suppression, modif de champ)
+        // On invalide la timeline car elle ne correspond plus au code
+        clearSimulation();
+        
+        if(isPythonOpen) updatePythonCode();
+    });
+
     newWorkspace.updateToolbox(currentToolbox);
     if (safeData.startBlocks) {
        try {
@@ -86,37 +121,30 @@ export default function GameEngine({ levelData, onWin, levelIndex, onNextLevel }
     window.setTimeout(() => Blockly.svgResize(newWorkspace), 0);
   };
 
+  useEffect(() => { if(isPythonOpen) updatePythonCode(); }, [isPythonOpen]);
+
   useEffect(() => {
     if (workspaceRef.current && isReady) workspaceRef.current.updateToolbox(currentToolbox);
   }, [currentToolbox, isReady]); 
 
-  // Redimensionnement SVG quand le panneau ou le splitter bouge
   useEffect(() => {
-    if (!workspaceRef.current) return;
-    const timer = setTimeout(() => { Blockly.svgResize(workspaceRef.current); }, 50); 
-    return () => clearTimeout(timer);
-  }, [isPanelOpen, gamePanelWidth]);
+      if (!blocklyContainerRef.current) return;
+      const resizeObserver = new ResizeObserver(() => {
+          if (workspaceRef.current) Blockly.svgResize(workspaceRef.current);
+      });
+      resizeObserver.observe(blocklyContainerRef.current);
+      return () => resizeObserver.disconnect();
+  }, [isReady]); 
 
-  // --- GESTION DRAG SPLITTER ---
-  const handleMouseDown = (e) => {
-      setIsDragging(true);
-      e.preventDefault();
-  };
-
+  const handleMouseDown = (e) => { setIsDragging(true); e.preventDefault(); };
   useEffect(() => {
       const handleMouseMove = (e) => {
           if (!isDragging || !containerRef.current) return;
           const containerRect = containerRef.current.getBoundingClientRect();
-          // On calcule la largeur restante à droite
           const newWidth = ((containerRect.right - e.clientX) / containerRect.width) * 100;
-          // Bornes : min 20%, max 70%
           setGamePanelWidth(Math.min(70, Math.max(20, newWidth)));
       };
-
-      const handleMouseUp = () => {
-          setIsDragging(false);
-      };
-
+      const handleMouseUp = () => { setIsDragging(false); };
       if (isDragging) {
           window.addEventListener('mousemove', handleMouseMove);
           window.addEventListener('mouseup', handleMouseUp);
@@ -139,10 +167,7 @@ export default function GameEngine({ levelData, onWin, levelIndex, onNextLevel }
   };
 
   if (!isReady) return <div className="flex h-full items-center justify-center text-slate-400">Chargement...</div>;
-
-  const displayTitle = levelIndex !== undefined 
-    ? `Niveau ${levelIndex + 1}` 
-    : (typeof safeData.id === 'number' && safeData.id < 1000000 ? `Niveau ${safeData.id}` : "Niveau Test");
+  const displayTitle = levelIndex !== undefined ? `Niveau ${levelIndex + 1}` : `Niveau ${safeData.id}`;
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -166,49 +191,81 @@ export default function GameEngine({ levelData, onWin, levelIndex, onNextLevel }
                 🔄
             </button>
         </div>
-        <div className="flex items-center gap-3 bg-slate-100 px-4 py-2 rounded-full">
-            <span className="text-lg">🐢</span>
-            <input type="range" min="0" max="100" value={speed} onChange={(e) => setSpeed(Number(e.target.value))} className="w-24 h-2 bg-slate-300 rounded-lg appearance-none cursor-pointer accent-blue-600" />
-            <span className="text-lg">🐇</span>
+
+        <div className="flex items-center gap-4">
+            <button 
+                onClick={() => setIsPythonOpen(!isPythonOpen)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-bold border transition-all
+                    ${isPythonOpen ? 'bg-yellow-50 border-yellow-300 text-yellow-700 shadow-inner' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}
+                `}
+            >
+                <span>🐍</span> <span className="hidden md:inline">Code Python</span>
+            </button>
+
+            <div className="flex items-center gap-3 bg-slate-100 px-4 py-2 rounded-full">
+                <span className="text-lg">🐢</span>
+                <input type="range" min="0" max="100" value={speed} onChange={(e) => setSpeed(Number(e.target.value))} className="w-24 h-2 bg-slate-300 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+                <span className="text-lg">🐇</span>
+            </div>
         </div>
       </div>
 
       <div ref={containerRef} className="flex flex-1 overflow-hidden relative" style={{ cursor: isDragging ? 'col-resize' : 'auto' }}>
         
-        <InstructionPanel 
-            title={displayTitle}
-            content={safeData.instruction}
-            isCollapsed={!isPanelOpen} onToggle={() => setIsPanelOpen(!isPanelOpen)}
-        />
+        <InstructionPanel title={displayTitle} content={safeData.instruction} isCollapsed={!isPanelOpen} onToggle={() => setIsPanelOpen(!isPanelOpen)} />
 
-        {/* BLOCKLY ZONE */}
-        <div className="flex-1 min-w-0 bg-slate-50 relative">
-          <BlocklyWorkspace
-            key={`${safeData.id}-${plugin.id}-${JSON.stringify(safeData.allowedBlocks || [])}`} 
-            className="blockly-div absolute inset-0"
-            toolboxConfiguration={currentToolbox}
-            workspaceConfiguration={workspaceConfig}
-            onInject={handleInject}
-          />
-          {/* Overlay anti-clic pendant le drag */}
-          {isDragging && <div className="absolute inset-0 z-50 bg-transparent"></div>}
+        <div ref={blocklyContainerRef} className="flex-1 min-w-0 bg-slate-50 relative flex flex-col">
+          <div className="flex-1 relative">
+              <BlocklyWorkspace
+                key={`${safeData.id}-${plugin.id}-${JSON.stringify(safeData.allowedBlocks || [])}`} 
+                className="blockly-div absolute inset-0"
+                toolboxConfiguration={currentToolbox}
+                workspaceConfiguration={workspaceConfig}
+                onInject={handleInject}
+              />
+              {isDragging && <div className="absolute inset-0 z-50 bg-transparent"></div>}
+          </div>
         </div>
       
-        {/* SPLITTER (POIGNÉE) */}
-        <div 
-            onMouseDown={handleMouseDown}
-            className="w-2 bg-slate-200 hover:bg-blue-400 cursor-col-resize z-30 flex items-center justify-center transition-colors flex-shrink-0"
-        >
+        <div onMouseDown={handleMouseDown} className="w-2 bg-slate-200 hover:bg-blue-400 cursor-col-resize z-30 flex items-center justify-center transition-colors flex-shrink-0">
             <div className="h-8 w-1 bg-slate-400 rounded-full"></div>
         </div>
 
-        {/* ZONE DE JEU (Largeur dynamique) */}
         <div 
             style={{ width: `${gamePanelWidth}%` }}
-            className="bg-slate-800 flex justify-center items-center overflow-hidden shadow-inner flex-shrink-0 relative"
+            className="bg-slate-800 flex flex-col shadow-inner flex-shrink-0 relative border-l border-slate-700"
         >
-          <GameView {...renderProps} />
-          {/* Overlay anti-clic pendant le drag */}
+          <div className="flex-1 relative overflow-hidden">
+              {isPythonOpen ? (
+                  <div className="absolute inset-0 bg-[#1e1e1e] p-6 overflow-auto font-mono text-sm text-gray-300">
+                      <h3 className="text-yellow-500 font-bold mb-4 flex items-center gap-2 border-b border-gray-700 pb-2">
+                          <span>🐍</span> Code Python généré
+                      </h3>
+                      <pre className="whitespace-pre-wrap font-mono leading-relaxed">{pythonCode}</pre>
+                  </div>
+              ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                      <GameView {...renderProps} />
+                  </div>
+              )}
+          </div>
+
+          {/* TIMELINE (Toujours visible tant qu'il y a des étapes et pas Python) */}
+          {!isPythonOpen && totalSteps > 0 && (
+             <div className="h-16 bg-slate-900 border-t border-slate-700 px-4 flex items-center gap-4 shrink-0 animate-in slide-in-from-bottom duration-300">
+                <span className="text-xs font-bold text-slate-400 uppercase w-12">Temps</span>
+                <input 
+                    type="range" 
+                    min="0" max={totalSteps} 
+                    value={currentStep} 
+                    onChange={(e) => goToStep(parseInt(e.target.value))}
+                    className="flex-1 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                    title={`Étape ${currentStep} / ${totalSteps}`}
+                />
+                <span className="text-xs font-mono text-blue-400 font-bold w-12 text-right">{currentStep}/{totalSteps}</span>
+             </div>
+          )}
+
           {isDragging && <div className="absolute inset-0 z-50 bg-transparent"></div>}
         </div>
 
@@ -216,7 +273,7 @@ export default function GameEngine({ levelData, onWin, levelIndex, onNextLevel }
           isOpen={gameState === 'WON' || gameState === 'LOST' || gameState === 'FAILED'} 
           status={gameState}
           stats={gameStats} token={proofToken} 
-          onReplay={() => { reset(); }} 
+          onReplay={() => { reset(); }} // Rejouer = Ferme modale + Reset curseur
           onMenu={() => window.location.reload()} 
           onNext={onNextLevel} 
         />
