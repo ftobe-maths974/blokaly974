@@ -152,8 +152,14 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
   const runLoop = useCallback(() => {
     const shouldContinue = executeSingleStep();
     if (shouldContinue) {
-        let baseDelay = Math.max(5, (100 - speed) * 10); 
-        if (safeData.type === 'EQUATION') baseDelay = Math.max(baseDelay, 2500);
+        // Vitesse de base
+        let baseDelay = Math.max(5, (100 - speed) * 10);
+        
+        // CORRECTION : Pour les équations, on impose un rythme lent et pédagogique
+        // 3000ms permet de laisser l'animation de 2000ms se finir tranquillement + 1s de lecture
+        if (safeData.type === 'EQUATION') {
+            baseDelay = Math.max(baseDelay, 3000);
+        }
         const prevAction = actionsRef.current[stepRef.current - 1];
         if (prevAction && prevAction.type === 'SCAN') baseDelay = Math.max(baseDelay, 500);
 
