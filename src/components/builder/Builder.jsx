@@ -3,15 +3,31 @@ import LevelEditor from './LevelEditor';
 import LZString from 'lz-string';
 import { MAZE_CONFIG } from '../../core/adapters/MazeAdapter';
 
-// Mapping des icônes par type de jeu
+// Définition des types disponibles avec leurs blocs par défaut
+const LEVEL_TYPES = [
+  { 
+    id: 'MAZE', label: 'Labyrinthe', icon: '🏰',
+    defaultBlocks: ['maze_move_forward', 'maze_turn', 'maze_forever', 'maze_if'] 
+  },
+  { 
+    id: 'TURTLE', label: 'Tortue', icon: '🐢',
+    defaultBlocks: ['turtle_move', 'turtle_turn', 'turtle_pen', 'turtle_color', 'controls_repeat_ext']
+  },
+  { 
+    id: 'MATH', label: 'Labo', icon: '🧪',
+    defaultBlocks: ['variables_set', 'math_number', 'math_arithmetic', 'text_print']
+  },
+  { 
+    id: 'EQUATION', label: 'Équation', icon: '⚖️',
+    defaultBlocks: ['equation_op_both', 'math_number']
+  }
+];
+
 const LEVEL_ICONS = {
-  'MAZE': '🏰',
-  'TURTLE': '🐢',
-  'MATH': '🧪'
+  'MAZE': '🏰', 'TURTLE': '🐢', 'MATH': '🧪', 'EQUATION': '⚖️'
 };
 
 export default function Builder() {
-  // 1. CHARGEMENT
   const [campaign, setCampaign] = useState(() => {
     const saved = localStorage.getItem('blokaly_builder_autosave');
     if (saved) {
@@ -20,144 +36,26 @@ export default function Builder() {
     return {
       title: "Ma Nouvelle Campagne",
       levels: [{
-        id: 1,
-        type: 'MAZE',
-        grid: MAZE_CONFIG.defaultGrid,
-        startPos: {x: 1, y: 1},
-        maxBlocks: 5
+        id: 1, 
+        type: 'MAZE', 
+        grid: MAZE_CONFIG.defaultGrid, 
+        startPos: {x: 1, y: 1}, 
+        maxBlocks: 5,
+        allowedBlocks: LEVEL_TYPES[0].defaultBlocks // Important : Blocs par défaut
       }]
     };
   });
   
   const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
-  
-  // État pour le Drag & Drop
   const dragItem = useRef(null);
   const dragOverItem = useRef(null);
-  
-  // Référence pour l'input file (Import)
   const fileInputRef = useRef(null);
 
-  // 2. SAUVEGARDE AUTO
   useEffect(() => {
     localStorage.setItem('blokaly_builder_autosave', JSON.stringify(campaign));
   }, [campaign]);
 
-  // --- GESTION DRAG & DROP ---
-  const handleDragStart = (e, position) => {
-    dragItem.current = position;
-    e.dataTransfer.effectAllowed = "move";
-  };
-
-  const handleDragEnter = (e, position) => {
-    dragOverItem.current = position;
-    e.preventDefault();
-  };
-
-  const handleDragEnd = () => {
-    const startIdx = dragItem.current;
-    const endIdx = dragOverItem.current;
-
-    if (startIdx !== null && endIdx !== null && startIdx !== endIdx) {
-        const newLevels = [...campaign.levels];
-        const draggedLevel = newLevels[startIdx];
-        newLevels.splice(startIdx, 1);
-        newLevels.splice(endIdx, 0, draggedLevel);
-
-        if (currentLevelIndex === startIdx) setCurrentLevelIndex(endIdx);
-        else if (currentLevelIndex > startIdx && currentLevelIndex <= endIdx) setCurrentLevelIndex(currentLevelIndex - 1);
-        else if (currentLevelIndex < startIdx && currentLevelIndex >= endIdx) setCurrentLevelIndex(currentLevelIndex + 1);
-
-        setCampaign({ ...campaign, levels: newLevels });
-    }
-    dragItem.current = null;
-    dragOverItem.current = null;
-  };
-
-  // --- ACTIONS IMPORT / EXPORT ---
-
-  const handleExport = () => {
-    const dataStr = JSON.stringify(campaign, null, 2);
-    const blob = new Blob([dataStr], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    
-    const link = document.createElement('a');
-    link.download = `${campaign.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.blokaly.json`;
-    link.href = url;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleImportClick = () => {
-    if (fileInputRef.current) fileInputRef.current.click();
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-        try {
-            const json = JSON.parse(event.target.result);
-            if (!json.levels || !Array.isArray(json.levels)) {
-                throw new Error("Format de fichier invalide (pas de niveaux)");
-            }
-            
-            if (confirm(`Charger la campagne "${json.title || 'Sans titre'}" ? Cela remplacera votre travail actuel.`)) {
-                setCampaign(json);
-                setCurrentLevelIndex(0);
-            }
-        } catch (err) {
-            alert("Erreur lors de l'importation : " + err.message);
-        }
-    };
-    reader.readAsText(file);
-    e.target.value = null; 
-  };
-
-  // --- ACTIONS CRUD ---
-
-  const addLevel = () => {
-    const newLevel = {
-      id: Date.now(), 
-      type: 'MAZE',
-      grid: MAZE_CONFIG.defaultGrid,
-      startPos: {x: 1, y: 1},
-      maxBlocks: 10
-    };
-    setCampaign({ ...campaign, levels: [...campaign.levels, newLevel] });
-    setCurrentLevelIndex(campaign.levels.length); 
-  };
-
-  // NOUVEAU : Fonction de duplication
-  const duplicateLevel = (index) => {
-    const levelToCopy = campaign.levels[index];
-    
-    // Copie profonde pour ne pas garder de références vers l'ancien objet
-    const newLevel = {
-        ...JSON.parse(JSON.stringify(levelToCopy)),
-        id: Date.now() // On génère un nouvel ID unique
-    };
-    
-    const newLevels = [...campaign.levels];
-    // On insère la copie juste après l'original
-    newLevels.splice(index + 1, 0, newLevel);
-    
-    setCampaign({ ...campaign, levels: newLevels });
-    // On bascule sur la copie pour l'éditer tout de suite
-    setCurrentLevelIndex(index + 1);
-  };
-
-  const deleteLevel = (index) => {
-    if (campaign.levels.length <= 1) return alert("Il faut au moins un niveau !");
-    const newLevels = campaign.levels.filter((_, i) => i !== index);
-    
-    if (index < currentLevelIndex) setCurrentLevelIndex(currentLevelIndex - 1);
-    else if (index === currentLevelIndex) setCurrentLevelIndex(Math.max(0, index - 1));
-    
-    setCampaign({ ...campaign, levels: newLevels });
-  };
+  // --- LOGIQUE MÉTIER ---
 
   const updateCurrentLevel = (newLevelData) => {
     const newLevels = [...campaign.levels];
@@ -165,159 +63,214 @@ export default function Builder() {
     setCampaign({ ...campaign, levels: newLevels });
   };
 
-  const generateLink = () => {
-    const json = JSON.stringify(campaign);
-    const compressed = LZString.compressToEncodedURIComponent(json);
+  const handleTypeChange = (newType) => {
+    const currentLevel = campaign.levels[currentLevelIndex];
+    if (currentLevel.type === newType) return;
+
+    const typeDef = LEVEL_TYPES.find(t => t.id === newType);
     
-    const url = new URL(window.location.href);
-    // AJOUT DE &preview=1
-    url.search = `?data=${compressed}&preview=1`; 
-    url.hash = ''; 
-    
-    // On ouvre directement dans le même onglet pour tester
-    window.location.href = url.toString();
+    let newDefaults = {};
+    if (newType === 'MAZE') {
+        newDefaults = { grid: MAZE_CONFIG.defaultGrid, startPos: { x: 1, y: 1, dir: 1 }, maxBlocks: 10 };
+    } else if (newType === 'TURTLE') {
+        newDefaults = { startPos: { x: 0, y: 0, dir: 0 }, maxBlocks: 10, grid: undefined };
+    } else if (newType === 'MATH') {
+        newDefaults = { maxBlocks: 20, startPos: undefined };
+    } else if (newType === 'EQUATION') {
+        newDefaults = { equation: { a: 2, b: 4, c: 0, d: 10, lhs: "2*x+4", rhs: "10" }, maxBlocks: 5 };
+    }
+
+    if(confirm(`Passer en mode ${typeDef.label} ? Cela réinitialisera ce niveau.`)) {
+        updateCurrentLevel({ 
+            ...currentLevel, 
+            type: newType, 
+            allowedBlocks: typeDef.defaultBlocks, // Reset toolbox avec les bons blocs
+            startBlocks: '<xml></xml>', // Reset code élève
+            solutionBlocks: '<xml></xml>', // Reset solution
+            ...newDefaults 
+        });
+    }
   };
 
+  // --- DRAG & DROP ---
+  const handleDragStart = (e, pos) => { dragItem.current = pos; };
+  const handleDragEnter = (e, pos) => { dragOverItem.current = pos; e.preventDefault(); };
+  const handleDragEnd = () => {
+    const start = dragItem.current; const end = dragOverItem.current;
+    if (start !== null && end !== null && start !== end) {
+        const list = [...campaign.levels]; const item = list[start];
+        list.splice(start, 1); list.splice(end, 0, item);
+        setCampaign({ ...campaign, levels: list });
+        setCurrentLevelIndex(end);
+    }
+    dragItem.current = null; dragOverItem.current = null;
+  };
+
+  // --- ACTIONS CRUD ---
+  const addLevel = () => {
+    const defaultType = LEVEL_TYPES[0]; // Maze par défaut
+    const newLevel = { 
+        id: Date.now(), 
+        type: defaultType.id, 
+        grid: MAZE_CONFIG.defaultGrid, 
+        startPos: {x: 1, y: 1}, 
+        maxBlocks: 10,
+        allowedBlocks: defaultType.defaultBlocks // <--- FIX : Blocs par défaut
+    };
+    setCampaign({ ...campaign, levels: [...campaign.levels, newLevel] });
+    setCurrentLevelIndex(campaign.levels.length); 
+  };
+
+  const duplicateLevel = (idx) => {
+    const copy = { ...JSON.parse(JSON.stringify(campaign.levels[idx])), id: Date.now() };
+    const list = [...campaign.levels]; list.splice(idx + 1, 0, copy);
+    setCampaign({ ...campaign, levels: list });
+    setCurrentLevelIndex(idx + 1);
+  };
+
+  const deleteLevel = (idx) => {
+    if (campaign.levels.length <= 1) return alert("Impossible de supprimer le dernier niveau !");
+    const list = campaign.levels.filter((_, i) => i !== idx);
+    setCampaign({ ...campaign, levels: list });
+    if (idx <= currentLevelIndex) setCurrentLevelIndex(Math.max(0, currentLevelIndex - 1));
+  };
+
+  // --- IMPORT / EXPORT ---
+  const handleExport = () => {
+    const blob = new Blob([JSON.stringify(campaign, null, 2)], { type: "application/json" });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${campaign.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.blokaly.json`;
+    link.click();
+  };
+
+  const handleFileChange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const r = new FileReader(); 
+      r.onload = (ev) => { 
+          try { 
+              const json = JSON.parse(ev.target.result);
+              if (!json.levels || !Array.isArray(json.levels)) throw new Error("Format invalide (pas de niveaux)");
+              
+              if(confirm(`Charger la campagne "${json.title || 'Sans titre'}" ?`)) {
+                  setCampaign(json); 
+                  setCurrentLevelIndex(0); 
+              }
+          } catch(err) { 
+              alert("Erreur lors du chargement : " + err.message); 
+          }
+      }; 
+      r.readAsText(file);
+      e.target.value = null; // <--- FIX : Permet de recharger le même fichier
+  };
+
+  const generateLink = () => {
+    const url = new URL(window.location.href);
+    url.search = `?data=${LZString.compressToEncodedURIComponent(JSON.stringify(campaign))}&preview=1`;
+    window.open(url.toString(), '_blank');
+  };
+
+  const currentLevel = campaign.levels[currentLevelIndex];
+
   return (
-    <div className="builder-container" style={{display: 'flex', padding: 0, height: '100vh', overflow: 'hidden'}}>
+    <div className="flex h-screen overflow-hidden bg-slate-50 font-sans">
       
       {/* SIDEBAR GAUCHE */}
-      <div style={{width: '250px', background: '#2c3e50', color: 'white', display: 'flex', flexDirection: 'column', borderRight: '1px solid #ccc'}}>
-        <div style={{padding: '20px', background: '#1a252f'}}>
-          <h2 style={{fontSize: '1.2rem', margin: 0}}>🗂️ Campagne</h2>
+      <div className="w-64 bg-slate-900 text-white flex flex-col border-r border-slate-800 flex-shrink-0 z-20">
+        <div className="p-6 bg-slate-950 border-b border-slate-800">
+          <label className="text-xs uppercase font-bold text-slate-500 tracking-wider mb-1 block">Campagne</label>
           <input 
-            type="text" 
-            value={campaign.title} 
+            type="text" value={campaign.title} 
             onChange={(e) => setCampaign({...campaign, title: e.target.value})}
-            style={{background: 'transparent', border: 'none', borderBottom: '1px solid #555', color: 'white', width: '100%', marginTop: '10px', fontSize: '0.9rem'}}
-            placeholder="Titre de la campagne..."
+            className="bg-transparent border-none text-lg font-bold text-white w-full focus:ring-0 placeholder-slate-600 p-0"
+            placeholder="Titre..."
           />
         </div>
-        
-        <div style={{flex: 1, overflowY: 'auto'}}>
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
           {campaign.levels.map((lvl, index) => (
             <div 
-              key={lvl.id} 
-              draggable
+              key={lvl.id} draggable
               onDragStart={(e) => handleDragStart(e, index)}
               onDragEnter={(e) => handleDragEnter(e, index)}
               onDragEnd={handleDragEnd}
               onDragOver={(e) => e.preventDefault()} 
               onClick={() => setCurrentLevelIndex(index)}
-              style={{
-                padding: '15px', 
-                cursor: 'grab',
-                background: index === currentLevelIndex ? '#3498db' : 'transparent',
-                borderBottom: '1px solid #34495e',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                transition: 'background 0.2s'
-              }}
+              className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all border border-transparent ${index === currentLevelIndex ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800'}`}
             >
-              <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
-                  <span style={{color: '#555', fontSize: '1.2rem'}}>⋮</span>
-                  <span style={{fontSize: '1.2rem'}} title={lvl.type}>
-                    {LEVEL_ICONS[lvl.type] || '❓'}
-                  </span>
-                  <span style={{fontWeight: index === currentLevelIndex ? 'bold' : 'normal'}}>
-                    Niveau {index + 1}
-                  </span>
+              <div className="flex items-center gap-3 overflow-hidden">
+                  <span className="cursor-grab opacity-50">⋮⋮</span>
+                  <span className="text-lg">{LEVEL_ICONS[lvl.type] || '❓'}</span>
+                  <span className="truncate text-sm font-medium">Niveau {index + 1}</span>
               </div>
-
-              <div style={{display: 'flex', gap: '5px'}}>
-                  {/* BOUTON DUPLIQUER */}
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); duplicateLevel(index); }}
-                    style={{background:'none', border:'none', cursor:'pointer', fontSize:'0.8rem', opacity: 0.7}}
-                    title="Dupliquer"
-                  >
-                    📑
-                  </button>
-
-                  {campaign.levels.length > 1 && (
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); deleteLevel(index); }} 
-                        style={{background:'none', border:'none', color:'#e74c3c', cursor:'pointer', fontSize:'0.8rem', opacity: 0.7}}
-                        title="Supprimer"
-                    >
-                        🗑️
-                    </button>
-                  )}
+              <div className="flex gap-1 opacity-0 group-hover:opacity-100">
+                  <button onClick={(e) => {e.stopPropagation(); duplicateLevel(index)}} className="p-1 hover:bg-white/20 rounded" title="Dupliquer">📑</button>
+                  {campaign.levels.length > 1 && <button onClick={(e) => {e.stopPropagation(); deleteLevel(index)}} className="p-1 hover:bg-red-500/20 text-red-400 rounded" title="Supprimer">🗑️</button>}
               </div>
             </div>
           ))}
         </div>
-
-        {/* BOUTONS D'ACTION */}
-        <div style={{padding: '10px', borderTop: '1px solid #34495e', background: '#222', display:'flex', flexDirection:'column', gap:'10px'}}>
-            <button 
-                onClick={addLevel} 
-                style={{width: '100%', padding: '10px', background: '#27ae60', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold', borderRadius: '4px'}}
-            >
-            + Nouveau Niveau
-            </button>
-
-            <div style={{display:'flex', gap:'10px'}}>
-                <button 
-                    onClick={handleExport} 
-                    style={{flex:1, padding: '8px', background: '#34495e', color: 'white', border: '1px solid #7f8c8d', cursor: 'pointer', fontSize: '0.8rem', borderRadius: '4px'}}
-                    title="Sauvegarder en JSON"
-                >
-                📤 Export
-                </button>
-                
-                <button 
-                    onClick={handleImportClick} 
-                    style={{flex:1, padding: '8px', background: '#34495e', color: 'white', border: '1px solid #7f8c8d', cursor: 'pointer', fontSize: '0.8rem', borderRadius: '4px'}}
-                    title="Charger un JSON"
-                >
-                📥 Import
-                </button>
-                <input 
-                    type="file" 
-                    accept=".json" 
-                    ref={fileInputRef} 
-                    style={{display: 'none'}} 
-                    onChange={handleFileChange} 
-                />
+        <div className="p-4 bg-slate-950 border-t border-slate-800 flex flex-col gap-2">
+            <button onClick={addLevel} className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded font-bold text-xs flex justify-center gap-2"><span>+</span> Nouveau Niveau</button>
+            <div className="grid grid-cols-2 gap-2">
+                <button onClick={handleExport} className="py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs transition-colors">📤 Export</button>
+                <button onClick={() => fileInputRef.current.click()} className="py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs transition-colors">📥 Import</button>
             </div>
-
-            <button 
-                onClick={() => {
-                    if(confirm("Tout effacer ? Cette action est irréversible.")) {
-                    localStorage.removeItem('blokaly_builder_autosave');
-                    window.location.reload();
-                    }
-                }} 
-                style={{width: '100%', padding: '8px', background: 'none', border: '1px solid #c0392b', color: '#c0392b', cursor: 'pointer', fontSize: '0.8rem', borderRadius: '4px'}}
-            >
-            🗑️ Reset
-            </button>
+            <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} accept=".json" />
         </div>
       </div>
 
-      {/* ZONE CENTRALE */}
-      <div style={{flex: 1, display: 'flex', flexDirection: 'column', height: '100%'}}>
-        <div style={{padding: '10px 20px', borderBottom: '1px solid #ddd', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background:'white'}}>
-          <h2 style={{margin:0, color: '#2c3e50'}}>
-             Édition Niveau {currentLevelIndex + 1} 
-             <span style={{fontSize: '0.6em', color: '#777', marginLeft: '10px', fontWeight: 'normal'}}>
-               ({campaign.levels[currentLevelIndex]?.type})
-             </span>
-          </h2>
-          <button onClick={generateLink} className="generate-btn" style={{margin: 0, width: 'auto', fontSize: '0.9rem', background: 'linear-gradient(135deg, #3498db, #2980b9)', padding: '8px 15px', boxShadow:'none'}}>
-            🚀 TESTER / PARTAGER
+      {/* ZONE PRINCIPALE */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+        
+        {/* HEADER */}
+        <div className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shadow-sm z-10 shrink-0">
+          <div className="flex items-center gap-6">
+             <h2 className="text-lg font-bold text-slate-700 whitespace-nowrap">
+                Niveau {currentLevelIndex + 1}
+             </h2>
+             
+             <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
+                {LEVEL_TYPES.map(type => {
+                    const isActive = currentLevel?.type === type.id;
+                    return (
+                        <button
+                            key={type.id}
+                            onClick={() => handleTypeChange(type.id)}
+                            className={`
+                                flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all
+                                ${isActive 
+                                    ? 'bg-white text-blue-600 shadow-sm ring-1 ring-black/5' 
+                                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}
+                            `}
+                        >
+                            <span>{type.icon}</span>
+                            <span className="hidden xl:inline">{type.label}</span>
+                        </button>
+                    );
+                })}
+             </div>
+          </div>
+          
+          <button 
+            onClick={generateLink} 
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold text-xs shadow transition-all flex items-center gap-2"
+          >
+            🚀 TESTER
           </button>
         </div>
 
-        <div style={{flex: 1, overflowY: 'auto', padding: '20px', background: '#f4f4f4'}}>
-          {campaign.levels[currentLevelIndex] ? (
+        {/* CONTENU */}
+        <div className="flex-1 overflow-hidden p-6 bg-slate-50">
+          {currentLevel ? (
             <LevelEditor 
-                key={campaign.levels[currentLevelIndex].id}
-                levelData={campaign.levels[currentLevelIndex]} 
+                key={currentLevel.id} 
+                levelData={currentLevel} 
                 onUpdate={updateCurrentLevel} 
             />
           ) : (
-            <div style={{padding: 20, textAlign: 'center', color: '#777'}}>Sélectionnez ou créez un niveau...</div>
+            <div className="flex h-full items-center justify-center text-slate-400">Sélectionnez un niveau...</div>
           )}
         </div>
       </div>

@@ -4,27 +4,35 @@ import CampaignMenu from './CampaignMenu';
 import ScormService from '../../core/scorm/ScormService';
 
 export default function Runner({ campaign, ltiConfig, isTeacherMode }) {
-  // Normalisation : Si c'est un niveau seul, on en fait une campagne d'un niveau
+  // Normalisation
   const normalizedCampaign = campaign.levels ? campaign : { title: "Campagne", levels: [campaign] };
+  
   const [activeLevelIndex, setActiveLevelIndex] = useState(-1);
-  const [progress, setProgress] = useState({});
+  
+  // --- 1. CHARGEMENT PERSISTANCE ---
+  const [progress, setProgress] = useState(() => {
+    // On essaie de récupérer la sauvegarde locale
+    const saved = localStorage.getItem('blokaly_progress');
+    if (saved) {
+        try { return JSON.parse(saved); } catch (e) { console.error("Erreur lecture sauvegarde", e); }
+    }
+    return {};
+  });
 
   // --- INITIALISATION SCORM ---
   useEffect(() => {
-    // On tente de se connecter au SCORM au montage du Runner
-    // (Seulement si on n'est pas déjà en LTI ou mode prof)
     if (!ltiConfig && !isTeacherMode) {
         ScormService.init();
     }
-    
-    // Nettoyage quand on quitte
     return () => ScormService.terminate();
   }, [ltiConfig, isTeacherMode]);
 
   const handleLevelWin = useCallback((stats) => {
     setProgress(prev => {
         const newProgress = { ...prev, [activeLevelIndex]: { stars: stats.stars } };
-        // ... (Sauvegarde localStorage inchangée) ...
+        
+        // --- 2. SAUVEGARDE PERSISTANCE ---
+        localStorage.setItem('blokaly_progress', JSON.stringify(newProgress));
 
         // --- CALCUL DU SCORE GLOBAL ---
         const totalLevels = normalizedCampaign.levels.length;
@@ -33,39 +41,44 @@ export default function Runner({ campaign, ltiConfig, isTeacherMode }) {
         const maxStars = totalLevels * 3;
         const scorePercent = maxStars > 0 ? (totalStars / maxStars) : 0;
 
-        // 1. ENVOI LTI (Si actif)
-        if (ltiConfig && ltiConfig.apiUrl) {
-             // ... (Code LTI existant)
-        }
-
-        // 2. ENVOI SCORM (Si actif)
-        // Le service vérifie lui-même s'il est connecté, donc on peut l'appeler sans crainte
+        // SCORM
         ScormService.setScore(scorePercent);
 
         return newProgress;
     });
-  }, [activeLevelIndex, normalizedCampaign, ltiConfig]);
+  }, [activeLevelIndex, normalizedCampaign]);
+
+  // --- 3. LOGIQUE NIVEAU SUIVANT ---
+  const handleNextLevel = useCallback(() => {
+      if (activeLevelIndex < normalizedCampaign.levels.length - 1) {
+          setActiveLevelIndex(prev => prev + 1);
+      } else {
+          // Fin de campagne : retour au menu
+          setActiveLevelIndex(-1);
+      }
+  }, [activeLevelIndex, normalizedCampaign]);
 
   const handleBackToMenu = () => setActiveLevelIndex(-1);
 
   // --- AFFICHAGE MENU ---
   if (activeLevelIndex === -1) {
     return (
-      <div style={{minHeight: '100vh', background: '#ecf0f1'}}>
-        <div style={{padding: '10px', background: '#333', color:'white', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-          
-          {/* CONDITION : Seul le prof en mode preview voit ce bouton */}
+      <div className="min-h-screen bg-slate-100 font-sans">
+        {/* Header Menu */}
+        <div className="bg-slate-800 text-white p-4 flex justify-between items-center shadow-md">
           {isTeacherMode ? (
-              <button onClick={() => window.location.href = window.location.pathname} style={{color: 'white', background: '#e74c3c', border: 'none', padding:'5px 10px', borderRadius:'4px', cursor: 'pointer', fontWeight:'bold'}}>
+              <button 
+                onClick={() => window.location.href = window.location.pathname} 
+                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-bold transition-colors"
+              >
                 ⬅ Retour Éditeur
               </button>
           ) : (
-              // Pour l'élève/LTI, on met un simple titre ou rien
-              <span style={{fontWeight:'bold', color:'#aaa'}}>Blokaly 974</span>
+              <span className="font-bold text-slate-400">Blokaly 974</span>
           )}
-
-          {ltiConfig && <span style={{fontSize:'0.8rem', background:'#27ae60', padding:'2px 8px', borderRadius:'4px'}}>Mode Noté (LTI)</span>}
+          {ltiConfig && <span className="bg-emerald-600 px-2 py-1 rounded text-xs font-bold">Mode Noté (LTI)</span>}
         </div>
+        
         <CampaignMenu campaign={normalizedCampaign} progress={progress} onSelectLevel={setActiveLevelIndex} />
       </div>
     );
@@ -73,22 +86,32 @@ export default function Runner({ campaign, ltiConfig, isTeacherMode }) {
 
   // --- AFFICHAGE JEU ---
   return (
-    <div style={{height: '100vh', display: 'flex', flexDirection: 'column'}}>
-      <div style={{height: '40px', background: '#2c3e50', color: 'white', display: 'flex', alignItems: 'center', padding: '0 20px', justifyContent: 'space-between'}}>
-        <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
-          <button onClick={handleBackToMenu} style={{background: '#e74c3c', border: 'none', color: 'white', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer'}}>☰ Menu</button>
-          <span style={{fontWeight: 'bold'}}>Niveau {activeLevelIndex + 1}</span>
+    <div className="h-screen flex flex-col font-sans bg-slate-50">
+      {/* Header Jeu */}
+      <div className="h-14 bg-slate-900 text-white flex items-center justify-between px-6 shadow-md z-30">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={handleBackToMenu} 
+            className="text-slate-400 hover:text-white transition-colors flex items-center gap-2 text-sm font-bold"
+          >
+            <span>☰</span> Menu
+          </button>
+          <div className="h-4 w-px bg-slate-700 mx-2"></div>
+          <span className="font-bold text-lg tracking-wide">
+            Niveau {activeLevelIndex + 1}
+          </span>
         </div>
-        <span style={{fontSize: '0.8rem', opacity: 0.7}}>
-            {ltiConfig ? "🟢 Suivi Activé" : "Blokaly Runner"}
+        <span className="text-xs text-slate-500 uppercase tracking-wider font-bold">
+            {ltiConfig ? "🟢 Suivi Activé" : "Mode Entraînement"}
         </span>
       </div>
       
       <GameEngine
-        key={activeLevelIndex}
+        key={activeLevelIndex} // Force le reset complet quand le niveau change
         levelData={normalizedCampaign.levels[activeLevelIndex]} 
         levelIndex={activeLevelIndex}
-        onWin={handleLevelWin} 
+        onWin={handleLevelWin}
+        onNextLevel={handleNextLevel} // <--- ON PASSE LA FONCTION ICI
       />
     </div>
   );

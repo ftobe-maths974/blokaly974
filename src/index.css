@@ -1,15 +1,35 @@
-/* src/index.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
+/* --- Réglages Globaux --- */
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 }
 
-/* INDISPENSABLE : Force le navigateur à utiliser toute la hauteur */
 html, body, #root {
   height: 100%;
   width: 100%;
   margin: 0;
   padding: 0;
+  /* Empêche le rebond du scroll sur Mac/Mobile pour une expérience "App" */
+  overscroll-behavior: none; 
+}
+
+/* --- Utilitaire Scrollbar (Style MacOS fin) --- */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1; /* slate-300 */
+  border-radius: 20px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8; /* slate-400 */
 }

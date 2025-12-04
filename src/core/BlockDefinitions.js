@@ -26,31 +26,12 @@ export const BLOCK_DEFINITIONS = {
   'turtle_color': `
     <block type="turtle_color"><field name="COLOR">#ff0000</field></block>
   `,
-
-  // Dans BLOCK_DEFINITIONS
-'equation_op_both': `
-  <block type="equation_op_both">
-    <value name="VAL"><shadow type="math_number"><field name="NUM">1</field></shadow></value>
-  </block>
-`,
-
-// Dans BLOCK_LABELS
-'equation_op_both': `
+  // --- ALGEBRE ---
+  'equation_op_both': `
     <block type="equation_op_both">
-      <value name="VAL">
-        <shadow type="math_number">
-          <field name="NUM">1</field>
-        </shadow>
-      </value>
+      <value name="VAL"><shadow type="math_number"><field name="NUM">1</field></shadow></value>
     </block>
   `,
-
-// Dans CATEGORY_CONTENTS, ajoutez une catégorie 'Algèbre'
-'Algèbre': ['equation_op_both', 'math_number'],
-
-// Dans CATEGORIES_BY_TYPE
-'EQUATION': ['Algèbre', 'Logique'],
-
   // --- LOGIQUE ---
   'controls_repeat_ext': `
     <block type="controls_repeat_ext">
@@ -59,11 +40,10 @@ export const BLOCK_DEFINITIONS = {
       </value>
     </block>
   `,
+  'controls_whileUntil': '<block type="controls_whileUntil"></block>',
   'controls_if': '<block type="controls_if"></block>',
   'logic_compare': '<block type="logic_compare"></block>',
   'logic_operation': '<block type="logic_operation"></block>',
-  'controls_whileUntil': '<block type="controls_whileUntil"></block>',
-
   // --- MATHS ---
   'math_number': '<block type="math_number"></block>',
   'math_arithmetic': `
@@ -84,62 +64,50 @@ export const BLOCK_DEFINITIONS = {
       <value name="TO"><shadow type="math_number"><field name="NUM">100</field></shadow></value>
     </block>
   `,
-
   // --- LISTES ---
   'lists_create_with': '<block type="lists_create_with"><mutation items="3"></mutation></block>',
   'lists_getIndex': '<block type="lists_getIndex"></block>',
   'lists_setIndex': '<block type="lists_setIndex"></block>',
   'lists_length': '<block type="lists_length"></block>',
-
   // --- INTERACTIONS ---
   'text_print': '<block type="text_print"></block>',
   'text_prompt_ext': '<block type="text_prompt_ext"><value name="TEXT"><shadow type="text"><field name="TEXT">?</field></shadow></value></block>',
+  
+  // --- VARIABLES (Fallback) ---
+  'variables_get': '<block type="variables_get"></block>',
+  'variables_set': '<block type="variables_set"></block>',
 };
 
-// --- TRADUCTION FRANÇAISE UNIQUE & ÉDITION ---
 export const BLOCK_LABELS = {
-  // Maze (Modifié selon ta demande)
   'maze_move_forward': 'Avancer ✥', 
   'maze_turn': 'Pivoter 🗘',
-
-  // Radar
   'maze_if': 'Si chemin... 📡',
   'maze_if_else': 'Si... Sinon... 📡',
-  'maze_forever': 'Répéter jusqu\'à Arrivée 🏁',
-  
-  // Turtle (On garde cohérent ou on laisse "Tourner" ?)
-  // Pour l'instant je mets Pivoter aussi pour la cohérence pédagogique
+  'maze_forever': 'Répéter jusqu\'à 🏁',
   'turtle_move': 'Avancer 🐢',
   'turtle_turn': 'Pivoter 🐢',
   'turtle_pen': 'Stylo ✏️',
   'turtle_color': 'Couleur 🎨',
-  
-  // Logique
   'controls_repeat_ext': 'Répéter N fois',
   'controls_whileUntil': 'Répéter tant que',
   'controls_if': 'Si... Alors',
-  'logic_compare': 'Comparaison (= < >)',
-  'logic_operation': 'Opérateur (ET / OU)',
-  
-  // Maths
+  'logic_compare': 'Comparaison',
+  'logic_operation': 'Opérateur',
   'math_number': 'Nombre',
-  'math_arithmetic': 'Calcul (+ - * /)',
-  'math_modulo': 'Reste (Modulo)',
+  'math_arithmetic': 'Calcul',
+  'math_modulo': 'Reste',
   'math_random_int': 'Aléatoire',
-  
-  // Listes
+  'equation_op_both': 'Opération Équation',
+  'text_print': 'Afficher',
+  'text_prompt_ext': 'Demander',
   'lists_create_with': 'Créer liste',
   'lists_getIndex': 'Lire élément',
   'lists_setIndex': 'Modifier élément',
   'lists_length': 'Longueur liste',
-  
-  // Variables & Divers
   'variables_set': 'Définir variable',
-  'text_print': 'Afficher message',
-  'text_prompt_ext': 'Demander saisie'
+  'variables_get': 'Lire variable'
 };
 
-// Configuration des catégories
 export const CATEGORIES_BY_TYPE = {
   'MAZE': ['Mouvements', 'Capteurs', 'Logique'],
   'TURTLE': ['Tortue', 'Logique', 'Mathématiques', 'Variables'],
@@ -159,7 +127,7 @@ export const CATEGORY_CONTENTS = {
   'Algèbre': ['equation_op_both', 'math_number']
 };
 
-// --- GÉNÉRATEURS ---
+// --- GÉNÉRATEUR ADAPTATIF ---
 
 export const generateToolbox = (allowedBlocks, levelInputs, hiddenVars = [], lockedVars = []) => {
   return buildToolboxXML(allowedBlocks, levelInputs, hiddenVars, lockedVars);
@@ -179,6 +147,11 @@ export const generateMasterToolbox = (type, levelInputs, hiddenVars = [], locked
 const buildToolboxXML = (allowedBlocks, levelInputs, hiddenVars, lockedVars, forceFull = false) => {
   let xmlContent = '';
   let remainingBlocks = new Set(allowedBlocks || []);
+  
+  // HEURISTIQUE : Si < 6 blocs, on affiche tout à plat (Flyout)
+  const totalBlocksCount = (allowedBlocks || []).length;
+  const useCategories = forceFull || (totalBlocksCount >= 6);
+
   let hasCategories = false;
 
   // 1. VARIABLES
@@ -197,14 +170,18 @@ const buildToolboxXML = (allowedBlocks, levelInputs, hiddenVars, lockedVars, for
               }
           });
           
-          if (remainingBlocks.has('variables_set') || (forceFull && variableXml)) {
-             xmlContent += `<category name="Variables" colour="330">${variableXml}</category>`;
-             hasCategories = true;
+          if (variableXml) {
+             if (useCategories) {
+                 xmlContent += `<category name="Variables" colour="330">${variableXml}</category>`;
+                 hasCategories = true;
+             } else {
+                 xmlContent += variableXml;
+             }
              variableXml = ''; 
+             remainingBlocks.delete('variables_set');
+             remainingBlocks.delete('variables_get');
           }
       }
-      remainingBlocks.delete('variables_set');
-      remainingBlocks.delete('variables_get');
   }
 
   // 2. CATÉGORIES
@@ -212,29 +189,32 @@ const buildToolboxXML = (allowedBlocks, levelInputs, hiddenVars, lockedVars, for
     const selectedInCat = catBlockList.filter(b => remainingBlocks.has(b));
     if (selectedInCat.length === 0 && !forceFull) return;
 
-    const isFullCategory = forceFull || (selectedInCat.length === catBlockList.length);
+    const blocksToAdd = forceFull ? catBlockList : selectedInCat;
+    
+    if (blocksToAdd.length > 0) {
+        let catXml = '';
+        blocksToAdd.forEach(blockType => {
+            if (BLOCK_DEFINITIONS[blockType]) {
+                catXml += BLOCK_DEFINITIONS[blockType];
+                remainingBlocks.delete(blockType);
+            }
+        });
 
-    if (isFullCategory && (forceFull || selectedInCat.length > 0)) {
-      let colour = '0'; 
-      if (catName === 'Mouvements') colour = '120';
-      if (catName === 'Tortue') colour = '160';
-      if (catName === 'Logique') colour = '210';
-      if (catName === 'Mathématiques') colour = '230';
-      if (catName === 'Listes') colour = '260';
-      if (catName === 'Interactions') colour = '160';
-      if (catName === 'Algèbre') colour = '290'; // Une couleur violette/rose
+        if (useCategories) {
+            let colour = '0'; 
+            if (catName === 'Mouvements') colour = '120';
+            if (catName === 'Tortue') colour = '160';
+            if (catName === 'Logique') colour = '210';
+            if (catName === 'Mathématiques') colour = '230';
+            if (catName === 'Listes') colour = '260';
+            if (catName === 'Interactions') colour = '160';
+            if (catName === 'Algèbre') colour = '290';
 
-      xmlContent += `<category name="${catName}" colour="${colour}">`;
-      const blocksToAdd = forceFull ? catBlockList : Array.from(selectedInCat);
-      
-      blocksToAdd.forEach(blockType => {
-        if (BLOCK_DEFINITIONS[blockType]) {
-          xmlContent += BLOCK_DEFINITIONS[blockType];
-          remainingBlocks.delete(blockType);
+            xmlContent += `<category name="${catName}" colour="${colour}">${catXml}</category>`;
+            hasCategories = true;
+        } else {
+            xmlContent += catXml;
         }
-      });
-      xmlContent += '</category>';
-      hasCategories = true;
     }
   });
 
@@ -246,7 +226,7 @@ const buildToolboxXML = (allowedBlocks, levelInputs, hiddenVars, lockedVars, for
      }
   });
 
-  // 4. FINAL
+  // 4. FINALISATION
   if (hasCategories) {
       if (orphansXml) {
           xmlContent += `<category name="⭐ Divers" colour="0">${orphansXml}</category>`;
@@ -256,7 +236,7 @@ const buildToolboxXML = (allowedBlocks, levelInputs, hiddenVars, lockedVars, for
   }
 
   return { 
-      xml: `<xml id="toolbox" style="display: none">${xmlContent}</xml>`, 
+      xml: `<xml xmlns="https://developers.google.com/blockly/xml" id="toolbox" style="display: none">${xmlContent}</xml>`, 
       hasCategories 
   };
 };

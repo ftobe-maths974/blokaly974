@@ -1,189 +1,38 @@
-/* src/App.css */
-
-/* CONFIGURATION GLOBALE */
-.App {
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background-color: #f5f6fa;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-/* --- CSS SPÉCIFIQUE AU RUNNER (JEU) --- */
-/* Le runner doit prendre tout l'écran sans scroller */
-.blocklyContainer {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  background-color: #fff; 
-  border-right: 1px solid #ccc;
-}
-
-.blockly-div {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
-
-/* --- CSS SPÉCIFIQUE AU BUILDER (ATELIER) --- */
-/* L'atelier peut scroller si besoin */
-.builder-container {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-  height: 100%;
-  overflow-y: auto; /* Scroll autorisé pour l'atelier */
-}
-
-.builder-header {
-  text-align: center;
-  margin-bottom: 30px;
-  color: #2c3e50;
-}
-
-/* La grille d'édition */
-.editor-grid {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background: white;
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-
-.editor-row {
-  display: flex;
-}
-
-.editor-cell {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 24px;
-  cursor: pointer;
-  border: 1px solid #eee;
-  transition: all 0.1s;
-}
-
-.editor-cell:hover {
-  border-color: #3498db;
-  transform: scale(1.1);
-  z-index: 10;
-  box-shadow: 0 0 5px rgba(0,0,0,0.2);
-}
-
-/* Toolbar du prof */
-.editor-toolbar {
-  background: white;
-  padding: 15px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.tool-btn {
-  padding: 8px 16px;
-  border: 2px solid #eee;
-  background: white;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
-  color: #555;
-  transition: all 0.2s;
-}
-
-.tool-btn:hover {
-  border-color: #3498db;
-  color: #3498db;
-}
-
-.tool-btn.active {
-  background: #3498db;
-  color: white;
-  border-color: #3498db;
-}
-
-.generate-btn {
-  display: block;
-  width: 100%;
-  max-width: 400px;
-  margin: 30px auto;
-  padding: 15px;
-  background: linear-gradient(135deg, #8e44ad, #9b59b6);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 1.1rem;
-  font-weight: bold;
-  cursor: pointer;
-  box-shadow: 0 4px 15px rgba(142, 68, 173, 0.4);
-  transition: transform 0.2s;
-}
-
-.generate-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(142, 68, 173, 0.5);
-}
-
 /* =========================================
-   ANIMATION CAPTEURS BLOKALY
+   ANIMATIONS SPÉCIFIQUES BLOKALY
+   (Non gérées par Tailwind car ciblage SVG interne)
    ========================================= */
 
-/* 1. Définition de l'animation (double onde qui s'étend et disparaît) */
+/* 1. Animation Radar (Double onde) */
 @keyframes sensor-pulse-light {
   0% {
-    /* Au départ : petit point blanc opaque */
     box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
   }
   70% {
-    /* À 70% : première onde large et transparente */
     box-shadow: 0 0 0 15px rgba(255, 255, 255, 0);
   }
   100% {
-    /* Fin : état final transparent pour boucler proprement */
     box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
   }
 }
 
-/* 2. Ciblage des blocs spécifiques dans le SVG Blockly */
-/* On utilise un sélecteur d'attribut qui cherche les classes générées par Blockly */
-
-/* Bloc : Répéter jusqu'à 🏁 */
+/* 2. Ciblage des blocs capteurs dans le SVG Blockly */
 .blocklyDraggable[class*="blockly-block-maze_forever"] .blocklyText,
-/* Bloc : Si chemin... ❓ */
 .blocklyDraggable[class*="blockly-block-maze_if"] .blocklyText {
-  position: relative; /* Nécessaire pour positionner l'animation */
+  position: relative;
 }
 
-/* 3. Ajout de l'élément animé juste après le texte du bloc */
 .blocklyDraggable[class*="blockly-block-maze_forever"] .blocklyText::after,
 .blocklyDraggable[class*="blockly-block-maze_if"] .blocklyText::after {
   content: '';
   position: absolute;
-  /* Positionnement : au milieu verticalement, à droite du texte */
   top: 50%;
   right: -8px; 
   transform: translateY(-50%);
-  
-  /* Le point central */
   width: 6px;
   height: 6px;
-  background-color: rgba(255, 255, 255, 0.9); /* Blanc légèrement transparent */
-  border-radius: 50%; /* Cercle */
-  
-  /* L'animation */
-  /* On lance l'animation définie plus haut, en boucle infinie */
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
   animation: sensor-pulse-light 2s infinite ease-out;
-  
-  /* Important : ne pas bloquer les clics de souris */
   pointer-events: none;
 }

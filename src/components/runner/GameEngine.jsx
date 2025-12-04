@@ -135,27 +135,42 @@ export default function GameEngine({ levelData, onWin, levelIndex }) {
 
   return (
     <div style={{display: 'flex', height: '100%', flexDirection: 'column'}}>
-      <div style={{padding: '10px', background: '#eee', display: 'flex', alignItems: 'center', gap: '10px', borderBottom:'1px solid #ccc'}}>
-        
-        {gameState === 'RUNNING' ? (
-            <button onClick={pause} style={{...btnStyle, background: '#f39c12'}}>⏸️ Pause</button>
-        ) : (
-            <button onClick={run} style={{...btnStyle, background: '#27ae60'}}>
-                {gameState === 'PAUSED' ? '▶️ Reprendre' : '▶️ Exécuter'}
-            </button>
-        )}
-
-        <button onClick={stepForward} style={{...btnStyle, background: '#3498db'}} title="Exécuter le prochain bloc">
-            👣 Pas à pas
+      {/* BARRE D'OUTILS MODERNE */}
+      <div className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shadow-sm z-20">
+  
+  {/* GAUCHE : Contrôles de lecture */}
+  <div className="flex items-center gap-3">
+    {gameState === 'RUNNING' ? (
+        <button onClick={pause} className="flex items-center gap-2 px-4 py-2 bg-amber-100 text-amber-700 hover:bg-amber-200 rounded-lg font-bold transition-colors">
+            <span>⏸️</span> Pause
         </button>
-        
-        <button onClick={reset} style={{...btnStyle, background: '#e74c3c'}}>🔄 Stop</button>
-        
-        <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto', background: 'white', padding: '5px 10px', borderRadius: '20px', border: '1px solid #ddd'}}>
-            <span style={{fontSize: '1.2rem'}}>🐢</span>
-            <input type="range" min="0" max="100" value={speed} onChange={(e) => setSpeed(Number(e.target.value))} style={{width: '100px', cursor: 'pointer'}} title={`Vitesse : ${speed}%`} />
-            <span style={{fontSize: '1.2rem'}}>🐇</span>
-        </div>
+    ) : (
+        <button onClick={run} className="flex items-center gap-2 px-4 py-2 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 rounded-lg font-bold transition-colors shadow-sm hover:shadow-md">
+            <span>▶️</span> {gameState === 'PAUSED' ? 'Reprendre' : 'Exécuter'}
+        </button>
+    )}
+
+    <button onClick={stepForward} className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg font-medium transition-colors" title="Pas à pas">
+        👣 <span className="hidden sm:inline">Pas à pas</span>
+    </button>
+    
+    <button onClick={reset} className="flex items-center gap-2 px-4 py-2 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Réinitialiser">
+        🔄
+    </button>
+  </div>
+
+  {/* DROITE : Vitesse */}
+  <div className="flex items-center gap-3 bg-slate-100 px-4 py-2 rounded-full">
+      <span className="text-lg">🐢</span>
+      <input 
+        type="range" 
+        min="0" max="100" 
+        value={speed} 
+        onChange={(e) => setSpeed(Number(e.target.value))} 
+        className="w-24 h-2 bg-slate-300 rounded-lg appearance-none cursor-pointer accent-blue-600"
+      />
+      <span className="text-lg">🐇</span>
+  </div>
       </div>
 
       <div style={{display: 'flex', flex: 1, overflow: 'hidden'}}>
@@ -165,10 +180,11 @@ export default function GameEngine({ levelData, onWin, levelIndex }) {
             isCollapsed={!isPanelOpen} onToggle={() => setIsPanelOpen(!isPanelOpen)}
         />
 
-        <div className="blocklyContainer" style={{flex: 1, position: 'relative', minWidth: '0'}}>
+        <div className="blocklyContainer relative flex-1 min-w-0 bg-slate-50 border-r border-slate-200">
           <BlocklyWorkspace
-            key={`${safeData.id}-${plugin.id}`} 
-            className="blockly-div"
+            // CORRECTION ICI : On ajoute safeData.allowedBlocks à la clé pour forcer le rafraîchissement
+            key={`${safeData.id}-${plugin.id}-${JSON.stringify(safeData.allowedBlocks || [])}`} 
+            className="blockly-div absolute inset-0"
             toolboxConfiguration={currentToolbox}
             workspaceConfiguration={workspaceConfig}
             onInject={handleInject}
@@ -190,8 +206,3 @@ export default function GameEngine({ levelData, onWin, levelIndex }) {
     </div>
   );
 }
-
-const btnStyle = {
-    padding: '8px 16px', color: 'white', border:'none', borderRadius:'4px', cursor:'pointer', fontWeight:'bold',
-    display: 'flex', alignItems: 'center', gap: '5px'
-};

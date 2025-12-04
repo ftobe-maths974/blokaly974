@@ -4,82 +4,89 @@ export default function FeedbackModal({ isOpen, stats, token, status, onReplay, 
   if (!isOpen) return null;
 
   const isWin = status === 'WON';
-  const isFail = status === 'FAILED'; // Code fini mais dessin faux
-  const isLost = status === 'LOST';   // Crash (mur)
-
-  const renderStars = () => {
-    if (!isWin) return <div style={{fontSize:'40px'}}>😕</div>;
-    
-    const stars = [];
-    for (let i = 0; i < 3; i++) {
-      stars.push(
-        <span key={i} style={{ 
-          fontSize: '40px', 
-          color: i < stats.stars ? '#f1c40f' : '#bdc3c7',
-          textShadow: i < stats.stars ? '0 0 10px #f39c12' : 'none'
-        }}>
-          ★
-        </span>
-      );
-    }
-    return stars;
-  };
+  const isFail = status === 'FAILED';
+  const isLost = status === 'LOST';
 
   let title = "Niveau Terminé !";
   let message = stats.stars === 3 ? "✨ Code Parfait !" : "💡 Tu peux optimiser...";
-  let color = "#27ae60";
+  let titleColor = "text-emerald-600";
+  let icon = "🎉";
 
   if (isFail) {
       title = "Presque...";
-      message = "Le résultat ne correspond pas exactement au modèle. Vérifie ton code !";
-      color = "#e67e22";
+      message = "Le résultat ne correspond pas au modèle.";
+      titleColor = "text-amber-500";
+      icon = "🤔";
   } else if (isLost) {
       title = "Aïe !";
       message = "Le robot a rencontré un obstacle.";
-      color = "#c0392b";
+      titleColor = "text-red-500";
+      icon = "💥";
   }
 
+  const renderStars = () => {
+    if (!isWin) return <div className="text-6xl mb-4 grayscale opacity-50">{icon}</div>;
+    return (
+      <div className="flex justify-center gap-2 mb-6">
+        {[0, 1, 2].map(i => (
+          <span key={i} className={`text-5xl transition-all duration-500 ${i < stats.stars ? 'text-yellow-400 drop-shadow-lg scale-110' : 'text-slate-200'}`}>
+            ★
+          </span>
+        ))}
+      </div>
+    );
+  };
+
   return (
-    <div style={styles.overlay}>
-      <div style={styles.modal}>
-        <h1 style={{margin: 0, color: color}}>{title}</h1>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md text-center transform transition-all scale-100 border border-white/20">
         
-        <div style={{margin: '10px 0'}}>
+        <h1 className={`text-3xl font-extrabold mb-2 ${titleColor} drop-shadow-sm`}>{title}</h1>
+        
+        <div className="my-4">
           {renderStars()}
         </div>
 
-        <div style={styles.stats}>
+        <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 mb-6">
           {isWin ? (
-             <p>🧱 Blocs utilisés : <strong>{stats.blockCount}</strong> / {stats.target}</p>
+             <p className="text-slate-600 font-medium">
+               🧱 Blocs utilisés : <strong className="text-slate-900 text-lg">{stats.blockCount}</strong> <span className="text-slate-400">/ {stats.target}</span>
+             </p>
           ) : (
-             <p style={{fontWeight:'bold', color:'#555'}}>Essaie encore !</p>
+             <p className="font-bold text-slate-500">Essaie encore !</p>
           )}
-          <p>{message}</p>
+          <p className="text-sm text-slate-400 mt-1">{message}</p>
         </div>
 
         {isWin && (
-            <div style={styles.proofSection}>
-            <p style={{fontSize: '0.9em', marginBottom: '5px'}}>🔑 Code de preuve :</p>
-            <div style={styles.tokenBox}>
-                {token}
-            </div>
-            <button onClick={() => navigator.clipboard.writeText(token)} style={styles.copyBtn}>
-                Copier le code
-            </button>
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-lg text-left">
+                <p className="text-xs font-bold text-blue-400 uppercase mb-2">🔑 Code de preuve :</p>
+                <div className="font-mono text-xs bg-white p-2 rounded border border-blue-200 text-slate-600 break-all select-all">
+                    {token}
+                </div>
             </div>
         )}
 
-        <div style={styles.actions}>
-          <button onClick={onReplay} style={styles.replayBtn}>
-            🔄 Recommencer
+        <div className="flex gap-3 justify-center">
+          <button 
+            onClick={onReplay} 
+            className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold transition-colors"
+          >
+            🔄 Rejouer
           </button>
           
-          <button onClick={onMenu} style={{...styles.replayBtn, background: '#95a5a6', marginLeft: '10px'}}>
+          <button 
+            onClick={onMenu} 
+            className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold transition-colors"
+          >
              ☰ Menu
           </button>
 
           {isWin && onNext && (
-            <button onClick={onNext} style={{...styles.replayBtn, background: '#27ae60', marginLeft: '10px'}}>
+            <button 
+                onClick={onNext} 
+                className="flex-[1.5] py-3 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold shadow-lg shadow-emerald-200 transition-all hover:-translate-y-0.5"
+            >
               ⏩ Suivant
             </button>
           )}
@@ -88,42 +95,3 @@ export default function FeedbackModal({ isOpen, stats, token, status, onReplay, 
     </div>
   );
 }
-
-const styles = {
-  overlay: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    display: 'flex', justifyContent: 'center', alignItems: 'center',
-    zIndex: 1000, backdropFilter: 'blur(4px)'
-  },
-  modal: {
-    backgroundColor: 'white', padding: '30px', borderRadius: '15px',
-    width: '400px', textAlign: 'center',
-    boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
-    animation: 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
-  },
-  stats: {
-    backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '8px',
-    margin: '15px 0', border: '1px solid #eee'
-  },
-  proofSection: {
-    margin: '20px 0', padding: '15px',
-    border: '2px dashed #3498db', borderRadius: '8px',
-    backgroundColor: '#ebf5fb'
-  },
-  tokenBox: {
-    fontFamily: 'monospace', background: 'white', padding: '8px',
-    border: '1px solid #ccc', borderRadius: '4px',
-    overflowWrap: 'break-word', fontSize: '12px',
-    marginBottom: '8px'
-  },
-  copyBtn: {
-    background: '#3498db', color: 'white', border: 'none',
-    padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem'
-  },
-  replayBtn: {
-    background: '#e67e22', color: 'white', border: 'none',
-    padding: '10px 20px', borderRadius: '5px', cursor: 'pointer',
-    fontSize: '1rem', fontWeight: 'bold'
-  }
-};
