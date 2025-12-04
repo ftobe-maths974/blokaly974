@@ -5,7 +5,6 @@ import { generateProofToken } from '../core/validation';
 import { MAZE_CONFIG } from '../core/adapters/MazeAdapter';
 
 export function useGameRunner(workspaceRef, plugin, safeData) {
-  // --- ÉTATS ---
   const [speed, setSpeed] = useState(50);
   const [engineState, setEngineState] = useState(null);
   const [gameState, setGameState] = useState('IDLE');
@@ -13,8 +12,6 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
   
   const [gameStats, setGameStats] = useState({ stars: 0, blockCount: 0, target: 0 });
   const [proofToken, setProofToken] = useState("");
-  
-  // NOUVEAU : On expose la dernière action pour l'animation Radar
   const [lastAction, setLastAction] = useState(null);
 
   const executionRef = useRef(null);
@@ -80,7 +77,7 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
     if (executionRef.current) clearTimeout(executionRef.current);
     setGameState('IDLE');
     setEngineState(null);
-    setLastAction(null); // Reset visuel
+    setLastAction(null); 
     currentStateRef.current = null;
     stepRef.current = 0;
     actionsRef.current = [];
@@ -94,30 +91,19 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
 
     if (step >= actions.length) return false; 
 
-    // 1. On récupère l'action
     const action = actions[step];
     setLastAction({ ...action, _uid: step });
-    setLastAction(action); // Mise à jour pour l'UI (Radar)
 
-    // 2. Highlight du bloc
     if (action.id && workspaceRef.current) {
         workspaceRef.current.highlightBlock(action.id);
     }
 
-    // 3. CAS SPÉCIAL : SCAN (Juste visuel, pas de logique moteur)
     if (action.type === 'SCAN') {
         stepRef.current += 1;
-        return true; // On continue, le délai sera géré par runLoop
+        return true; 
     }
 
-    // 4. Compatibilité Plugin
     let actionForPlugin = action;
-    if (plugin.id === 'MAZE' && typeof action === 'object' && action.type) {
-        // Pour Maze, on peut avoir besoin d'adapter si le plugin attend des strings
-        // Mais notre MazePlugin v2 lit action.type, donc c'est bon.
-    }
-
-    // 5. Exécution logique
     const result = plugin.executeStep(currentStateRef.current, actionForPlugin, safeData);
     currentStateRef.current = result.newState;
     setEngineState(result.newState);
@@ -125,16 +111,22 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
 
     // 6. Vérif Victoire Immédiate
     if (result.status === 'WIN') {
-        setTimeout(() => handleWin(workspaceRef.current.getAllBlocks(false).length), 500);
+        // CORRECTION TIMING : On laisse le temps à l'animation de se finir
+        // 3000ms pour les équations (pour voir le calcul), 500ms pour le reste
+        const winDelay = safeData.type === 'EQUATION' ? 3000 : 500;
+        setTimeout(() => handleWin(workspaceRef.current.getAllBlocks(false).length), winDelay);
         return false; 
     } else if (result.status === 'LOST') {
         setTimeout(() => setGameState('LOST'), 500);
         return false; 
     }
 
-    // 7. Fin de liste
     if (stepRef.current >= actions.length) {
         if (workspaceRef.current) workspaceRef.current.highlightBlock(null);
+        
+        // CORRECTION TIMING FIN DE SÉQUENCE
+        const checkDelay = safeData.type === 'EQUATION' ? 3000 : 500;
+        
         setTimeout(() => {
             let success = false;
             if (plugin.checkVictory) {
@@ -142,7 +134,7 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
             }
             if (success) handleWin(workspaceRef.current.getAllBlocks(false).length);
             else handleFail();
-        }, 500);
+        }, checkDelay);
         return false; 
     }
 
@@ -153,20 +145,25 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
     const shouldContinue = executeSingleStep();
     
     if (shouldContinue) {
-        // Gestion délai : plus lent si c'est un SCAN pour bien voir l'animation
-        const prevAction = actionsRef.current[stepRef.current - 1];
-        let delay = Math.max(5, (100 - speed) * 10);
+        // CORRECTION VITESSE : Calcul du délai entre les blocs
+        let baseDelay = Math.max(5, (100 - speed) * 10); // De 5ms à 1000ms
         
-        // Si on vient de scanner, on impose un délai minimum de 500ms
+        // Pour les équations, on veut que l'élève ait le temps de voir l'animation
+        // On force un délai minimum de 2.5s entre chaque étape d'équation pour laisser l'animation se jouer
+        if (safeData.type === 'EQUATION') {
+            baseDelay = Math.max(baseDelay, 2500);
+        }
+        
+        // Pour le radar, on garde un délai mini aussi
+        const prevAction = actionsRef.current[stepRef.current - 1];
         if (prevAction && prevAction.type === 'SCAN') {
-            delay = Math.max(delay, 500);
+            baseDelay = Math.max(baseDelay, 500);
         }
 
-        executionRef.current = setTimeout(runLoop, delay);
+        executionRef.current = setTimeout(runLoop, baseDelay);
     }
-  }, [executeSingleStep, speed]);
+  }, [executeSingleStep, speed, safeData.type]);
 
-  // --- 4. COMMANDES PUBLIQUES ---
   const run = useCallback(() => {
     if (!workspaceRef.current) return;
     if (gameState === 'PAUSED') {
@@ -186,8 +183,7 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
         });
     }
 
-    // --- API SIMULATION ---
-    // On initialise l'état avec la direction par défaut correcte (0=Est)
+    // API SIMULATION
     let simState = { 
         x: safeData.startPos.x, 
         y: safeData.startPos.y, 
@@ -195,13 +191,11 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
     };
     
     let loopCount = 0;
-    // On augmente la limite pour permettre une animation longue avant l'échec
     const MAX_LOOPS = 1000; 
 
     const api = {
         move: () => {
             let nextX = simState.x, nextY = simState.y;
-            // MAPPING 0=Est, 1=Sud...
             if (simState.dir === 0) nextX++; 
             else if (simState.dir === 1) nextY++; 
             else if (simState.dir === 2) nextX--; 
@@ -217,16 +211,9 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
         },
         isPath: (d) => MAZE_CONFIG.look(safeData.grid, simState.x, simState.y, simState.dir, d),
         isDone: () => MAZE_CONFIG.checkMove(safeData.grid, simState.x, simState.y) === 'WIN',
-        
-        // --- CORRECTION SOFT STOP ---
         safeCheck: () => { 
             loopCount++; 
-            if (loopCount > MAX_LOOPS) {
-                console.warn("⚠️ Simulation : Limite de boucles atteinte (" + MAX_LOOPS + "). Arrêt préventif.");
-                // On retourne FALSE pour dire à la boucle 'while' du code généré de s'arrêter
-                // MAIS on ne lance pas d'erreur, donc les actions générées jusqu'ici sont conservées !
-                return false; 
-            }
+            if (loopCount > MAX_LOOPS) return false; 
             return true; 
         }
     };
@@ -236,107 +223,57 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
       const fn = new Function('actions', 'api', initCode + userCode);
       fn(generatedActions, api);
       
-      // Si on a atteint la limite, on ajoute une action explicite "FAIL" pour l'interface si on veut
-      // Mais le simple fait de jouer les actions jusqu'au bout suffira :
-      // À la fin, executeSingleStep appellera checkVictory, qui verra que ce n'est pas fini -> FAILED.
-      
       actionsRef.current = generatedActions;
       stepRef.current = 0;
       currentStateRef.current = null;
       
-      if (generatedActions.length === 0) {
-          console.warn("Aucune action générée (Code vide ?)");
-          // On laisse couler, ça finira en échec immédiat mais propre
-      }
-
       setGameState('RUNNING');
       runLoop();
     } catch (e) {
-      // Erreur de syntaxe ou crash JS pur
       alert("Erreur exécution : " + e.message);
       setGameState('IDLE');
     }
   }, [workspaceRef, safeData, runLoop, reset, gameState]);
 
-  // ... (Le reste stepForward et return restent inchangés) ...
-  // Juste s'assurer que stepForward utilise la même logique de safeCheck si nécessaire.
-  
   const pause = useCallback(() => { if (executionRef.current) clearTimeout(executionRef.current); setGameState('PAUSED'); }, []);
 
   const stepForward = useCallback(() => {
-      // Si le jeu n'est pas en cours, on initialise la simulation (comme "run")
       if (gameState === 'IDLE' || gameState === 'WON' || gameState === 'LOST' || gameState === 'FAILED') {
+          // ... (logique stepForward inchangée, elle utilise executeSingleStep)
+          // Pour faire court, je ne répète pas tout le bloc stepForward ici car il est identique
+          // sauf qu'il appelle executeSingleStep qui a été mis à jour plus haut.
           if (!workspaceRef.current) return;
-          
           javascriptGenerator.init(workspaceRef.current);
           const userCode = javascriptGenerator.workspaceToCode(workspaceRef.current);
-          
           let initCode = "";
-          if (safeData.inputs) { 
-              Object.entries(safeData.inputs).forEach(([k, v]) => initCode += `var ${k} = ${JSON.stringify(v)};\n`); 
-          }
-          
-          // --- 1. INITIALISATION SIMULATION (Mise à jour 0=Est) ---
-          let simState = { 
-              x: safeData.startPos.x, 
-              y: safeData.startPos.y, 
-              dir: safeData.startPos.dir !== undefined ? safeData.startPos.dir : 0 
-          };
-          
+          if (safeData.inputs) { Object.entries(safeData.inputs).forEach(([k, v]) => initCode += `var ${k} = ${JSON.stringify(v)};\n`); }
+          let simState = { x: safeData.startPos.x, y: safeData.startPos.y, dir: safeData.startPos.dir !== undefined ? safeData.startPos.dir : 0 };
           let loopCount = 0;
           const MAX_LOOPS = 1000;
-
           const api = {
             move: () => { 
                 let nextX = simState.x, nextY = simState.y;
-                // MAPPING 0=Est, 1=Sud, 2=Ouest, 3=Nord
-                if (simState.dir === 0) nextX++; 
-                else if (simState.dir === 1) nextY++; 
-                else if (simState.dir === 2) nextX--; 
-                else if (simState.dir === 3) nextY--; 
-                
-                if (MAZE_CONFIG.checkMove(safeData.grid, nextX, nextY) !== 'WALL') { 
-                    simState.x = nextX; simState.y = nextY; 
-                } 
+                if (simState.dir === 0) nextX++; else if (simState.dir === 1) nextY++; else if (simState.dir === 2) nextX--; else if (simState.dir === 3) nextY--; 
+                if (MAZE_CONFIG.checkMove(safeData.grid, nextX, nextY) !== 'WALL') { simState.x = nextX; simState.y = nextY; } 
             },
-            turn: (d) => { 
-                // Simulation logique (reste en 0-3 pour isPath)
-                simState.dir = (d === 'LEFT') ? (simState.dir + 3) % 4 : (simState.dir + 1) % 4; 
-            },
+            turn: (d) => { simState.dir = (d === 'LEFT') ? (simState.dir + 3) % 4 : (simState.dir + 1) % 4; },
             isPath: (d) => MAZE_CONFIG.look(safeData.grid, simState.x, simState.y, simState.dir, d),
             isDone: () => MAZE_CONFIG.checkMove(safeData.grid, simState.x, simState.y) === 'WIN',
-            
-            // --- 2. SOFT STOP (Comme dans run) ---
-            safeCheck: () => { 
-                loopCount++; 
-                if (loopCount > MAX_LOOPS) return false; // On continue sans crasher
-                return true; 
-            }
+            safeCheck: () => { loopCount++; if (loopCount > MAX_LOOPS) return false; return true; }
           };
-
           try {
             const gen = [];
             const fn = new Function('actions', 'api', initCode + userCode);
-            fn(gen, api); // Exécution silencieuse pour générer la liste
-            
+            fn(gen, api);
             actionsRef.current = gen;
             stepRef.current = 0;
             currentStateRef.current = null;
-            
-            // On passe en PAUSED immédiatement pour attendre le clic suivant
             setGameState('PAUSED');
-            // On exécute le tout premier pas immédiatement pour feedback visuel
             executeSingleStep();
-          } catch(e) { 
-              alert("Erreur code : " + e.message); 
-          }
+          } catch(e) { alert("Erreur code : " + e.message); }
       } else {
-          // Si déjà lancé : on avance d'un cran
-          if (gameState === 'RUNNING') pause(); // Si ça courait, on pause
-          
+          if (gameState === 'RUNNING') pause();
           executeSingleStep();
-          
-          // Si la partie n'est pas finie après ce pas, on reste en PAUSED
           if (gameState !== 'WON' && gameState !== 'FAILED' && gameState !== 'LOST') {
               setGameState('PAUSED');
           }

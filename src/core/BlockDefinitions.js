@@ -1,3 +1,5 @@
+import { MAZE_CONFIG } from './adapters/MazeAdapter';
+
 export const BLOCK_DEFINITIONS = {
   // --- MAZE ---
   'maze_move_forward': '<block type="maze_move_forward"></block>',
@@ -26,12 +28,19 @@ export const BLOCK_DEFINITIONS = {
   'turtle_color': `
     <block type="turtle_color"><field name="COLOR">#ff0000</field></block>
   `,
+  
   // --- ALGEBRE ---
   'equation_op_both': `
     <block type="equation_op_both">
       <value name="VAL"><shadow type="math_number"><field name="NUM">1</field></shadow></value>
     </block>
   `,
+  'equation_term_x': `
+    <block type="equation_term_x">
+      <field name="COEFF">1</field>
+    </block>
+  `,
+
   // --- LOGIQUE ---
   'controls_repeat_ext': `
     <block type="controls_repeat_ext">
@@ -44,6 +53,7 @@ export const BLOCK_DEFINITIONS = {
   'controls_if': '<block type="controls_if"></block>',
   'logic_compare': '<block type="logic_compare"></block>',
   'logic_operation': '<block type="logic_operation"></block>',
+
   // --- MATHS ---
   'math_number': '<block type="math_number"></block>',
   'math_arithmetic': `
@@ -64,16 +74,18 @@ export const BLOCK_DEFINITIONS = {
       <value name="TO"><shadow type="math_number"><field name="NUM">100</field></shadow></value>
     </block>
   `,
+
   // --- LISTES ---
   'lists_create_with': '<block type="lists_create_with"><mutation items="3"></mutation></block>',
   'lists_getIndex': '<block type="lists_getIndex"></block>',
   'lists_setIndex': '<block type="lists_setIndex"></block>',
   'lists_length': '<block type="lists_length"></block>',
+
   // --- INTERACTIONS ---
   'text_print': '<block type="text_print"></block>',
   'text_prompt_ext': '<block type="text_prompt_ext"><value name="TEXT"><shadow type="text"><field name="TEXT">?</field></shadow></value></block>',
   
-  // --- VARIABLES (Fallback) ---
+  // --- VARIABLES ---
   'variables_get': '<block type="variables_get"></block>',
   'variables_set': '<block type="variables_set"></block>',
 };
@@ -97,7 +109,10 @@ export const BLOCK_LABELS = {
   'math_arithmetic': 'Calcul',
   'math_modulo': 'Reste',
   'math_random_int': 'Aléatoire',
+  
   'equation_op_both': 'Opération Équation',
+  'equation_term_x': 'Terme X (ax)', // Ajouté ici
+  
   'text_print': 'Afficher',
   'text_prompt_ext': 'Demander',
   'lists_create_with': 'Créer liste',
@@ -124,7 +139,8 @@ export const CATEGORY_CONTENTS = {
   'Listes': ['lists_create_with', 'lists_getIndex', 'lists_setIndex', 'lists_length'],
   'Variables': ['variables_set'],
   'Interactions': ['text_print', 'text_prompt_ext'],
-  'Algèbre': ['equation_op_both', 'math_number']
+  // Ajout du bloc 'equation_term_x' dans la catégorie
+  'Algèbre': ['equation_op_both', 'equation_term_x', 'math_number']
 };
 
 // --- GÉNÉRATEUR ADAPTATIF ---
@@ -148,7 +164,6 @@ const buildToolboxXML = (allowedBlocks, levelInputs, hiddenVars, lockedVars, for
   let xmlContent = '';
   let remainingBlocks = new Set(allowedBlocks || []);
   
-  // HEURISTIQUE : Si < 6 blocs, on affiche tout à plat (Flyout)
   const totalBlocksCount = (allowedBlocks || []).length;
   const useCategories = forceFull || (totalBlocksCount >= 6);
 

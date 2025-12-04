@@ -3,7 +3,6 @@ import { javascriptGenerator } from 'blockly/javascript';
 
 // ICÔNES ANIMÉES (SVG en Base64)
 const ICON_RADAR = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgdmlld0JveD0iMCAwIDIwIDIwIj48Y2lyY2xlIGN4PSIxMCIgY3k9IjEwIiByPSIzIiBmaWxsPSJ3aGl0ZSIvPjxjaXJjbGUgY3g9IjEwIiBjeT0iMTAiIHI9IjEwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIG9wYWNpdHk9IjAuNSI+PGFuaW1hdGUgYXR0cmlidXRlTmFtZT0iciIgZnJvbT0iMyIgdG89IjEwIiBkdXI9IjEuNXMiIHJlcGVhdENvdW50PSJpbmRlZmluaXRlIi8+PGFuaW1hdGUgYXR0cmlidXRlTmFtZT0ib3BhY2l0eSIgZnJvbT0iMSIgdG89IjAiIGR1cj0iMS41cyIgcmVwZWF0Q291bnQ9ImluZGVmaW5pdGUiLz48L2NpcmNsZT48L3N2Zz4=";
-const ICON_FLAG = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgdmlld0JveD0iMCAwIDIwIDIwIj48cGF0aCBkPSZNMiwyIFYxOCBNMiwyIEgxMiBMOSw1IEwxMiw4IEgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiLz48L3N2Zz4=";
 
 let isRegistered = false;
 
@@ -11,7 +10,7 @@ export const registerAllBlocks = () => {
   if (isRegistered) return;
   isRegistered = true;
 
-  console.log("🏗️ Enregistrement global des blocs (V3 Animée)...");
+  console.log("🏗️ Enregistrement global des blocs (V4)...");
 
   // --- 1. MAZE ---
   Blockly.defineBlocksWithJsonArray([
@@ -26,13 +25,10 @@ export const registerAllBlocks = () => {
       "args0": [ { "type": "field_dropdown", "name": "DIR", "options": [["à gauche ↺", "LEFT"], ["à droite ↻", "RIGHT"]] } ],
       "previousStatement": null, "nextStatement": null, "colour": 160
     },
-    // --- RADAR ANIMÉ ---
     {
       "type": "maze_forever", 
       "message0": "Répéter jusqu'à 🏁 %1",
-      "args0": [
-        { "type": "input_statement", "name": "DO" }
-      ],
+      "args0": [ { "type": "input_statement", "name": "DO" } ],
       "previousStatement": null, "nextStatement": null, "colour": 120
     },
     {
@@ -60,7 +56,6 @@ export const registerAllBlocks = () => {
     }
   ]);
   
-  // GÉNÉRATEURS AVEC API
   javascriptGenerator.forBlock['maze_move_forward'] = (block) => 
     `actions.push({type: "MOVE", id: "${block.id}"}); api.move();\n`;
   
@@ -71,8 +66,6 @@ export const registerAllBlocks = () => {
 
   javascriptGenerator.forBlock['maze_forever'] = (block) => {
     const branch = javascriptGenerator.statementToCode(block, 'DO');
-    // On ajoute une action LOOP_CHECK qui provoquera une pause visuelle + highlight
-    // Mais comme le type n'est pas "SCAN", MazeRender n'affichera pas de radar.
     return `while (!api.isDone() && api.safeCheck()) {
       actions.push({type: "LOOP_CHECK", id: "${block.id}"}); 
       ${branch}
@@ -82,7 +75,6 @@ export const registerAllBlocks = () => {
   javascriptGenerator.forBlock['maze_if'] = (block) => {
     const dir = block.getFieldValue('DIR');
     const branch = javascriptGenerator.statementToCode(block, 'DO');
-    // Ici on garde SCAN car c'est un capteur, donc on veut le radar
     return `actions.push({type: "SCAN", dir: "${dir}", id: "${block.id}"}); if (api.isPath('${dir}')) {\n${branch}}\n`;
   };
 
@@ -90,20 +82,16 @@ export const registerAllBlocks = () => {
     const dir = block.getFieldValue('DIR');
     const branch0 = javascriptGenerator.statementToCode(block, 'DO');
     const branch1 = javascriptGenerator.statementToCode(block, 'ELSE');
-    // Ici aussi SCAN
     return `actions.push({type: "SCAN", dir: "${dir}", id: "${block.id}"}); if (api.isPath('${dir}')) {\n${branch0}} else {\n${branch1}}\n`;
   };
 
-  // --- 2. TURTLE (Standard) ---
+  // --- 2. TURTLE ---
   Blockly.defineBlocksWithJsonArray([
     { 
       "type": "turtle_move", 
-      // MODIFICATION : Ajout de "pas" à la fin
       "message0": "avancer ✥ de %1 pas", 
       "args0": [{ "type": "input_value", "name": "VALUE", "check": "Number" }], 
-      "previousStatement": null, 
-      "nextStatement": null, 
-      "colour": 160 
+      "previousStatement": null, "nextStatement": null, "colour": 160 
     },
     { "type": "turtle_turn", "message0": "pivoter %1 de %2 degrés 🗘", "args0": [ { "type": "field_dropdown", "name": "DIR", "options": [["↺ gauche", "LEFT"], ["↻ droite", "RIGHT"]] }, { "type": "input_value", "name": "VALUE", "check": "Number" } ], "previousStatement": null, "nextStatement": null, "colour": 160 },
     { "type": "turtle_pen", "message0": "stylo %1", "args0": [ { "type": "field_dropdown", "name": "STATE", "options": [["levé ⬆️", "UP"], ["baissé ⬇️", "DOWN"]] } ], "previousStatement": null, "nextStatement": null, "colour": 160 },
@@ -114,17 +102,13 @@ export const registerAllBlocks = () => {
   javascriptGenerator.forBlock['turtle_turn'] = (block) => {
     const dir = block.getFieldValue('DIR');
     const val = javascriptGenerator.valueToCode(block, 'VALUE', javascriptGenerator.ORDER_ATOMIC) || '0';
-    
-    // MODIFICATION : Inversion ici. 
-    // Si 'LEFT' -> on veut tourner en négatif (-val). 
-    // Si 'RIGHT' -> on veut tourner en positif (val).
     const angleCode = (dir === 'LEFT') ? `-${val}` : val;
-    
     return `actions.push({type: 'TURN', id: "${block.id}", angle: ${angleCode}});\n`;
   };
   javascriptGenerator.forBlock['turtle_pen'] = (block) => `actions.push({type: 'PEN', id: "${block.id}", state: '${block.getFieldValue('STATE')}'});\n`;
   javascriptGenerator.forBlock['turtle_color'] = (block) => `actions.push({type: 'COLOR', id: "${block.id}", color: '${block.getFieldValue('COLOR')}'});\n`;
 
+  // --- VARIABLES ---
   javascriptGenerator.forBlock['variables_set'] = (block) => {
     const argument0 = javascriptGenerator.valueToCode(block, 'VALUE', javascriptGenerator.ORDER_ATOMIC) || '0';
     const varName = block.getField('VAR').getText();
@@ -143,12 +127,15 @@ export const registerAllBlocks = () => {
   javascriptGenerator.forBlock['system_var_get'] = (block) => [block.getField('VAR_NAME').getText(), javascriptGenerator.ORDER_ATOMIC];
 
   // --- 3. EQUATION BLOCKS ---
+  
+  // BLOC 1 : Opération sur les deux côtés
   Blockly.defineBlocksWithJsonArray([{
     "type": "equation_op_both",
     "message0": "Aux deux côtés %1 %2",
     "args0": [
       { "type": "field_dropdown", "name": "OP", "options": [["Ajouter +", "ADD"], ["Soustraire -", "SUB"], ["Multiplier ×", "MUL"], ["Diviser /", "DIV"]] },
-      { "type": "input_value", "name": "VAL", "check": "Number" }
+      // Plus de check "Number" ici, on accepte tout (Nombre ou X)
+      { "type": "input_value", "name": "VAL" }
     ],
     "previousStatement": null,
     "nextStatement": null,
@@ -159,9 +146,27 @@ export const registerAllBlocks = () => {
   javascriptGenerator.forBlock['equation_op_both'] = (block) => {
     const op = block.getFieldValue('OP');
     const val = javascriptGenerator.valueToCode(block, 'VAL', javascriptGenerator.ORDER_ATOMIC) || '0';
-    
     const symbolMap = { 'ADD': '+', 'SUB': '-', 'MUL': '*', 'DIV': '/' };
     return `actions.push({ type: 'OP_BOTH', operator: '${symbolMap[op]}', value: ${val} });\n`;
+  };
+
+  // BLOC 2 : Terme X (Nouveau !)
+  Blockly.defineBlocksWithJsonArray([{
+    "type": "equation_term_x",
+    "message0": "%1 x",
+    "args0": [
+      { "type": "field_number", "name": "COEFF", "value": 1, "precision": 1 } 
+    ],
+    "output": null, 
+    "colour": 230,
+    "tooltip": "Représente une inconnue (ex: 2x, -x...)"
+  }]);
+
+  javascriptGenerator.forBlock['equation_term_x'] = (block) => {
+    const coeff = block.getFieldValue('COEFF');
+    // On retourne une chaîne avec des guillemets pour que ce soit traité comme du texte
+    // et non comme une variable JS 'x' qui n'existe pas.
+    return [`"${coeff}*x"`, javascriptGenerator.ORDER_ATOMIC];
   };
 
   // --- 4. LISTES ---
