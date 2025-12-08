@@ -88,14 +88,14 @@ export default {
         };
     },
     
-    // Catalogue Visuel
+    // 👇 CATALOGUE CORRIGÉ
     catalog: [
         {
             category: 'Actions',
             color: 'emerald-500',
             blocks: [
                 { type: 'turtle_move', label: 'Avancer', icon: '⬆️' },
-                { type: 'turtle_turn', label: 'Pivoter', icon: 'hz' },
+                { type: 'turtle_turn', label: 'Pivoter', icon: '↺' },
                 { type: 'turtle_pen', label: 'Stylo', icon: '✏️' },
                 { type: 'turtle_color', label: 'Couleur', icon: '🎨' }
             ]
@@ -104,7 +104,7 @@ export default {
             category: 'Boucles',
             color: 'yellow-500',
             blocks: [
-                { type: 'controls_repeat_ext', label: 'Répéter N fois', icon: 'jq' }
+                { type: 'controls_repeat_ext', label: 'Répéter N fois', icon: '🔁' }
             ]
         }
     ],

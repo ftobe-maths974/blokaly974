@@ -3,13 +3,11 @@ import nerdamer from 'nerdamer';
 
 export default function EquationEditor({ levelData, onUpdate }) {
   const params = levelData.equation || { a: 2, b: 4, c: 0, d: 10, sign: '=', implicit: false, showGraph: false };
-  
-  // Récupération de la config de validation (ou valeurs par défaut)
   const validation = levelData.validation || { strategy: 'ISOLATION', stars: { blocks: 5, steps: 20 } };
 
   const [manualMode, setManualMode] = useState(false);
   const [manualEq, setManualEq] = useState("");
-  const [tab, setTab] = useState('EQUATION'); // 'EQUATION' ou 'VALIDATION'
+  const [tab, setTab] = useState('EQUATION'); 
 
   useEffect(() => {
     if (!levelData.allowedBlocks || levelData.allowedBlocks.length === 0) {
@@ -22,19 +20,11 @@ export default function EquationEditor({ levelData, onUpdate }) {
   const updateGlobal = (newParams, resetBlocks = false) => {
     const lhs = newParams.manualLhs || `${newParams.a}*x + ${newParams.b}`;
     const rhs = newParams.manualRhs || `${newParams.c}*x + ${newParams.d}`;
-    
-    const updates = { 
-      ...levelData, 
-      equation: { ...newParams, lhs, rhs, sign: newParams.sign }
-    };
-
-    if (resetBlocks) {
-        updates.allowedBlocks = ['equation_op_both', 'equation_term_x', 'equation_verify', 'equation_solution_state', 'math_number'];
-    }
+    const updates = { ...levelData, equation: { ...newParams, lhs, rhs, sign: newParams.sign } };
+    if (resetBlocks) updates.allowedBlocks = ['equation_op_both', 'equation_term_x', 'equation_verify', 'equation_solution_state', 'math_number'];
     onUpdate(updates);
   };
 
-  // Mise à jour de la config de validation
   const updateValidation = (field, value) => {
       const newValidation = { ...validation, [field]: value };
       onUpdate({ ...levelData, validation: newValidation });
@@ -51,7 +41,17 @@ export default function EquationEditor({ levelData, onUpdate }) {
     setManualEq(`${newParams.a}*x + ${newParams.b} ${newParams.sign} ${newParams.c}*x + ${newParams.d}`);
   };
 
-  // ... (Garde tes fonctions generateRandom et handleManualChange ici) ...
+  const generateRandom = () => {
+      const x = Math.floor(Math.random() * 10) - 5;
+      const a = Math.floor(Math.random() * 5) + 2;  
+      const c = Math.floor(Math.random() * a);
+      const b = Math.floor(Math.random() * 10);
+      const d = a*x + b - c*x;
+      const signs = ['=', '<', '>', '\\leq', '\\geq'];
+      const randomSign = signs[Math.floor(Math.random() * signs.length)];
+      updateParam({ a, b, c, d, sign: randomSign });
+  };
+
   const handleManualChange = (e) => {
       const val = e.target.value;
       setManualEq(val);
@@ -85,20 +85,21 @@ export default function EquationEditor({ levelData, onUpdate }) {
 
       <div className="p-4 overflow-y-auto custom-scrollbar flex-1">
         
-        {/* VUE ÉQUATION (Ton code existant) */}
+        {/* VUE ÉQUATION */}
         {tab === 'EQUATION' && (
             <div className="flex flex-col gap-6">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                    <span className="text-xs font-bold text-slate-400 uppercase">Paramètres</span>
-                    <button onClick={() => setManualMode(!manualMode)} className="text-[10px] bg-slate-100 px-2 py-1 rounded text-slate-600 hover:bg-slate-200 transition-colors">
-                        {manualMode ? "Mode Simple" : "Mode Expert"}
-                    </button>
+                    <span className="text-xs font-bold text-slate-400 uppercase">Générateur</span>
+                    <div className="flex gap-2">
+                        <button onClick={generateRandom} className="text-[10px] bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200">🎲 Aléatoire</button>
+                        <button onClick={() => setManualMode(!manualMode)} className="text-[10px] bg-slate-100 px-2 py-1 rounded text-slate-600 hover:bg-slate-200">
+                            {manualMode ? "Simple" : "Expert"}
+                        </button>
+                    </div>
                 </div>
 
                 {manualMode ? (
-                    <div>
-                        <input type="text" value={manualEq} onChange={handleManualChange} className="w-full p-3 font-mono text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 outline-none text-center text-slate-700" />
-                    </div>
+                    <input type="text" value={manualEq} onChange={handleManualChange} className="w-full p-3 font-mono text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 outline-none text-center text-slate-700" />
                 ) : (
                     <div className="space-y-5">
                         {['a', 'b', 'c', 'd'].map(p => (
@@ -108,23 +109,33 @@ export default function EquationEditor({ levelData, onUpdate }) {
                                 <span className="w-8 text-right font-mono font-bold text-slate-700">{params[p]}</span>
                             </div>
                         ))}
+                        <div className="flex items-center gap-4 bg-slate-100 p-2 rounded-lg justify-center">
+                            {['=', '<', '>', '\\leq', '\\geq'].map(s => (
+                                <button key={s} onClick={() => updateParam({ sign: s })} className={`w-8 h-8 rounded font-bold ${params.sign === s ? 'bg-white shadow text-blue-600' : 'text-slate-400'}`}>
+                                    {s === '\\leq' ? '≤' : (s === '\\geq' ? '≥' : s)}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 )}
                 
-                <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm mt-2">
-                    <label className="flex items-center gap-3 cursor-pointer">
-                        <input type="checkbox" checked={params.implicit || false} onChange={(e) => updateParam({ implicit: e.target.checked })} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
-                        <span className="text-sm font-medium text-slate-600">Mode Implicite (ax + b)</span>
+                <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm mt-2 flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={params.implicit || false} onChange={(e) => updateParam({ implicit: e.target.checked })} className="w-4 h-4 text-blue-600 rounded" />
+                        <span className="text-xs font-bold text-slate-600">Implicit</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={params.showGraph || false} onChange={(e) => updateParam({ showGraph: e.target.checked })} className="w-4 h-4 text-emerald-600 rounded" />
+                        <span className="text-xs font-bold text-slate-600">Graphique</span>
                     </label>
                 </div>
             </div>
         )}
 
-        {/* VUE VALIDATION (Nouveau !) */}
+        {/* VUE VALIDATION */}
         {tab === 'VALIDATION' && (
             <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-4 duration-300">
                 
-                {/* 1. Stratégie */}
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                     <h4 className="text-xs font-bold text-slate-400 uppercase mb-3">Condition de Victoire</h4>
                     <select 
@@ -132,10 +143,10 @@ export default function EquationEditor({ levelData, onUpdate }) {
                         onChange={(e) => updateValidation('strategy', e.target.value)}
                         className="w-full p-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50"
                     >
-                        <option value="ISOLATION">Isolation (x = ...)</option>
-                        <option value="VERIFICATION">Vérification (Bloc Vert)</option>
-                        <option value="FLEXIBLE">Hybride (L'un ou l'autre)</option>
-                        <option value="COMPLETE">Expert (Les deux requis)</option> {/* 👈 AJOUT ICI */}
+                        <option value="ISOLATION">Standard (x = solution)</option>
+                        <option value="VERIFICATION">Par Vérification (Bloc vert)</option>
+                        <option value="FLEXIBLE">Hybride (L'un OU l'autre)</option>
+                        <option value="COMPLETE">Expert (L'un ET l'autre)</option>
                     </select>
                     <p className="text-[10px] text-slate-400 mt-2 leading-snug bg-slate-50 p-2 rounded">
                         {validation.strategy === 'ISOLATION' && "L'élève gagne dès que x est isolé."}
@@ -145,34 +156,17 @@ export default function EquationEditor({ levelData, onUpdate }) {
                     </p>
                 </div>
 
-                {/* 2. Seuils Étoiles */}
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <h4 className="text-xs font-bold text-slate-400 uppercase mb-3">Objectifs ⭐⭐⭐</h4>
-                    
+                    <h4 className="text-xs font-bold text-slate-400 uppercase mb-3">Critères ⭐⭐⭐</h4>
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
                             <label className="text-sm font-medium text-slate-600">Max Blocs</label>
-                            <input 
-                                type="number" min="1" max="50" 
-                                value={validation.stars?.blocks || 10}
-                                onChange={(e) => updateStarTarget('blocks', e.target.value)}
-                                className="w-16 p-1 text-center border border-slate-300 rounded font-mono text-sm"
-                            />
+                            <input type="number" min="1" value={validation.stars?.blocks || 10} onChange={(e) => updateStarTarget('blocks', e.target.value)} className="w-16 p-1 text-center border border-slate-300 rounded font-mono text-sm" />
                         </div>
-                        
                         <div className="flex items-center justify-between">
-                            <label className="text-sm font-medium text-slate-600">Max Étapes (CPU)</label>
-                            <input 
-                                type="number" min="1" max="100" 
-                                value={validation.stars?.steps || 20}
-                                onChange={(e) => updateStarTarget('steps', e.target.value)}
-                                className="w-16 p-1 text-center border border-slate-300 rounded font-mono text-sm"
-                            />
+                            <label className="text-sm font-medium text-slate-600">Max Étapes</label>
+                            <input type="number" min="1" value={validation.stars?.steps || 20} onChange={(e) => updateStarTarget('steps', e.target.value)} className="w-16 p-1 text-center border border-slate-300 rounded font-mono text-sm" />
                         </div>
-                    </div>
-                    
-                    <div className="mt-4 p-2 bg-amber-50 border border-amber-100 rounded text-[10px] text-amber-800">
-                        💡 Chaque dépassement d'un seuil fait perdre 1 étoile.
                     </div>
                 </div>
 

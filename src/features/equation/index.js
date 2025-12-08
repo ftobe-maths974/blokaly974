@@ -108,14 +108,14 @@ export default {
         };
     },
     
-    // CATALOGUE (Inchangé)
+    // 👇 CATALOGUE CORRIGÉ
     catalog: [
         {
             category: 'Résolution',
             color: 'indigo-500',
             blocks: [
                 { type: 'equation_op_both', label: 'Opération (2 côtés)', icon: '⚖️' },
-                { type: 'equation_term_x', label: 'Terme X', icon: 'x' },
+                { type: 'equation_term_x', label: 'Terme X', icon: '𝒙' },
                 { type: 'equation_verify', label: 'Vérifier la réponse', icon: '✅' },
                 { type: 'math_number', label: 'Nombre', icon: '123' }
             ]
@@ -124,9 +124,9 @@ export default {
             category: 'Analyse',
             color: 'purple-500',
             blocks: [
-                { type: 'equation_solution_state', label: 'Conclusion (Pas de sol...)', icon: '∅' },
-                { type: 'equation_solution_s', label: 'Écrire S = ...', icon: 'S' },
-                { type: 'equation_interval', label: 'Intervalle [ ; ]', icon: 'Pw' },
+                { type: 'equation_solution_state', label: 'Conclusion', icon: '∅' },
+                { type: 'equation_solution_s', label: 'Écrire S = ...', icon: '📝' },
+                { type: 'equation_interval', label: 'Intervalle [ ; ]', icon: '↔️' },
                 { type: 'math_infinity', label: 'Infini', icon: '∞' }
             ]
         }

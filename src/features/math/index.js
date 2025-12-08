@@ -96,13 +96,14 @@ export default {
     executeStep: MathLogic.executeStep,
     evaluateResult: MathLogic.evaluateResult,
     
+    // 👇 CATALOGUE CORRIGÉ
     catalog: [
         {
             category: 'Variables',
             color: 'pink-500',
             blocks: [
-                { type: 'variables_set', label: 'Affecter (=)', icon: 'Df' },
-                { type: 'variables_get', label: 'Lire valeur', icon: 'Lr' },
+                { type: 'variables_set', label: 'Affecter (=)', icon: '📥' },
+                { type: 'variables_get', label: 'Lire valeur', icon: '👀' },
             ]
         },
         {
@@ -110,7 +111,7 @@ export default {
             color: 'blue-500',
             blocks: [
                 { type: 'math_number', label: 'Nombre', icon: '123' },
-                { type: 'math_arithmetic', label: 'Opération (+ - * /)', icon: '+-' },
+                { type: 'math_arithmetic', label: 'Opération', icon: '➕' },
                 { type: 'math_random_int', label: 'Aléatoire', icon: '🎲' },
                 { type: 'math_modulo', label: 'Reste (Eucl.)', icon: '%' }
             ]
@@ -119,9 +120,9 @@ export default {
             category: 'Logique',
             color: 'amber-500',
             blocks: [
-                { type: 'controls_if', label: 'Si... Alors', icon: 'qt' },
+                { type: 'controls_if', label: 'Si... Alors', icon: '❓' },
                 { type: 'logic_compare', label: 'Comparer', icon: '≠' },
-                { type: 'logic_operation', label: 'ET / OU', icon: '&' }
+                { type: 'logic_operation', label: 'ET / OU', icon: '&&' }
             ]
         },
         {
@@ -129,7 +130,7 @@ export default {
             color: 'slate-500',
             blocks: [
                 { type: 'text_print', label: 'Afficher', icon: '🖨️' },
-                { type: 'text_prompt_ext', label: 'Demander', icon: 'wq' }
+                { type: 'text_prompt_ext', label: 'Demander', icon: '💬' }
             ]
         }
     ],

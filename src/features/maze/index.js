@@ -15,7 +15,6 @@ export default {
     }),
     executeStep: MazePlugin.executeStep,
     
-    // 👇 JUGE COMPLET
     evaluateResult: (state, levelData, metrics) => {
         const moveResult = MAZE_CONFIG.checkMove(levelData.grid, state.x, state.y);
         const isWin = (moveResult === 'WIN');
@@ -27,7 +26,6 @@ export default {
             };
         }
 
-        // SCORING
         const validation = levelData.validation || {};
         const targetBlocks = validation.stars?.blocks || levelData.maxBlocks || 99;
         const targetSteps = validation.stars?.steps || 100;
@@ -52,22 +50,23 @@ export default {
         };
     },
     
+    // 👇 CATALOGUE CORRIGÉ AVEC EMOJIS STANDARDS
     catalog: [
         {
             category: 'Mouvements',
             color: 'blue-500',
             blocks: [
                 { type: 'maze_move_forward', label: 'Avancer', icon: '⬆️' },
-                { type: 'maze_turn', label: 'Pivoter', icon: 'Ql' }
+                { type: 'maze_turn', label: 'Pivoter', icon: '↺' }
             ]
         },
         {
             category: 'Capteurs',
             color: 'emerald-500',
             blocks: [
-                { type: 'maze_if', label: 'Si Chemin...', icon: 'qa' },
-                { type: 'maze_if_else', label: 'Si... Sinon...', icon: 'qt' },
-                { type: 'maze_forever', label: 'Jusqu\'à l\'Arrivée', icon: 'jq' }
+                { type: 'maze_if', label: 'Si Chemin...', icon: '❓' },
+                { type: 'maze_if_else', label: 'Si... Sinon...', icon: '🔀' },
+                { type: 'maze_forever', label: 'Jusqu\'à l\'Arrivée', icon: '🏁' }
             ]
         }
     ],
