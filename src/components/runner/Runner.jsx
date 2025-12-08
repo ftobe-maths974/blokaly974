@@ -106,6 +106,7 @@ export default function Runner({ campaign, ltiConfig, isTeacherMode, onBackToBui
       </div>
     );
   }
+  
 
   // --- AFFICHAGE : JEU ---
   // Sécurité ultime : on vérifie que le niveau existe avant de le rendre

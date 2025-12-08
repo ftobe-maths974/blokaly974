@@ -10,13 +10,13 @@ const stylesCSS = `
 .maze-wrapper {
     width: 100%;
     height: 100%;
-    container-type: size; /* Active les Container Queries */
+    container-type: size;
     display: flex;
     justify-content: center;
     align-items: center;
     background: #2c3e50;
     padding: 20px;
-    box-sizing: border-box; /* Le padding est inclus dans la taille */
+    box-sizing: border-box;
 }
 
 .maze-grid {
@@ -24,25 +24,16 @@ const stylesCSS = `
     gap: 1px;
     background-color: #34495e;
     border: 4px solid #34495e;
-    box-sizing: content-box; /* La bordure s'ajoute à l'extérieur des dimensions calculées */
+    box-sizing: content-box;
     
-    /* --- FORMULE MATHÉMATIQUE POUR LE RATIO 1:1 --- */
-    
-    /* 1. Espace disponible = Taille conteneur - (Padding Wrapper 20px*2) - (Bordure Grille 4px*2) */
+    /* Calcul dynamique pour garder le ratio carré */
     --safe-w: calc(100cqw - 40px - 8px);
     --safe-h: calc(100cqh - 40px - 8px);
+    --cell-size: min(var(--safe-w) / var(--cols), var(--safe-h) / var(--rows));
     
-    /* 2. Taille max d'une case = Le plus petit (min) entre la dispo largeur et la dispo hauteur */
-    --cell-size: min(
-        var(--safe-w) / var(--cols), 
-        var(--safe-h) / var(--rows)
-    );
-    
-    /* 3. Application des dimensions strictes */
     width: calc(var(--cell-size) * var(--cols));
     height: calc(var(--cell-size) * var(--rows));
     
-    /* Configuration de la grille */
     grid-template-columns: repeat(var(--cols), 1fr);
     grid-template-rows: repeat(var(--rows), 1fr);
     
@@ -62,7 +53,6 @@ const stylesCSS = `
 
 .maze-emoji {
     z-index: 1;
-    /* La police fait 70% de la case, toujours centrée */
     font-size: calc(var(--cell-size) * 0.7);
     line-height: 1;
     user-select: none;
@@ -94,17 +84,17 @@ const stylesCSS = `
 }
 `;
 
-// Ajoutez la prop initialLevelIndex (défaut à -1 pour le mode élève classique)
-export default function Runner({ campaign, ltiConfig, isTeacherMode, onBackToBuilder, initialLevelIndex = -1 }) {
-  
-  const normalizedCampaign = campaign.levels ? campaign : { title: "Campagne", levels: [campaign] };
-  
-  // --- MODIFICATION : Initialisation avec la prop ---
-  const [activeLevelIndex, setActiveLevelIndex] = useState(initialLevelIndex);
-  const rotation = playerDir * 90 + 90; 
+export default function MazeRunner({ grid, playerPos, playerDir, lastAction }) {
+  // Sécurité si la grille n'est pas encore chargée
+  if (!grid || grid.length === 0) return <div>Chargement du Labyrinthe...</div>;
+
   const rows = grid.length;
   const cols = grid[0].length;
+  
+  // Conversion de la direction (0=Est, 1=Sud...) en degrés pour CSS
+  const rotation = (playerDir * 90) + 90; // +90 car l'emoji pointe vers le haut par défaut ? À ajuster selon ton emoji
 
+  // Logique du "Scanner" (Radar)
   const isScanning = lastAction && lastAction.type === 'SCAN';
   let scanTarget = null;
   const normalizeDir = (d) => ((d % 4) + 4) % 4;
@@ -115,6 +105,7 @@ export default function Runner({ campaign, ltiConfig, isTeacherMode, onBackToBui
       } else {
           const currentDirNorm = normalizeDir(playerDir);
           let lookDirIdx = currentDirNorm;
+          // Logique relative (Gauche/Droite/Devant)
           if (lastAction.dir === 'LEFT') lookDirIdx = (currentDirNorm + 3) % 4;
           if (lastAction.dir === 'RIGHT') lookDirIdx = (currentDirNorm + 1) % 4;
 
@@ -133,7 +124,6 @@ export default function Runner({ campaign, ltiConfig, isTeacherMode, onBackToBui
       <div className="maze-wrapper">
         <div 
           className="maze-grid"
-          // On passe les variables CSS dynamiques ici
           style={{
               '--rows': rows,
               '--cols': cols,
@@ -146,10 +136,12 @@ export default function Runner({ campaign, ltiConfig, isTeacherMode, onBackToBui
 
               return (
                 <div key={`${rowIndex}-${colIndex}`} className="maze-cell">
+                  {/* Décors (Mur, Départ, Arrivée) */}
                   <span className="maze-emoji">
                     {MAZE_CONFIG.THEME[cell] || ''}
                   </span>
 
+                  {/* Joueur */}
                   {isPlayerHere && (
                     <div 
                         className="maze-player"
@@ -159,6 +151,7 @@ export default function Runner({ campaign, ltiConfig, isTeacherMode, onBackToBui
                     </div>
                   )}
 
+                  {/* Effet Radar */}
                   {isScanned && <div key={lastAction._uid} className="scan-pulse"></div>}
                 </div>
               );
