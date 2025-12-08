@@ -92,7 +92,8 @@ export default function MazeRunner({ grid, playerPos, playerDir, lastAction }) {
   const cols = grid[0].length;
   
   // Conversion de la direction (0=Est, 1=Sud...) en degrés pour CSS
-  const rotation = (playerDir * 90) + 90; // +90 car l'emoji pointe vers le haut par défaut ? À ajuster selon ton emoji
+  // +90 car l'emoji pointe souvent vers le haut par défaut, à ajuster si besoin
+  const rotation = (playerDir * 90) + 90; 
 
   // Logique du "Scanner" (Radar)
   const isScanning = lastAction && lastAction.type === 'SCAN';
