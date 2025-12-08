@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import LevelEditor from './LevelEditor';
 import LZString from 'lz-string';
+
 import { getPlugin, getAllPlugins } from '../../core/PluginRegistry';
 
 const getLevelIcon = (type) => {
@@ -9,19 +10,14 @@ const getLevelIcon = (type) => {
 };
 
 export default function Builder({ onTest }) {
-  const [currentLevelIndex, setCurrentLevelIndex] = useState(() => {
-      // Si on revient d'un test, on récupère l'index sauvegardé
-      const savedIndex = sessionStorage.getItem('blokaly_editor_last_level');
-      return savedIndex ? parseInt(savedIndex, 10) : 0;
-  });
-  // 1. CHARGEMENT
+  // 1. CHARGEMENT CAMPAGNE
   const [campaign, setCampaign] = useState(() => {
     const saved = localStorage.getItem('blokaly_builder_autosave');
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
     
-    // Initialisation dynamique avec le premier plugin disponible (ex: Maze)
+    // Initialisation dynamique
     const defaultPlugin = getAllPlugins()[0]; 
     return {
       title: "Ma Nouvelle Campagne",
@@ -35,7 +31,12 @@ export default function Builder({ onTest }) {
     };
   });
   
-  const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
+  // --- 2. GESTION DE L'INDEX (Unique déclaration) ---
+  const [currentLevelIndex, setCurrentLevelIndex] = useState(() => {
+      // Restaure le niveau actif au retour du test
+      const savedIndex = sessionStorage.getItem('blokaly_editor_last_level');
+      return savedIndex ? parseInt(savedIndex, 10) : 0;
+  });
   
   const dragItem = useRef(null);
   const dragOverItem = useRef(null);
@@ -44,16 +45,6 @@ export default function Builder({ onTest }) {
   useEffect(() => {
     localStorage.setItem('blokaly_builder_autosave', JSON.stringify(campaign));
   }, [campaign]);
-
-  const handleQuickTest = () => {
-      // 1. Sauvegarde campagne
-      localStorage.setItem('blokaly_builder_autosave', JSON.stringify(campaign));
-      // 2. Sauvegarde position (pour le retour)
-      sessionStorage.setItem('blokaly_editor_last_level', currentLevelIndex);
-      
-      // 3. Lancement du test AVEC l'index actuel
-      if (onTest) onTest(campaign, currentLevelIndex); 
-  };
 
   // --- GESTION DRAG & DROP ---
   const handleDragStart = (e, position) => {
@@ -87,7 +78,6 @@ export default function Builder({ onTest }) {
   };
 
   // --- ACTIONS IMPORT / EXPORT ---
-
   const handleExport = () => {
     const dataStr = JSON.stringify(campaign, null, 2);
     const blob = new Blob([dataStr], { type: "application/json" });
@@ -113,15 +103,14 @@ export default function Builder({ onTest }) {
         try {
             const json = JSON.parse(event.target.result);
             if (!json.levels || !Array.isArray(json.levels)) {
-                throw new Error("Format de fichier invalide (pas de niveaux)");
+                throw new Error("Format de fichier invalide");
             }
-            
-            if (confirm(`Charger la campagne "${json.title || 'Sans titre'}" ? Cela remplacera votre travail actuel.`)) {
+            if (confirm(`Charger la campagne "${json.title || 'Sans titre'}" ?`)) {
                 setCampaign(json);
                 setCurrentLevelIndex(0);
             }
         } catch (err) {
-            alert("Erreur lors de l'importation : " + err.message);
+            alert("Erreur : " + err.message);
         }
     };
     reader.readAsText(file);
@@ -129,15 +118,11 @@ export default function Builder({ onTest }) {
   };
 
   // --- ACTIONS CRUD ---
-
   const addLevel = () => {
-    // CORRECTION ICI : On récupère dynamiquement le plugin par défaut
     const defaultPlugin = getAllPlugins()[0] || getPlugin('MAZE');
-    
     const newLevel = {
       id: Date.now(), 
       type: defaultPlugin ? defaultPlugin.id : 'MAZE',
-      // On utilise la config du plugin trouvé
       grid: defaultPlugin?.config?.defaultGrid,
       startPos: {x: 1, y: 1},
       maxBlocks: 10
@@ -148,15 +133,12 @@ export default function Builder({ onTest }) {
 
   const duplicateLevel = (index) => {
     const levelToCopy = campaign.levels[index];
-    
     const newLevel = {
         ...JSON.parse(JSON.stringify(levelToCopy)),
         id: Date.now() 
     };
-    
     const newLevels = [...campaign.levels];
     newLevels.splice(index + 1, 0, newLevel);
-    
     setCampaign({ ...campaign, levels: newLevels });
     setCurrentLevelIndex(index + 1);
   };
@@ -164,10 +146,8 @@ export default function Builder({ onTest }) {
   const deleteLevel = (index) => {
     if (campaign.levels.length <= 1) return alert("Il faut au moins un niveau !");
     const newLevels = campaign.levels.filter((_, i) => i !== index);
-    
     if (index < currentLevelIndex) setCurrentLevelIndex(currentLevelIndex - 1);
     else if (index === currentLevelIndex) setCurrentLevelIndex(Math.max(0, index - 1));
-    
     setCampaign({ ...campaign, levels: newLevels });
   };
 
@@ -177,10 +157,13 @@ export default function Builder({ onTest }) {
     setCampaign({ ...campaign, levels: newLevels });
   };
 
-  // Nouvelle fonction pour tester via App.jsx
+  // --- NAVIGATION TEST ---
   const handleQuickTest = () => {
       localStorage.setItem('blokaly_builder_autosave', JSON.stringify(campaign));
-      if (onTest) onTest(campaign);
+      // Sauvegarde l'index pour le retour
+      sessionStorage.setItem('blokaly_editor_last_level', currentLevelIndex);
+      
+      if (onTest) onTest(campaign, currentLevelIndex);
   };
 
   const generateLink = () => {
@@ -204,7 +187,7 @@ export default function Builder({ onTest }) {
             value={campaign.title} 
             onChange={(e) => setCampaign({...campaign, title: e.target.value})}
             style={{background: 'transparent', border: 'none', borderBottom: '1px solid #555', color: 'white', width: '100%', marginTop: '10px', fontSize: '0.9rem'}}
-            placeholder="Titre de la campagne..."
+            placeholder="Titre..."
           />
         </div>
         
@@ -223,8 +206,7 @@ export default function Builder({ onTest }) {
                 cursor: 'grab',
                 background: index === currentLevelIndex ? '#3498db' : 'transparent',
                 borderBottom: '1px solid #34495e',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                transition: 'background 0.2s'
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
               }}
             >
               <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
@@ -238,73 +220,23 @@ export default function Builder({ onTest }) {
               </div>
 
               <div style={{display: 'flex', gap: '5px'}}>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); duplicateLevel(index); }}
-                    style={{background:'none', border:'none', cursor:'pointer', fontSize:'0.8rem', opacity: 0.7}}
-                    title="Dupliquer"
-                  >
-                    📑
-                  </button>
-
+                  <button onClick={(e) => { e.stopPropagation(); duplicateLevel(index); }} style={{background:'none', border:'none', cursor:'pointer', fontSize:'0.8rem', opacity: 0.7}}>📑</button>
                   {campaign.levels.length > 1 && (
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); deleteLevel(index); }} 
-                        style={{background:'none', border:'none', color:'#e74c3c', cursor:'pointer', fontSize:'0.8rem', opacity: 0.7}}
-                        title="Supprimer"
-                    >
-                        🗑️
-                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); deleteLevel(index); }} style={{background:'none', border:'none', color:'#e74c3c', cursor:'pointer', fontSize:'0.8rem', opacity: 0.7}}>🗑️</button>
                   )}
               </div>
             </div>
           ))}
         </div>
 
-        {/* BOUTONS D'ACTION */}
         <div style={{padding: '10px', borderTop: '1px solid #34495e', background: '#222', display:'flex', flexDirection:'column', gap:'10px'}}>
-            <button 
-                onClick={addLevel} 
-                style={{width: '100%', padding: '10px', background: '#27ae60', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold', borderRadius: '4px'}}
-            >
-            + Nouveau Niveau
-            </button>
-
+            <button onClick={addLevel} style={{width: '100%', padding: '10px', background: '#27ae60', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold', borderRadius: '4px'}}>+ Nouveau Niveau</button>
             <div style={{display:'flex', gap:'10px'}}>
-                <button 
-                    onClick={handleExport} 
-                    style={{flex:1, padding: '8px', background: '#34495e', color: 'white', border: '1px solid #7f8c8d', cursor: 'pointer', fontSize: '0.8rem', borderRadius: '4px'}}
-                    title="Sauvegarder en JSON"
-                >
-                📤 Export
-                </button>
-                
-                <button 
-                    onClick={handleImportClick} 
-                    style={{flex:1, padding: '8px', background: '#34495e', color: 'white', border: '1px solid #7f8c8d', cursor: 'pointer', fontSize: '0.8rem', borderRadius: '4px'}}
-                    title="Charger un JSON"
-                >
-                📥 Import
-                </button>
-                <input 
-                    type="file" 
-                    accept=".json" 
-                    ref={fileInputRef} 
-                    style={{display: 'none'}} 
-                    onChange={handleFileChange} 
-                />
+                <button onClick={handleExport} style={{flex:1, padding: '8px', background: '#34495e', color: 'white', border: '1px solid #7f8c8d', cursor: 'pointer', fontSize: '0.8rem', borderRadius: '4px'}}>📤 Export</button>
+                <button onClick={handleImportClick} style={{flex:1, padding: '8px', background: '#34495e', color: 'white', border: '1px solid #7f8c8d', cursor: 'pointer', fontSize: '0.8rem', borderRadius: '4px'}}>📥 Import</button>
+                <input type="file" accept=".json" ref={fileInputRef} style={{display: 'none'}} onChange={handleFileChange} />
             </div>
-
-            <button 
-                onClick={() => {
-                    if(confirm("Tout effacer ? Cette action est irréversible.")) {
-                    localStorage.removeItem('blokaly_builder_autosave');
-                    window.location.reload();
-                    }
-                }} 
-                style={{width: '100%', padding: '8px', background: 'none', border: '1px solid #c0392b', color: '#c0392b', cursor: 'pointer', fontSize: '0.8rem', borderRadius: '4px'}}
-            >
-            🗑️ Reset
-            </button>
+            <button onClick={() => { if(confirm("Tout effacer ?")) { localStorage.removeItem('blokaly_builder_autosave'); window.location.reload(); }}} style={{width: '100%', padding: '8px', background: 'none', border: '1px solid #c0392b', color: '#c0392b', cursor: 'pointer', fontSize: '0.8rem', borderRadius: '4px'}}>🗑️ Reset</button>
         </div>
       </div>
 
@@ -313,24 +245,13 @@ export default function Builder({ onTest }) {
         <div style={{padding: '10px 20px', borderBottom: '1px solid #ddd', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background:'white'}}>
           <h2 style={{margin:0, color: '#2c3e50'}}>
              Édition Niveau {currentLevelIndex + 1} 
-             <span style={{fontSize: '0.6em', color: '#777', marginLeft: '10px', fontWeight: 'normal'}}>
-               ({campaign.levels[currentLevelIndex]?.type})
-             </span>
+             <span style={{fontSize: '0.6em', color: '#777', marginLeft: '10px', fontWeight: 'normal'}}>({campaign.levels[currentLevelIndex]?.type})</span>
           </h2>
           <div style={{display:'flex', gap:'10px'}}>
-              <button 
-                onClick={handleQuickTest} 
-                className="generate-btn" 
-                style={{margin: 0, width: 'auto', fontSize: '0.9rem', background: '#27ae60', padding: '8px 15px', border:'none', color:'white', fontWeight:'bold', cursor:'pointer', borderRadius:'4px'}}
-              >
+              <button onClick={handleQuickTest} style={{margin: 0, fontSize: '0.9rem', background: '#27ae60', padding: '8px 15px', border:'none', color:'white', fontWeight:'bold', cursor:'pointer', borderRadius:'4px'}}>
                 ▶️ TESTER (Mode Élève)
               </button>
-
-              <button 
-                onClick={generateLink} 
-                className="generate-btn" 
-                style={{margin: 0, width: 'auto', fontSize: '0.9rem', background: '#3498db', padding: '8px 15px', border:'none', color:'white', fontWeight:'bold', cursor:'pointer', borderRadius:'4px'}}
-              >
+              <button onClick={generateLink} style={{margin: 0, fontSize: '0.9rem', background: '#3498db', padding: '8px 15px', border:'none', color:'white', fontWeight:'bold', cursor:'pointer', borderRadius:'4px'}}>
                 🔗 Partager
               </button>
           </div>

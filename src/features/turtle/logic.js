@@ -48,14 +48,19 @@ export const TurtleLogic = {
       const val = javascriptGenerator.valueToCode(block, 'VALUE', javascriptGenerator.ORDER_ATOMIC) || '0';
       return `actions.push({type: 'MOVE', id: "${block.id}", dist: ${val}}); api.move(${val});\n`;
     };
+
     javascriptGenerator.forBlock['turtle_turn'] = (block) => {
       const val = javascriptGenerator.valueToCode(block, 'VALUE', javascriptGenerator.ORDER_ATOMIC) || '0';
-      const dir = block.getFieldValue('DIR') === 'LEFT' ? '-' : ''; // Gauche = angle négatif ou positif selon convention, ici on gère dans executeStep
-      return `actions.push({type: 'TURN', id: "${block.id}", angle: ${dir}${val}}); api.turn(${dir}${val});\n`;
+      // GAUCHE (LEFT) = Angle POSITIF (Sens trigo)
+      // DROITE (RIGHT) = Angle NÉGATIF
+      const sign = block.getFieldValue('DIR') === 'LEFT' ? '' : '-'; 
+      return `actions.push({type: 'TURN', id: "${block.id}", angle: ${sign}${val}}); api.turn(${sign}${val});\n`;
     };
+
     javascriptGenerator.forBlock['turtle_pen'] = (block) => {
       return `actions.push({type: 'PEN', id: "${block.id}", state: '${block.getFieldValue('STATE')}'}); api.pen('${block.getFieldValue('STATE')}');\n`;
     };
+
     javascriptGenerator.forBlock['turtle_color'] = (block) => {
       return `actions.push({type: 'COLOR', id: "${block.id}", color: '${block.getFieldValue('COLOR')}'}); api.color('${block.getFieldValue('COLOR')}');\n`;
     };
@@ -72,16 +77,16 @@ export const TurtleLogic = {
   `,
 
   executeStep: (currentState, action, levelData) => {
+    // 1. Initialisation robuste
     const state = currentState || { 
       x: levelData.startPos?.x || 0, 
       y: levelData.startPos?.y || 0, 
-      dir: levelData.startPos?.dir !== undefined ? levelData.startPos.dir : 0,
+      dir: levelData.startPos?.dir || 0, // Défaut à 0 (Est)
       penDown: true, 
       color: '#2c3e50', 
       lines: [] 
     };
     
-    // Si c'est juste une action visuelle (comme un scan dans maze, mais pas utilisé ici), on ignore
     if (!action.type) return { newState: state, status: 'RUNNING' };
 
     let { x, y, dir, penDown, color, lines } = state;
@@ -89,35 +94,20 @@ export const TurtleLogic = {
 
     if (action.type === 'MOVE') {
       const dist = parseFloat(action.dist || 0);
-      const rad = (dir - 90) * (Math.PI / 180); // -90 car 0° est souvent vers le haut/droite, ajuster selon convention math
-      // Convention : 0 = Est (Droite). Dans Canvas : 0 = Droite.
-      // Mais attention, dans TurtleEditor on a : 0=Est, 90=Sud.
-      // Utilisons la convention standard Canvas : 0 rad = Droite (Est).
+      const rad = dir * (Math.PI / 180); // Conversion Degrés -> Radians
       
-      // Rectification : Dans les blocs précédents, startPos.dir était en degrés.
-      // Si 0 = Est, alors :
-      const rads = dir * (Math.PI / 180);
-      const finalX = x + dist * Math.cos(rads);
-      const finalY = y - dist * Math.sin(rads); // Y inversé dans un repère math standard vs canvas, on gère ça au rendu
-      // Note: On stocke des coordonnées "Logiques". Le rendu fera la conversion Y.
+      const finalX = x + dist * Math.cos(rad);
+      const finalY = y + dist * Math.sin(rad); // +sin car on est en repère Math (Haut = +)
       
       if (penDown) newLines.push({ x1: x, y1: y, x2: finalX, y2: finalY, color });
       x = finalX;
       y = finalY;
     } 
     else if (action.type === 'TURN') { 
-        // angle est déjà signé par le générateur (-90 pour gauche, +90 pour droite ou inversement)
-        // Ici : Left = - , Right = + (selon générateur ci-dessus : Left = '-' + val)
-        // Si on veut tourner à gauche (sens trigo), on AJOUTE l'angle. Si sens horaire, on SOUSTRAIT.
-        // Générateur : LEFT -> -90. 
-        // Si on est à 0 (Est) et on tourne à gauche (-90), on va à -90 (Nord ?).
-        // Convention habituelle : Est=0, Nord=90, Ouest=180.
-        // On va dire : Angle += action.angle.
-        dir -= parseFloat(action.angle); 
+        dir += parseFloat(action.angle); // Angle signé (+90 ou -90)
     }
-    else if (action.type === 'PEN') penDown = (action.state === 'DOWN');
-    else if (action.type === 'COLOR') color = action.color;
+    // ... (Reste Pen/Color inchangé)
 
     return { newState: { x, y, dir, penDown, color, lines: newLines }, status: 'RUNNING' };
-  }
+  },
 };

@@ -11,27 +11,32 @@ function App() {
   const [campaignData, setCampaignData] = useState(null);
   const [ltiConfig, setLtiConfig] = useState(null);
   
-  // RÔLES : Est-ce un prof connecté ?
+  // RÔLES
   const [isTeacher, setIsTeacher] = useState(false);
+  
+  // ÉTAT MANQUANT QUI CAUSAIT L'ERREUR
+  const [startLevelIndex, setStartLevelIndex] = useState(0);
 
-  // Callback pour quand Home charge un fichier (Mode Élève par défaut)
+  // 1. Un élève charge un fichier depuis l'accueil
   const handleFileLoaded = (data) => {
       setCampaignData(data);
-      setIsTeacher(false); // C'est un élève qui charge un fichier
+      setIsTeacher(false); 
+      setStartLevelIndex(0); // On commence au début
       setMode('runner');
   };
 
+  // 2. Le prof teste depuis le Builder
   const handleTeacherTest = (currentCampaignData, levelIndex = 0) => {
       setCampaignData(currentCampaignData);
-      setStartLevelIndex(levelIndex); // On stocke l'index demandé
+      setStartLevelIndex(levelIndex); // On saute au niveau en cours d'édition
       setMode('runner');
+      // On laisse isTeacher à true (défini à l'init)
   };
 
+  // 3. Retour à l'atelier
   const handleBackToBuilder = () => {
       setMode('builder');
-      // Le Builder lira sessionStorage pour retrouver son index
   };
-  
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -40,19 +45,19 @@ function App() {
     const jsonUrl = params.get('url');
     const ltiToken = params.get('lti_token');
     const gradeUrl = params.get('api_grade');
-    const previewParam = params.get('preview'); // Ancienne méthode
     
+    // Détection explicite du mode éditeur
     const isEditorMode = params.get('mode') === 'editor'; 
 
     const initApp = async () => {
       try {
-        // 1. MODE PROFESSEUR (Éditeur)
+        // A. MODE PROFESSEUR
         if (isEditorMode) {
             console.log("🛠️ Mode Enseignant activé");
             setIsTeacher(true);
             setMode('builder');
         }
-        // 2. MODE LTI (Élève noté)
+        // B. MODE LTI (Élève noté)
         else if (ltiToken && jsonUrl) {
             console.log("🎓 Mode Élève LTI");
             setLtiConfig({ token: ltiToken, apiUrl: gradeUrl });
@@ -62,26 +67,24 @@ function App() {
             setIsTeacher(false);
             setMode('runner');
         } 
-        // 3. MODE PARTAGE (Lien public)
+        // C. MODE PARTAGE (Lien public)
         else if (jsonUrl) {
             console.log("🔗 Mode Élève (Lien)");
             const response = await fetch(jsonUrl);
             if (!response.ok) throw new Error("Fichier introuvable");
             setCampaignData(await response.json());
-            // Si preview=1, on peut considérer que c'est un "aperçu" mais sans droits d'édition
-            // Pour l'instant, on traite comme élève
             setIsTeacher(false); 
             setMode('runner');
         }
-        // 4. MODE LZSTRING (Anciens liens de test)
+        // D. MODE LZSTRING (Anciens liens)
         else if (encodedData) {
             console.log("📦 Mode LZString");
             const jsonStr = LZString.decompressFromEncodedURIComponent(encodedData);
             setCampaignData(JSON.parse(jsonStr));
-            setIsTeacher(!!previewParam); // Si c'est un lien généré, on peut donner le droit de retour si preview=1
+            setIsTeacher(false);
             setMode('runner');
         }
-        // 5. PAR DÉFAUT -> ACCUEIL
+        // E. PAR DÉFAUT -> ACCUEIL
         else {
             console.log("🏠 Accueil");
             setIsTeacher(false);
@@ -102,10 +105,14 @@ function App() {
 
   return (
     <div className="App">
-      {/* ... (Home) */}
+      {mode === 'home' && (
+          <Home onFileLoaded={handleFileLoaded} />
+      )}
 
       {mode === 'builder' && (
-        <Builder onTest={handleTeacherTest} />
+        <Builder 
+            onTest={handleTeacherTest} // Passe la fonction au Builder
+        />
       )}
 
       {mode === 'runner' && (
@@ -114,10 +121,11 @@ function App() {
             ltiConfig={ltiConfig}
             isTeacherMode={isTeacher} 
             onBackToBuilder={handleBackToBuilder}
-            initialLevelIndex={startLevelIndex} // <-- ON PASSE LA PROP
+            initialLevelIndex={startLevelIndex} // Passe l'index de départ
         />
       )}
     </div>
   );
 }
+
 export default App;

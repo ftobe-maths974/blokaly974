@@ -1,21 +1,21 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import 'katex/dist/katex.min.css';
 import { InlineMath } from 'react-katex';
-import EquationGraph from './visualizers/EquationGraph';
+// 👇 CORRECTION ICI : Import direct depuis le même dossier
+import EquationGraph from './EquationGraph';
 
-export default function EquationRender({ state }) {
-  const safeState = state || { lhs: "x", rhs: "0", sign: "=", initialLhs: "x", initialRhs: "0", history: [] };
-  const [displayState, setDisplayState] = useState(safeState);
-  const [animating, setAnimating] = useState(false);
+export default function EquationRunner({ state }) {
+  // Valeurs par défaut sécurisées
+  const defaultState = { lhs: "x", rhs: "0", sign: "=", initialLhs: "x", initialRhs: "0", history: [] };
+  const displayState = state || defaultState;
   
+  const [animating, setAnimating] = useState(false);
   const [verifStep, setVerifStep] = useState(0);
-  const [showGraph, setShowGraph] = useState(false);
 
   const isImplicit = state?.implicit === true;
   const canShowGraph = state?.showGraph === true;
   const isModified = (displayState.history || []).length > 0;
 
-  // ... (Fonctions formatForLatex, formatOp, formatSubstitution INCHANGÉES) ...
   const formatForLatex = (expression) => {
     if (!expression) return "";
     let tex = String(expression);
@@ -39,50 +39,38 @@ export default function EquationRender({ state }) {
       return tex.replace(/x/g, replacement);
   };
 
-  // --- ORCHESTRATION ---
   useEffect(() => {
     if (state && state.lastOp && !state.lastOp.error) {
       setAnimating(true);
       setVerifStep(0);
       const timer = setTimeout(() => {
         setAnimating(false);
-        setDisplayState(state);
       }, 2000); 
-      return () => { clearTimeout(timer); setAnimating(false); setDisplayState(state); };
+      return () => clearTimeout(timer);
     } 
     else if (state && state.verification) {
         setAnimating(false);
-        setDisplayState(state);
-        
-        setVerifStep(1); // T=0
-        const t1 = setTimeout(() => setVerifStep(2), 1500); // T+1.5s
-        const t2 = setTimeout(() => setVerifStep(3), 3500); // T+3.5s
-        
-        // Note : Pour les inéquations, on n'affiche pas S=... automatiquement ici
-        // C'est à l'élève de le construire. Donc pas de passage à l'étape 4 auto.
+        setVerifStep(1); 
+        const t1 = setTimeout(() => setVerifStep(2), 1500); 
+        const t2 = setTimeout(() => setVerifStep(3), 3500); 
         const t3 = setTimeout(() => { 
             if (state.finalSolutionLatex) setVerifStep(4); 
         }, 5000);
-
         return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
     }
     else if (state && state.solutionState) {
-        setDisplayState(state);
         setVerifStep(4); 
     }
-    else if (state) {
+    else {
       setAnimating(false);
-      setDisplayState(state);
       setVerifStep(0);
     }
   }, [state]);
 
-  // ... (Reste Graphique inchangé) ...
-  // ... (Début Render inchangé) ...
-  
   let lhsTex = formatForLatex(displayState.lhs);
   let rhsTex = formatForLatex(displayState.rhs);
   const signTex = String(displayState.sign || "=");
+  
   if (animating && state.lastOp) {
       const valTex = formatForLatex(state.lastOp.val);
       const opTex = `{\\color{#e74c3c} \\quad ${formatOp(state.lastOp.op)} \\; ${valTex}}`;
@@ -107,7 +95,7 @@ export default function EquationRender({ state }) {
             </div>
           </div>
 
-          {/* ZONE VÉRIFICATION AVEC MESSAGE PÉDAGOGIQUE */}
+          {/* ZONE VÉRIFICATION */}
           {verifStep > 0 && state.verification && (
               <div className="w-full max-w-lg bg-white rounded-xl border-2 border-blue-100 p-0 overflow-hidden shadow-sm animate-in slide-in-from-top-4 duration-500">
                   <div className="bg-blue-50 px-4 py-2 border-b border-blue-100 flex justify-between items-center">
@@ -139,7 +127,6 @@ export default function EquationRender({ state }) {
                                      {state.verification.isCorrect ? "VRAI" : "FAUX"}
                                  </span>
                               </div>
-                              {/* MESSAGE PÉDAGOGIQUE (INCLURE/EXCLURE) */}
                               {state.verification.feedbackMsg && (
                                   <div className="text-xs italic text-slate-500 bg-blue-50/50 p-2 rounded border border-blue-100">
                                       💡 {state.verification.feedbackMsg}
@@ -151,7 +138,6 @@ export default function EquationRender({ state }) {
               </div>
           )}
 
-          {/* ... (Reste Solution Finale, Erreur, Graphique, Historique INCHANGÉS) ... */}
           {state.finalSolutionLatex && verifStep === 4 && (
               <div className="animate-in zoom-in duration-500 bg-emerald-50 text-emerald-900 px-6 py-3 rounded-xl border border-emerald-200 shadow-md mt-2">
                   <div className="text-2xl font-bold text-center">
@@ -160,15 +146,12 @@ export default function EquationRender({ state }) {
               </div>
           )}
           
-          {/* COMPOSANT GRAPHIQUE */}
           <EquationGraph 
              lhs={displayState.lhs} rhs={displayState.rhs} 
              initialLhs={displayState.initialLhs} initialRhs={displayState.initialRhs}
-             isVisible={canShowGraph && showGraph && !state.finalSolutionLatex} 
+             isVisible={canShowGraph && !state.finalSolutionLatex} 
              isModified={isModified}
           />
-          
-           {/* ... (Bouton et Historique inchangés) */}
       </div>
     </div>
   );

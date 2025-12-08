@@ -1,8 +1,7 @@
 import MazeFeature from '../features/maze';
-import TurtleFeature from '../features/turtle'; // <--- Vérifiez que c'est bien décommenté
-
-console.log("🕵️‍♂️ DEBUG - MazeFeature:", MazeFeature);     // Doit afficher un Objet {id: "MAZE", ...}
-console.log("🕵️‍♂️ DEBUG - TurtleFeature:", TurtleFeature); // Si c'est "undefined", le problème est l'import !
+import TurtleFeature from '../features/turtle';
+import MathFeature from '../features/math';
+import EquationFeature from '../features/equation';
 
 const REGISTRY = {};
 
@@ -21,7 +20,9 @@ export const registerPlugin = (plugin) => {
 };
 
 registerPlugin(MazeFeature);
-registerPlugin(TurtleFeature); 
+registerPlugin(TurtleFeature);
+registerPlugin(MathFeature);
+registerPlugin(EquationFeature);
 
 export const getPlugin = (id) => REGISTRY[id];
 export const getAllPlugins = () => Object.values(REGISTRY);
