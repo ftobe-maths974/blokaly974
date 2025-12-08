@@ -98,22 +98,46 @@ export const MazePlugin = {
   getCategory: () => 'Labyrinthe',
 
   executeStep: (currentState, action, levelData) => {
-    // ... (Ton code executeStep reste inchangé, copie-le ici)
-    const state = currentState || { x: levelData.startPos?.x || 0, y: levelData.startPos?.y || 1, dir: levelData.startPos?.dir !== undefined ? levelData.startPos.dir : 1 };
+    // 1. Initialisation de l'état (Position de départ)
+    const state = currentState || { 
+        x: levelData.startPos?.x || 0, 
+        y: levelData.startPos?.y || 0, 
+        dir: levelData.startPos?.dir !== undefined ? levelData.startPos.dir : 1 
+    };
+
+    // 🛑 SÉCURITÉ CRITIQUE : Si aucune action n'est demandée (Initialisation), on renvoie l'état intact.
+    // C'est ce qui manquait et causait le crash "Cannot read properties of null".
+    if (!action) return { newState: state, status: 'RUNNING' };
+
     let { x, y, dir } = state;
     let status = 'RUNNING';
+    
     const cmd = action.type || action;
     const normalizeDir = (d) => ((d % 4) + 4) % 4;
 
     if (cmd === 'MOVE') {
       let nextX = x, nextY = y;
       const effectiveDir = normalizeDir(dir);
-      if (effectiveDir === 0) nextX++; else if (effectiveDir === 1) nextY++; else if (effectiveDir === 2) nextX--; else if (effectiveDir === 3) nextY--; 
+      // 0=Est, 1=Sud, 2=Ouest, 3=Nord (Selon votre config)
+      if (effectiveDir === 0) nextX++; 
+      else if (effectiveDir === 1) nextY++; 
+      else if (effectiveDir === 2) nextX--; 
+      else if (effectiveDir === 3) nextY--; 
+      
       const moveStatus = MAZE_CONFIG.checkMove(levelData.grid || MAZE_CONFIG.defaultGrid, nextX, nextY);
-      if (moveStatus === 'OK' || moveStatus === 'WIN') { x = nextX; y = nextY; if (moveStatus === 'WIN') status = 'WIN'; } else { status = 'LOST'; }
-    } else if (cmd && cmd.startsWith('TURN_')) {
+      
+      if (moveStatus === 'OK' || moveStatus === 'WIN') { 
+          x = nextX; 
+          y = nextY; 
+          if (moveStatus === 'WIN') status = 'WIN'; 
+      } else { 
+          status = 'LOST'; 
+      }
+    } 
+    else if (cmd && typeof cmd === 'string' && cmd.startsWith('TURN_')) {
       dir = (cmd.includes('LEFT')) ? dir - 1 : dir + 1;
     }
+
     return { newState: { x, y, dir }, status };
   }
 };
