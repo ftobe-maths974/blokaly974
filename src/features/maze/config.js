@@ -15,7 +15,8 @@ export const MAZE_CONFIG = {
     4: '🧱', // Mur
     PLAYER: '🤖' // Robot
   },
-
+  
+  victoryDelay: 1200,
   checkMove: (grid, x, y) => {
     if (!grid || !grid[y] || typeof grid[y][x] === 'undefined') return 'WALL';
     const cell = grid[y][x];

@@ -18,9 +18,9 @@ export default {
     // Moteur Logique
     executeStep: TurtleLogic.executeStep,
     
-    // --- LE JUGE (Appelé par le moteur à la fin) ---
+    // --- JUGE (Validation & Scoring) ---
     evaluateResult: (state, levelData, metrics, solutionLines) => {
-        // 1. Cas particulier : Pas de modèle = Bac à sable (Toujours gagné ou neutre)
+        // 1. Cas particulier : Pas de modèle = Bac à sable (Toujours gagné)
         if (!solutionLines || solutionLines.length === 0) {
              return { 
                  status: 'WIN', 
@@ -32,7 +32,6 @@ export default {
         const userLines = state?.lines || [];
         
         // --- ALGORITHME DE COMPARAISON VISUELLE (Pixel perfect) ---
-        // On crée deux canvas virtuels pour comparer les dessins
         const WIDTH = 200; 
         const HEIGHT = 200;
         
@@ -85,6 +84,7 @@ export default {
         const finalScore = coverage - penalty;
         const isMatch = finalScore > 0.85; // 85% de précision requise
 
+        // 1. VERDICT : PASS / FAIL
         if (!isMatch) {
             return {
                 status: 'FAIL',
@@ -95,25 +95,33 @@ export default {
             };
         }
 
-        // 2. Calcul du Score (Basé sur les blocs si le dessin est bon)
-        const target = levelData.maxBlocks || 5;
-        const used = metrics.blockCount || 0;
+        // 2. SCORING (Étoiles basées sur la config)
+        const validation = levelData.validation || {};
+        const targetBlocks = validation.stars?.blocks || levelData.maxBlocks || 10;
+        const targetSteps = validation.stars?.steps || 1000; // Par défaut large pour la tortue
+
+        const usedBlocks = metrics.blockCount || 0;
+        const usedSteps = metrics.steps || 0;
         
-        let stars = 1;
-        if (used <= target) stars = 3;
-        else if (used <= Math.ceil(target * 1.5)) stars = 2;
+        let stars = 3;
+        const penalties = [];
+
+        if (usedBlocks > targetBlocks) { stars--; penalties.push("trop de blocs"); }
+        if (usedSteps > targetSteps) { stars--; penalties.push("trop d'étapes"); }
+
+        stars = Math.max(1, stars);
 
         return {
             status: 'WIN',
             score: {
                 stars: stars,
                 primaryMetric: `${Math.round(finalScore*100)}% Précision`,
-                targetMetric: `Obj: ${target} blocs`,
-                details: { blocks: used, accuracy: finalScore }
+                targetMetric: `Obj: ${targetBlocks} blocs`,
+                details: { blocks: usedBlocks, steps: usedSteps, accuracy: finalScore }
             },
             feedback: { 
                 title: stars === 3 ? "Artiste !" : "Dessin Valide", 
-                message: stars === 3 ? "Code optimisé et dessin parfait." : "Le dessin est bon, mais tu peux simplifier le code." 
+                message: stars === 3 ? "Code optimisé et dessin parfait." : `Dessin ok, mais ${penalties.join(" et ")}.` 
             }
         };
     },

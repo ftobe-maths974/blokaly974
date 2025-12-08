@@ -3,7 +3,6 @@ import { BlocklyWorkspace } from 'react-blockly';
 import * as Blockly from 'blockly';
 import { javascriptGenerator } from 'blockly/javascript';
 
-// --- NOUVEAU : On utilise le Registre ! ---
 import { getPlugin } from '../../core/PluginRegistry'; 
 import { registerAllBlocks } from '../../core/BlockRegistry';
 import { generateToolbox } from '../../core/BlockDefinitions'; 
@@ -20,45 +19,27 @@ const workspaceConfig = {
 };
 
 export default function GameEngine({ levelData, onWin, levelIndex, onNextLevel }) {
-  // 1. Récupération dynamique du plugin
   const plugin = getPlugin(levelData?.type);
-  
-  // Sécurité : Si le plugin n'existe pas/plus (ex: vieux niveau Turtle)
-  if (!plugin) {
-      return (
-          <div className="flex items-center justify-center h-full bg-slate-100 text-slate-500 font-bold">
-              🚫 Type de niveau inconnu ou désactivé : {levelData?.type}
-          </div>
-      );
-  }
+  if (!plugin) return <div className="p-10">🚫 Plugin introuvable</div>;
 
   const GameView = plugin.RenderComponent;
-
   const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [isReady, setIsReady] = useState(false);
   const [gameWidth, setGameWidth] = useState(40);
   const isResizing = useRef(false);
-  
   const workspaceRef = useRef(null);
   
   const safeData = useMemo(() => ({
-    ...levelData,
-    // On utilise la config du plugin chargé
+    ...levelData, // On garde tout, y compris 'equation', 'targets' etc.
     grid: levelData?.grid || (plugin.config?.defaultGrid), 
     startPos: { 
         x: Number(levelData?.startPos?.x) || 0, 
         y: Number(levelData?.startPos?.y) || 0, 
         dir: Number(levelData?.startPos?.dir) || 0 
     },
-    solutionBlocks: levelData?.solutionBlocks || null,
-    allowedBlocks: levelData?.allowedBlocks,
-    inputs: levelData?.inputs,
-    hiddenVars: levelData?.hiddenVars,
-    lockedVars: levelData?.lockedVars,
-    id: levelData?.id,
-    instruction: levelData?.instruction,
-    startBlocks: levelData?.startBlocks,
-    maxBlocks: levelData?.maxBlocks
+    // On s'assure que les champs spécifiques ne sont pas undefined
+    equation: levelData?.equation, 
+    targets: levelData?.targets
   }), [levelData, plugin]); 
 
   const {
@@ -67,28 +48,25 @@ export default function GameEngine({ levelData, onWin, levelIndex, onNextLevel }
     solutionLines,
     gameStats, proofToken,
     run, reset, pause, stepForward,
-    lastAction 
+    lastAction,
+    // TIME TRAVEL
+    currentStep, totalSteps, timeTravel
   } = useGameRunner(workspaceRef, plugin, safeData);
 
   useEffect(() => {
-    if (gameState === 'WON' && onWin) {
-        onWin(gameStats);
-    }
+    if (gameState === 'WON' && onWin) onWin(gameStats);
   }, [gameState, onWin, gameStats]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
         registerAllBlocks();
-        // Enregistrement dynamique des blocs du plugin actif
-        if (plugin.registerBlocks) {
-            plugin.registerBlocks(Blockly, javascriptGenerator);
-        }
+        if (plugin.registerBlocks) plugin.registerBlocks(Blockly, javascriptGenerator);
         setIsReady(true);
     }, 10);
     return () => clearTimeout(timer);
-  }, [plugin]); // Re-run si le plugin change
+  }, [plugin]);
 
-  // --- LOGIQUE SPLITTER (Inchangée) ---
+  // --- SPLITTER ---
   const startResizing = useCallback(() => {
       isResizing.current = true;
       document.addEventListener('mousemove', handleMouseMove);
@@ -96,7 +74,6 @@ export default function GameEngine({ levelData, onWin, levelIndex, onNextLevel }
       document.body.style.cursor = 'col-resize';
       document.body.style.userSelect = 'none';
   }, []);
-
   const stopResizing = useCallback(() => {
       isResizing.current = false;
       document.removeEventListener('mousemove', handleMouseMove);
@@ -105,28 +82,20 @@ export default function GameEngine({ levelData, onWin, levelIndex, onNextLevel }
       document.body.style.userSelect = '';
       if (workspaceRef.current) Blockly.svgResize(workspaceRef.current);
   }, []);
-
   const handleMouseMove = useCallback((e) => {
       if (!isResizing.current) return;
       const newWidth = ((window.innerWidth - e.clientX) / window.innerWidth) * 100;
       if (newWidth > 20 && newWidth < 80) setGameWidth(newWidth);
   }, []);
 
-  // --- TOOLBOX DYNAMIQUE (Simplifiée grâce au Registre) ---
+  // --- TOOLBOX ---
   const currentToolbox = useMemo(() => {
-      // 1. Base standard
-      const standardResult = generateToolbox(
-          safeData.allowedBlocks, safeData.inputs, safeData.hiddenVars, safeData.lockedVars
-      );
-
-      // 2. Base Plugin
+      const standardResult = generateToolbox(safeData.allowedBlocks, safeData.inputs, safeData.hiddenVars, safeData.lockedVars);
       let featureXml = '';
       if (plugin.getToolbox) {
-          const tb = plugin.getToolbox();
+          const tb = plugin.getToolbox(safeData.allowedBlocks); // Correction: passer allowedBlocks
           featureXml = tb.xml || '';
       }
-
-      // 3. Fusion
       if (featureXml) {
           let finalXml = standardResult.xml;
           if (!standardResult.hasCategories) {
@@ -145,7 +114,6 @@ export default function GameEngine({ levelData, onWin, levelIndex, onNextLevel }
     workspaceRef.current = newWorkspace;
     javascriptGenerator.init(newWorkspace); 
     newWorkspace.updateToolbox(currentToolbox);
-    
     if (safeData.startBlocks) {
        try {
            newWorkspace.clear();
@@ -166,11 +134,14 @@ export default function GameEngine({ levelData, onWin, levelIndex, onNextLevel }
     return () => clearTimeout(timer);
   }, [isPanelOpen, gameWidth]);
 
+  // --- PROPS DU JEU ---
   const renderProps = {
       grid: safeData.grid,
       playerPos: engineState ? {x: engineState.x, y: engineState.y} : {x: safeData.startPos.x, y: safeData.startPos.y},
       playerDir: engineState ? engineState.dir : safeData.startPos.dir,
-      state: engineState || { variables: safeData.inputs },
+      // Ici, on passe safeData complet ou au moins levelData pour que EquationRunner retrouve ses petits
+      state: engineState, // Sera null au départ, mais le hook l'initialisera vite
+      levelData: safeData, // IMPORTANT pour EquationRunner si state est incomplet
       history: engineState?.logs,
       hiddenVars: safeData.hiddenVars || [],
       modelLines: solutionLines,
@@ -185,22 +156,43 @@ export default function GameEngine({ levelData, onWin, levelIndex, onNextLevel }
 
   return (
     <div style={{display: 'flex', height: '100%', flexDirection: 'column'}}>
-      <div style={{padding: '10px', background: '#eee', display: 'flex', alignItems: 'center', gap: '10px', borderBottom:'1px solid #ccc'}}>
-        {gameState === 'RUNNING' ? (
-            <button onClick={pause} style={{...btnStyle, background: '#f39c12'}}>⏸️ Pause</button>
-        ) : (
-            <button onClick={run} style={{...btnStyle, background: '#27ae60'}}>
-                {gameState === 'PAUSED' ? '▶️ Reprendre' : '▶️ Exécuter'}
-            </button>
-        )}
-        <button onClick={stepForward} style={{...btnStyle, background: '#3498db'}} title="Pas à pas">👣 Pas à pas</button>
-        <button onClick={reset} style={{...btnStyle, background: '#e74c3c'}}>🔄 Stop</button>
-        
-        <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto', background: 'white', padding: '5px 10px', borderRadius: '20px', border: '1px solid #ddd'}}>
-            <span style={{fontSize: '1.2rem'}}>🐢</span>
-            <input type="range" min="0" max="100" value={speed} onChange={(e) => setSpeed(Number(e.target.value))} style={{width: '100px', cursor: 'pointer'}} />
-            <span style={{fontSize: '1.2rem'}}>🐇</span>
+      {/* BARRE OUTILS */}
+      <div style={{padding: '10px', background: '#eee', borderBottom:'1px solid #ccc'}}>
+        <div style={{display:'flex', alignItems:'center', gap:'10px', marginBottom: totalSteps > 0 ? '5px' : '0'}}>
+            {gameState === 'RUNNING' ? (
+                <button onClick={pause} style={{...btnStyle, background: '#f39c12'}}>⏸️ Pause</button>
+            ) : (
+                <button onClick={run} style={{...btnStyle, background: '#27ae60'}}>
+                    {gameState === 'PAUSED' ? '▶️ Reprendre' : '▶️ Exécuter'}
+                </button>
+            )}
+            <button onClick={stepForward} style={{...btnStyle, background: '#3498db'}} title="Pas à pas">👣 Pas à pas</button>
+            <button onClick={reset} style={{...btnStyle, background: '#e74c3c'}}>🔄 Stop</button>
+            
+            <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto', background: 'white', padding: '5px 10px', borderRadius: '20px', border: '1px solid #ddd'}}>
+                <span style={{fontSize: '1.2rem'}}>🐢</span>
+                <input type="range" min="0" max="100" value={speed} onChange={(e) => setSpeed(Number(e.target.value))} style={{width: '100px', cursor: 'pointer'}} />
+                <span style={{fontSize: '1.2rem'}}>🐇</span>
+            </div>
         </div>
+
+        {/* TIME TRAVELLER (Seulement si des actions existent) */}
+        {totalSteps > 0 && (
+            <div className="animate-in slide-in-from-top-2 duration-300" style={{display:'flex', alignItems:'center', gap:'10px', background:'#e0f7fa', padding:'5px 10px', borderRadius:'4px', border:'1px solid #b2ebf2', marginTop:'5px'}}>
+                <span style={{fontSize:'0.8rem', fontWeight:'bold', color:'#006064', whiteSpace:'nowrap'}}>⏳ Time Traveller :</span>
+                <input 
+                    type="range" 
+                    min="0" 
+                    max={totalSteps} 
+                    value={currentStep} 
+                    onChange={(e) => timeTravel(Number(e.target.value))}
+                    style={{width:'100%', cursor:'pointer', accentColor:'#00bcd4'}}
+                />
+                <span style={{fontSize:'0.8rem', fontMono:true, color:'#006064', minWidth:'40px', textAlign:'right'}}>
+                    {currentStep}/{totalSteps}
+                </span>
+            </div>
+        )}
       </div>
 
       <div style={{display: 'flex', flex: 1, overflow: 'hidden', position: 'relative'}}>
@@ -212,8 +204,16 @@ export default function GameEngine({ levelData, onWin, levelIndex, onNextLevel }
         <div style={{width: `${gameWidth}%`, background: '#2c3e50', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow:'hidden', position: 'relative'}}>
           <GameView {...renderProps} />
         </div>
-        <FeedbackModal isOpen={gameState === 'WON' || gameState === 'LOST' || gameState === 'FAILED'} status={gameState} stats={gameStats} token={proofToken} onReplay={() => reset()} onMenu={() => window.location.reload()} onNext={onNextLevel} />
-      </div>
+        <FeedbackModal 
+            isOpen={gameState === 'WON' || gameState === 'LOST' || gameState === 'FAILED'} 
+            status={gameState} 
+            stats={gameStats} 
+            token={proofToken} 
+            onReplay={() => reset()} 
+            onMenu={() => window.location.reload()} 
+            onNext={onNextLevel}
+            onAnalyze={() => pause()}  // 👈 AJOUT ICI : Ferme la modale, passe en PAUSE
+        />      </div>
     </div>
   );
 }

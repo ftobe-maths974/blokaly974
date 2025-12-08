@@ -1,10 +1,15 @@
 import nerdamer from 'nerdamer/all.min';
 
+// Gardien anti-doublon
+let isRegistered = false;
+
 export const EquationLogic = {
   registerBlocks: (Blockly, javascriptGenerator) => {
+    if (isRegistered) return;
+    isRegistered = true;
     console.log("📐 Enregistrement blocs EQUATION...");
     
-    // Définitions JSON des blocs (Copié depuis BlockDefinitions/Registry)
+    // Définitions
     const blocks = [
         { "type": "equation_op_both", "message0": "Aux deux côtés %1 %2", "args0": [ { "type": "field_dropdown", "name": "OP", "options": [["Ajouter +", "ADD"], ["Soustraire -", "SUB"], ["Multiplier ×", "MUL"], ["Diviser /", "DIV"]] }, { "type": "input_value", "name": "VAL" } ], "previousStatement": null, "nextStatement": null, "colour": 230 },
         { "type": "equation_term_x", "message0": "%1 x", "args0": [ { "type": "field_number", "name": "COEFF", "value": 1, "precision": 1 } ], "output": null, "colour": 230 },
@@ -16,19 +21,19 @@ export const EquationLogic = {
     ];
     Blockly.common.defineBlocksWithJsonArray(blocks);
 
-    // Générateurs JS
+    // Générateurs
     javascriptGenerator.forBlock['equation_op_both'] = (block) => {
         const op = block.getFieldValue('OP'); 
         const val = javascriptGenerator.valueToCode(block, 'VAL', javascriptGenerator.ORDER_ATOMIC) || '0';
         const symbolMap = { 'ADD': '+', 'SUB': '-', 'MUL': '*', 'DIV': '/' };
-        return `actions.push({ type: 'OP_BOTH', operator: '${symbolMap[op]}', value: ${val} });\n`;
+        return `actions.push({ type: 'OP_BOTH', operator: '${symbolMap[op]}', value: ${val}, id: '${block.id}' });\n`;
     };
     javascriptGenerator.forBlock['equation_term_x'] = (block) => [`"${block.getFieldValue('COEFF')}*x"`, javascriptGenerator.ORDER_ATOMIC];
-    javascriptGenerator.forBlock['equation_verify'] = (block) => `actions.push({ type: 'VERIFY', value: ${javascriptGenerator.valueToCode(block, 'VAL', javascriptGenerator.ORDER_ATOMIC) || '0'} });\n`;
-    javascriptGenerator.forBlock['equation_solution_state'] = (block) => `actions.push({ type: 'DECLARE_SOLUTION', kind: '${block.getFieldValue('STATE')}' });\n`;
+    javascriptGenerator.forBlock['equation_verify'] = (block) => `actions.push({ type: 'VERIFY', value: ${javascriptGenerator.valueToCode(block, 'VAL', javascriptGenerator.ORDER_ATOMIC) || '0'}, id: '${block.id}' });\n`;
+    javascriptGenerator.forBlock['equation_solution_state'] = (block) => `actions.push({ type: 'DECLARE_SOLUTION', kind: '${block.getFieldValue('STATE')}', id: '${block.id}' });\n`;
     javascriptGenerator.forBlock['equation_solution_s'] = (block) => {
         const interval = javascriptGenerator.valueToCode(block, 'INTERVAL', javascriptGenerator.ORDER_ATOMIC) || 'null';
-        return `actions.push({ type: 'DECLARE_INTERVAL', interval: ${interval} });\n`;
+        return `actions.push({ type: 'DECLARE_INTERVAL', interval: ${interval}, id: '${block.id}' });\n`;
     };
     javascriptGenerator.forBlock['equation_interval'] = (block) => {
         const left = block.getFieldValue('L_BRACKET'); const right = block.getFieldValue('R_BRACKET');
@@ -65,39 +70,160 @@ export const EquationLogic = {
   },
 
   executeStep: (currentState, action, levelData) => {
-      // Reprendre la logique complexe de src/plugins/EquationPlugin.js (calcul nerdamer, etc.)
-      // C'est long, je résume : initialisation de l'état, gestion de OP_BOTH, VERIFY...
-      // (Assurez-vous de copier TOUTE la logique existante ici)
-      const state = currentState || { 
-          lhs: levelData.equation?.lhs || "x", 
-          rhs: levelData.equation?.rhs || "0", 
-          history: [], 
-          initialLhs: levelData.equation?.lhs || "x", 
-          initialRhs: levelData.equation?.rhs || "0",
-          sign: levelData.equation?.sign || '='
-      };
-      
-      if (!action) return { newState: state, status: 'RUNNING' };
-      
-      // ... Copier la logique de traitement des actions ici ...
-      // Exemple :
-      if (action.type === 'OP_BOTH') {
-          // Logique Nerdamer...
-          // ...
-          return { newState: { ...state /* ... */ }, status: 'RUNNING' };
-      }
-      
-      return { newState: state, status: 'RUNNING' };
-  },
+    // 1. Initialisation complète avec Options (Implicit, Graph)
+    const state = currentState || { 
+      lhs: levelData.equation?.lhs || "x", 
+      rhs: levelData.equation?.rhs || "0", 
+      initialLhs: levelData.equation?.lhs || "x",
+      initialRhs: levelData.equation?.rhs || "0",
+      sign: levelData.equation?.sign || '=', 
+      initialSign: levelData.equation?.sign || '=', 
+      // 👇 RECUPERATION DES OPTIONS
+      implicit: levelData.equation?.implicit || false, 
+      showGraph: levelData.equation?.showGraph || false,
+      history: [],
+      verification: null,
+      solutionState: null,
+      finalSolutionLatex: null
+    };
 
-  evaluateResult: (state, levelData) => {
-      if (state.finalSolutionLatex) {
-          return {
-              status: 'WIN',
-              score: { stars: 3, primaryMetric: "Résolu", details: {} },
-              feedback: { title: "Équation Résolue", message: "La solution est correcte." }
-          };
+    if (!action) return { newState: state, status: 'RUNNING' };
+
+    let { lhs, rhs, history, sign } = state;
+
+    // --- 1. CALCUL ---
+    if (action.type === 'OP_BOTH') {
+      const val = action.value; 
+      const op = action.operator; 
+      
+      if (op === '/' && (val == 0 || val === '0')) {
+          return { newState: { ...state, lastOp: { error: "Division par zéro !" } }, status: 'RUNNING' };
       }
-      return { status: 'RUNNING', feedback: null };
+
+      let newSign = sign;
+      const valNum = parseFloat(val);
+      if ((op === '*' || op === '/') && valNum < 0) {
+          if (sign === '<') newSign = '>'; else if (sign === '>') newSign = '<';
+          else if (sign === '\\leq') newSign = '\\geq'; else if (sign === '\\geq') newSign = '\\leq';
+      }
+      
+      const rawLhs = `(${lhs}) ${op} (${val})`;
+      const rawRhs = `(${rhs}) ${op} (${val})`;
+      const simpleLhs = nerdamer(rawLhs).text(); 
+      const simpleRhs = nerdamer(rawRhs).text();
+      const newHistory = [...history, { lhs: simpleLhs, rhs: simpleRhs, op, val, sign: newSign }];
+
+      return { 
+        newState: { ...state, lhs: simpleLhs, rhs: simpleRhs, sign: newSign, history: newHistory, lastOp: { op, val, rawLhs, rawRhs }, verification: null, solutionState: null, finalSolutionLatex: null },
+        status: 'RUNNING'
+      };
+    }
+
+    // --- 2. VÉRIFICATION ---
+    if (action.type === 'VERIFY') {
+        const testVal = action.value;
+        const originLhs = state.initialLhs;
+        const originRhs = state.initialRhs;
+        const checkSign = state.initialSign; 
+
+        const valLhs = parseFloat(nerdamer(originLhs, { x: testVal }).evaluate().text());
+        const valRhs = parseFloat(nerdamer(originRhs, { x: testVal }).evaluate().text());
+        
+        const EPSILON = 0.0001;
+        const isBoundary = Math.abs(valLhs - valRhs) < EPSILON;
+        
+        let isCorrect = false;
+        if (checkSign === '=') isCorrect = isBoundary;
+        else if (checkSign === '<') isCorrect = valLhs < valRhs - EPSILON;
+        else if (checkSign === '>') isCorrect = valLhs > valRhs + EPSILON;
+        else if (checkSign === '\\leq') isCorrect = valLhs <= valRhs + EPSILON;
+        else if (checkSign === '\\geq') isCorrect = valLhs >= valRhs - EPSILON;
+
+        let feedbackMsg = "";
+        if (checkSign !== '=') {
+            if (isBoundary) {
+                if (isCorrect) feedbackMsg = "✅ Vrai à la frontière : INCLURE (Crochet fermé).";
+                else feedbackMsg = "❌ Faux à la frontière : EXCLURE (Crochet ouvert).";
+            } else {
+                feedbackMsg = isCorrect ? "Vrai (dans la solution)." : "Faux (hors solution).";
+            }
+        }
+
+        let solutionLatex = null;
+        if (isCorrect && checkSign === '=') solutionLatex = `S = \\{ ${testVal} \\}`;
+
+        return {
+            newState: { 
+                ...state, 
+                verification: { testVal, originLhs, originRhs, valLhs, valRhs, isCorrect, checkSign, feedbackMsg },
+                finalSolutionLatex: solutionLatex,
+                lastOp: null 
+            },
+            status: 'RUNNING'
+        };
+    }
+
+    // --- 3. DÉCLARATION INTERVALLE ---
+    if (action.type === 'DECLARE_INTERVAL') {
+        const userInterval = action.interval; 
+        if (!userInterval) return { newState: state, status: 'RUNNING' };
+
+        const rawDiff = `${state.initialLhs} - (${state.initialRhs})`;
+        const diffText = nerdamer(rawDiff).simplify().text();
+        
+        const valAt0 = nerdamer(diffText).evaluate({x: 0}).text();
+        const valAt1 = nerdamer(diffText).evaluate({x: 1}).text();
+        
+        const B = parseFloat(valAt0);
+        const AplusB = parseFloat(valAt1);
+        const A = AplusB - B;
+
+        const pivot = (A === 0) ? 0 : -B / A; 
+        const startSign = state.initialSign;
+
+        const uMin = userInterval.min === '-Infinity' ? -Infinity : parseFloat(userInterval.min);
+        const uMax = userInterval.max === 'Infinity' ? Infinity : parseFloat(userInterval.max);
+        
+        const minIsPivot = Math.abs(uMin - pivot) < 0.01;
+        const maxIsPivot = Math.abs(uMax - pivot) < 0.01;
+        let isPivotCorrect = (uMin === -Infinity && maxIsPivot) || (uMax === Infinity && minIsPivot);
+        
+        let isDirectionCorrect = false;
+        if (isPivotCorrect) {
+            let testPoint = (uMin === -Infinity) ? uMax - 1 : uMin + 1;
+            const vL = parseFloat(nerdamer(state.initialLhs, {x: testPoint}).evaluate().text());
+            const vR = parseFloat(nerdamer(state.initialRhs, {x: testPoint}).evaluate().text());
+            
+            if (startSign === '<') isDirectionCorrect = vL < vR;
+            else if (startSign === '>') isDirectionCorrect = vL > vR;
+            else if (startSign === '\\leq') isDirectionCorrect = vL <= vR;
+            else if (startSign === '\\geq') isDirectionCorrect = vL >= vR;
+        }
+
+        const isSuccess = isPivotCorrect && isDirectionCorrect;
+        let msg = "Bravo !";
+        if (!isPivotCorrect) msg = `Erreur de frontière (attendu : ${pivot.toFixed(2)})`;
+        else if (!isDirectionCorrect) msg = "L'intervalle est dans le mauvais sens.";
+
+        const minTex = uMin === -Infinity ? '-\\infty' : uMin;
+        const maxTex = uMax === Infinity ? '+\\infty' : uMax;
+        const solLatex = `S = ${userInterval.left} ${minTex} ; ${maxTex} ${userInterval.right}`;
+
+        return {
+            newState: { 
+                ...state, 
+                solutionState: { kind: 'INTERVAL', isSuccess, msg },
+                finalSolutionLatex: isSuccess ? solLatex : null,
+                lastOp: null 
+            },
+            status: 'RUNNING'
+        };
+    }
+    
+    if (action.type === 'DECLARE_SOLUTION') {
+        return { newState: state, status: 'RUNNING' }; 
+    }
+
+    return { newState: state, status: 'RUNNING' };
   }
 };

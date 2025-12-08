@@ -4,7 +4,7 @@ import { InlineMath } from 'react-katex';
 // 👇 CORRECTION ICI : Import direct depuis le même dossier
 import EquationGraph from './EquationGraph';
 
-export default function EquationRunner({ state }) {
+export default function EquationRunner({ state, levelData }) {
   // Valeurs par défaut sécurisées
   const defaultState = { lhs: "x", rhs: "0", sign: "=", initialLhs: "x", initialRhs: "0", history: [] };
   const displayState = state || defaultState;

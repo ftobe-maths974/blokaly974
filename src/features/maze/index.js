@@ -1,4 +1,7 @@
-import { MazePlugin } from './logic';
+// 📄 Fichier : src/features/maze/index.js
+
+// 👇 L'ERREUR EST SOUVENT ICI : C'est bien MazePlugin, pas EquationLogic !
+import { MazePlugin } from './logic'; 
 import Editor from './Editor';
 import Runner from './Runner';
 import { MAZE_CONFIG } from './config';
@@ -18,50 +21,46 @@ export default {
     // Moteur Logique
     executeStep: MazePlugin.executeStep,
     
-    // --- NOUVEAU : Logique de Notation Standardisée ---
+    // --- JUGE STANDARDISÉ ---
     evaluateResult: (state, levelData, metrics) => {
-        // 1. Vérification de la victoire (Position actuelle vs Objectif)
-        // Note: Dans Maze, executeStep renvoie déjà 'WIN' dans status, on peut s'en servir.
-        // Mais pour être robuste, on revérifie ici ou on se base sur le status passé par le moteur.
-        
-        // Ici, on va simplifier : le moteur nous dit "Le robot s'est arrêté".
-        // On regarde si la case actuelle est la sortie (3).
+        // 1. Victoire : Robot sur la case 'WIN'
         const cell = MAZE_CONFIG.checkMove(levelData.grid, state.x, state.y);
         const isWin = (cell === 'WIN');
 
         if (!isWin) {
             return { 
                 status: 'FAIL', 
-                feedback: { title: "Pas tout à fait...", message: "Le robot n'a pas atteint l'arrivée." } 
+                feedback: { title: "Incomplet", message: "Le robot n'est pas arrivé." } 
             };
         }
 
-        // 2. Calcul du Score (Basé sur le nombre de blocs)
-        const target = levelData.maxBlocks || 5;
+        // 2. Score (Blocs & Étapes)
+        const validation = levelData.validation || {};
+        const targetBlocks = validation.stars?.blocks || levelData.maxBlocks || 5;
+        const targetSteps = validation.stars?.steps || 30; // ex: 30 mouvements max
+
         const used = metrics.blockCount || 0;
+        const steps = metrics.steps || 0;
         
-        let stars = 1;
-        let message = "Tu peux faire mieux !";
+        let stars = 3;
+        const penalties = [];
         
-        if (used <= target) {
-            stars = 3;
-            message = "✨ Code Parfait ! Optimisation maximale.";
-        } else if (used <= Math.ceil(target * 1.5)) {
-            stars = 2;
-            message = "Bien joué ! Mais tu utilises un peu trop de blocs.";
-        }
+        if (used > targetBlocks) { stars--; penalties.push("trop de blocs"); }
+        if (steps > targetSteps) { stars--; penalties.push("chemin trop long"); }
+
+        stars = Math.max(1, stars);
 
         return {
             status: 'WIN',
             score: {
                 stars: stars,
-                primaryMetric: `${used} blocs`, // Ce qu'on affiche au joueur
-                targetMetric: `Objectif : ${target}`,
-                details: { blocks: used, target: target }
+                primaryMetric: `${used} blocs`,
+                targetMetric: `Obj: ${targetBlocks}`,
+                details: { blocks: used, steps: steps }
             },
             feedback: { 
-                title: stars === 3 ? "Excellent !" : "Niveau Réussi", 
-                message: message 
+                title: stars === 3 ? "Parfait !" : "Niveau réussi", 
+                message: stars === 3 ? "Code optimisé." : `Attention : ${penalties.join(", ")}.` 
             }
         };
     },
