@@ -10,8 +10,8 @@ export default {
     
     // API Blockly
     registerBlocks: TurtleLogic.registerBlocks,
-    getToolbox: () => ({
-        xml: TurtleLogic.getToolboxXML(), 
+    getToolbox: (allowedBlocks) => ({
+        xml: TurtleLogic.getToolboxXML(allowedBlocks), 
         category: 'Tortue'
     }),
 

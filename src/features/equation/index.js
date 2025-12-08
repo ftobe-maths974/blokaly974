@@ -8,7 +8,10 @@ export default {
     icon: '📐',
     
     registerBlocks: EquationLogic.registerBlocks,
-    getToolbox: () => ({ xml: EquationLogic.getToolboxXML(), category: 'Algèbre' }),
+    getToolbox: (allowedBlocks) => ({ 
+        xml: EquationLogic.getToolboxXML(allowedBlocks), 
+        category: 'Algèbre' 
+    }),
     executeStep: EquationLogic.executeStep,
     
     evaluateResult: (state, levelData) => {

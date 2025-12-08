@@ -66,15 +66,24 @@ export const TurtleLogic = {
     };
   },
 
-  getToolboxXML: () => `
-    <category name="Tortue" colour="#4a90e2">
-        <block type="turtle_move"><value name="VALUE"><shadow type="math_number"><field name="NUM">50</field></shadow></value></block>
-        <block type="turtle_turn"><value name="VALUE"><shadow type="math_number"><field name="NUM">90</field></shadow></value></block>
-        <block type="turtle_pen"><field name="STATE">UP</field></block>
-        <block type="turtle_pen"><field name="STATE">DOWN</field></block>
-        <block type="turtle_color"></block>
-    </category>
-  `,
+  // 👇 Mise à jour du toolbox builder
+  getToolboxXML: (allowedBlocks) => {
+    const allBlocks = [
+        { type: 'turtle_move', xml: '<block type="turtle_move"><value name="VALUE"><shadow type="math_number"><field name="NUM">50</field></shadow></value></block>' },
+        { type: 'turtle_turn', xml: '<block type="turtle_turn"><value name="VALUE"><shadow type="math_number"><field name="NUM">90</field></shadow></value></block>' },
+        { type: 'turtle_pen', xml: '<block type="turtle_pen"><field name="STATE">UP</field></block><block type="turtle_pen"><field name="STATE">DOWN</field></block>' },
+        { type: 'turtle_color', xml: '<block type="turtle_color"></block>' }
+    ];
+
+    let xml = '<category name="Tortue" colour="#4a90e2">';
+    allBlocks.forEach(b => {
+        if (!allowedBlocks || allowedBlocks.includes(b.type)) {
+            xml += b.xml;
+        }
+    });
+    xml += '</category>';
+    return xml;
+  },
 
   executeStep: (currentState, action, levelData) => {
     // 1. Initialisation robuste

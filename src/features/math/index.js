@@ -70,8 +70,10 @@ export default {
     
     // Le Labo n'a pas de blocs spéciaux, il utilise les blocs système (StandardBlocks)
     // On peut renvoyer une catégorie vide ou "Variables" pour forcer l'affichage si besoin
-    getToolbox: () => ({ xml: '', category: 'Mathématiques' }), 
-    
+    getToolbox: (allowedBlocks) => ({ 
+        xml: '', 
+        category: 'Mathématiques' 
+    }),
     executeStep: MathLogic.executeStep,
     evaluateResult: MathLogic.evaluateResult,
     

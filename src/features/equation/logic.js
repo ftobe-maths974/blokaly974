@@ -42,21 +42,27 @@ export const EquationLogic = {
     };
   },
 
-  getToolboxXML: () => `
-    <category name="Algèbre" colour="#5b67a5">
-        <block type="equation_op_both"><value name="VAL"><shadow type="math_number"><field name="NUM">1</field></shadow></value></block>
-        <block type="equation_term_x"></block>
-        <block type="equation_verify"><value name="VAL"><shadow type="math_number"><field name="NUM">1</field></shadow></value></block>
-        <block type="equation_solution_state"></block>
-        <block type="equation_solution_s"></block>
-        <block type="equation_interval">
-            <value name="MIN"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
-            <value name="MAX"><shadow type="math_number"><field name="NUM">10</field></shadow></value>
-        </block>
-        <block type="math_infinity"></block>
-        <block type="math_number"></block>
-    </category>
-  `,
+  getToolboxXML: (allowedBlocks) => {
+    const allBlocks = [
+        { type: 'equation_op_both', xml: '<block type="equation_op_both"><value name="VAL"><shadow type="math_number"><field name="NUM">1</field></shadow></value></block>' },
+        { type: 'equation_term_x', xml: '<block type="equation_term_x"></block>' },
+        { type: 'equation_verify', xml: '<block type="equation_verify"><value name="VAL"><shadow type="math_number"><field name="NUM">1</field></shadow></value></block>' },
+        { type: 'equation_solution_state', xml: '<block type="equation_solution_state"></block>' },
+        { type: 'equation_solution_s', xml: '<block type="equation_solution_s"></block>' },
+        { type: 'equation_interval', xml: '<block type="equation_interval"><value name="MIN"><shadow type="math_number"><field name="NUM">0</field></shadow></value><value name="MAX"><shadow type="math_number"><field name="NUM">10</field></shadow></value></block>' },
+        { type: 'math_infinity', xml: '<block type="math_infinity"></block>' },
+        { type: 'math_number', xml: '<block type="math_number"></block>' }
+    ];
+
+    let xml = '<category name="Algèbre" colour="#5b67a5">';
+    allBlocks.forEach(b => {
+        if (!allowedBlocks || allowedBlocks.includes(b.type)) {
+            xml += b.xml;
+        }
+    });
+    xml += '</category>';
+    return xml;
+  },
 
   executeStep: (currentState, action, levelData) => {
       // Reprendre la logique complexe de src/plugins/EquationPlugin.js (calcul nerdamer, etc.)
