@@ -150,7 +150,7 @@ export default function EquationRunner({ state, levelData }) {
              lhs={displayState.lhs} rhs={displayState.rhs} 
              initialLhs={displayState.initialLhs} initialRhs={displayState.initialRhs}
              isVisible={canShowGraph && !state.finalSolutionLatex} 
-             isModified={isModified}
+             isModified={isModified} sign={displayState.sign}
           />
       </div>
     </div>

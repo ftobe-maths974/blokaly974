@@ -29,7 +29,7 @@ export default function EquationGraph({ lhs, rhs, initialLhs, initialRhs, isVisi
             target: ref.current,
             width: width, 
             height: 220,
-            yAxis: { domain: [-10, 20] }, 
+            yAxis: { domain: [-10, 10] }, 
             xAxis: { domain: [-10, 10] },
             grid: true,
             title: title,
