@@ -132,14 +132,16 @@ export default function EquationEditor({ levelData, onUpdate }) {
                         onChange={(e) => updateValidation('strategy', e.target.value)}
                         className="w-full p-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50"
                     >
-                        <option value="ISOLATION">Standard (x = solution)</option>
-                        <option value="VERIFICATION">Par Vérification (Bloc vert)</option>
+                        <option value="ISOLATION">Isolation (x = ...)</option>
+                        <option value="VERIFICATION">Vérification (Bloc Vert)</option>
                         <option value="FLEXIBLE">Hybride (L'un ou l'autre)</option>
+                        <option value="COMPLETE">Expert (Les deux requis)</option> {/* 👈 AJOUT ICI */}
                     </select>
-                    <p className="text-[10px] text-slate-400 mt-2 leading-snug">
-                        {validation.strategy === 'ISOLATION' && "L'élève doit isoler x pour gagner."}
-                        {validation.strategy === 'VERIFICATION' && "L'élève doit utiliser le bloc 'Vérifier' et obtenir VRAI."}
-                        {validation.strategy === 'FLEXIBLE' && "Les deux méthodes sont acceptées."}
+                    <p className="text-[10px] text-slate-400 mt-2 leading-snug bg-slate-50 p-2 rounded">
+                        {validation.strategy === 'ISOLATION' && "L'élève gagne dès que x est isolé."}
+                        {validation.strategy === 'VERIFICATION' && "L'élève doit utiliser le bloc de vérification."}
+                        {validation.strategy === 'FLEXIBLE' && "L'élève peut choisir sa méthode."}
+                        {validation.strategy === 'COMPLETE' && "L'élève doit isoler x PUIS vérifier le résultat."}
                     </p>
                 </div>
 

@@ -66,7 +66,6 @@ export const TurtleLogic = {
     };
   },
 
-  // 👇 Mise à jour du toolbox builder
   getToolboxXML: (allowedBlocks) => {
     const allBlocks = [
         { type: 'turtle_move', xml: '<block type="turtle_move"><value name="VALUE"><shadow type="math_number"><field name="NUM">50</field></shadow></value></block>' },
@@ -96,7 +95,8 @@ export const TurtleLogic = {
       lines: [] 
     };
     
-    if (!action.type) return { newState: state, status: 'RUNNING' };
+    // 🛑 CORRECTIF ICI : Vérification de 'action' avant d'accéder à ses propriétés
+    if (!action) return { newState: state, status: 'RUNNING' };
 
     let { x, y, dir, penDown, color, lines } = state;
     const newLines = [...lines];
@@ -115,7 +115,12 @@ export const TurtleLogic = {
     else if (action.type === 'TURN') { 
         dir += parseFloat(action.angle); // Angle signé (+90 ou -90)
     }
-    // ... (Reste Pen/Color inchangé)
+    else if (action.type === 'PEN') {
+        penDown = (action.state === 'DOWN');
+    }
+    else if (action.type === 'COLOR') {
+        color = action.color;
+    }
 
     return { newState: { x, y, dir, penDown, color, lines: newLines }, status: 'RUNNING' };
   },
