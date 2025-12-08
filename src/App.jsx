@@ -21,17 +21,17 @@ function App() {
       setMode('runner');
   };
 
-  // Callback pour le Prof qui veut tester son niveau
-  const handleTeacherTest = (currentCampaignData) => {
+  const handleTeacherTest = (currentCampaignData, levelIndex = 0) => {
       setCampaignData(currentCampaignData);
+      setStartLevelIndex(levelIndex); // On stocke l'index demandé
       setMode('runner');
-      // On garde isTeacher = true
   };
 
-  // Callback pour le Prof qui revient à l'atelier
   const handleBackToBuilder = () => {
       setMode('builder');
+      // Le Builder lira sessionStorage pour retrouver son index
   };
+  
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -102,27 +102,22 @@ function App() {
 
   return (
     <div className="App">
-      {mode === 'home' && (
-          <Home onFileLoaded={handleFileLoaded} />
-      )}
+      {/* ... (Home) */}
 
       {mode === 'builder' && (
-        <Builder 
-            // Le prof passe une fonction pour lancer le test
-            onTest={handleTeacherTest} 
-        />
+        <Builder onTest={handleTeacherTest} />
       )}
 
       {mode === 'runner' && (
         <Runner 
             campaign={campaignData} 
             ltiConfig={ltiConfig}
-            isTeacherMode={isTeacher} // On passe le rôle au Runner
-            onBackToBuilder={handleBackToBuilder} // La fonction de retour
+            isTeacherMode={isTeacher} 
+            onBackToBuilder={handleBackToBuilder}
+            initialLevelIndex={startLevelIndex} // <-- ON PASSE LA PROP
         />
       )}
     </div>
   );
 }
-
 export default App;

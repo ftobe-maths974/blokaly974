@@ -1,29 +1,27 @@
-// On importe uniquement les plugins qui sont prêts (Features)
 import MazeFeature from '../features/maze';
-import TurtleFeature from '../features/turtle';
+import TurtleFeature from '../features/turtle'; // <--- Vérifiez que c'est bien décommenté
 
-// Plus tard, on décommentera ceux-là quand ils seront migrés
-// import MathFeature from '../features/math';
+console.log("🕵️‍♂️ DEBUG - MazeFeature:", MazeFeature);     // Doit afficher un Objet {id: "MAZE", ...}
+console.log("🕵️‍♂️ DEBUG - TurtleFeature:", TurtleFeature); // Si c'est "undefined", le problème est l'import !
 
 const REGISTRY = {};
 
 export const registerPlugin = (plugin) => {
-  if (!plugin || !plugin.id) {
-      console.error("❌ Tentative d'enregistrement d'un plugin invalide", plugin);
+  if (!plugin) {
+      console.error("❌ Erreur : Tentative d'enregistrer un plugin vide/indéfini.");
       return;
   }
-  console.log(`🔌 Plugin enregistré : ${plugin.name} (${plugin.id})`);
+  if (!plugin.id) {
+      console.error("❌ Erreur : Le plugin n'a pas d'ID.", plugin);
+      return;
+  }
+  
+  console.log(`✅ Succès : Plugin "${plugin.id}" ajouté au registre.`);
   REGISTRY[plugin.id] = plugin;
 };
 
-// --- ENREGISTREMENT INITIAL ---
 registerPlugin(MazeFeature);
-// registerPlugin(TurtleFeature); 
-// registerPlugin(MathFeature);
+registerPlugin(TurtleFeature); 
 
-// --- API ---
-export const getPlugin = (id) => {
-    return REGISTRY[id] || null; // Renvoie null si le plugin n'existe pas (ex: TURTLE désactivé)
-};
-
+export const getPlugin = (id) => REGISTRY[id];
 export const getAllPlugins = () => Object.values(REGISTRY);

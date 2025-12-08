@@ -3,16 +3,12 @@ import * as Blockly from 'blockly';
 import { javascriptGenerator } from 'blockly/javascript';
 import { generateProofToken } from '../core/validation';
 
-// 🗑️ SUPPRESSION de l'import : import { MAZE_CONFIG } from ... 
-// On ne veut plus de dépendance directe !
-
 export function useGameRunner(workspaceRef, plugin, safeData) {
   const [speed, setSpeed] = useState(50);
   const [engineState, setEngineState] = useState(null);
   const [gameState, setGameState] = useState('IDLE');
   const [solutionLines, setSolutionLines] = useState([]);
   
-  // Stats génériques
   const [gameStats, setGameStats] = useState({ stars: 0, metric: '', feedback: null });
   const [proofToken, setProofToken] = useState("");
   
@@ -24,32 +20,58 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
   const currentStateRef = useRef(null);
 
   // --- 1. CALCUL DU MODÈLE (GHOST) ---
-  // (On garde tel quel pour l'instant, c'est assez générique si plugin.executeStep l'est)
   useEffect(() => {
-    // Petit hack temporaire : seul Turtle utilise ça. 
-    // Comme Turtle est désactivé, ce bloc ne fera rien ou plantera pas.
+    // Hack temporaire pour Turtle (sera nettoyé quand tous les plugins seront migrés)
     if (!safeData.solutionBlocks || plugin.id !== 'TURTLE') {
       setSolutionLines([]);
       return;
     }
-    // ... (Le reste du code Ghost reste inchangé pour l'instant)
+    const timer = setTimeout(() => {
+      try {
+        const headlessWs = new Blockly.Workspace();
+        const xml = Blockly.utils.xml.textToDom(safeData.solutionBlocks);
+        Blockly.Xml.domToWorkspace(xml, headlessWs);
+        
+        javascriptGenerator.init(headlessWs);
+        const code = javascriptGenerator.workspaceToCode(headlessWs);
+        
+        const actions = [];
+        // Mock API pour le calcul silencieux
+        const api = {
+            move: () => {}, turn: () => {}, pen: () => {}, color: () => {},
+            isPath: () => false, isDone: () => false, safeCheck: () => true
+        };
+        const fn = new Function('actions', 'api', code);
+        fn(actions, api);
+        
+        let simState = null;
+        actions.forEach(action => {
+          if (plugin.executeStep) {
+              const res = plugin.executeStep(simState, action, safeData);
+              simState = res.newState;
+          }
+        });
+
+        if (simState?.lines) {
+            setSolutionLines(prev => {
+                if (JSON.stringify(prev) === JSON.stringify(simState.lines)) return prev;
+                return simState.lines;
+            });
+        }
+        headlessWs.dispose();
+      } catch (e) { console.error("Erreur modèle:", e); }
+    }, 50);
+    return () => clearTimeout(timer);
   }, [safeData.solutionBlocks, plugin, safeData]);
 
-
-  // --- 2. LOGIQUE DE FIN GÉNÉRIQUE (Cœur du changement) ---
+  // --- 2. FONCTIONS DE FIN (Définies en premier) ---
   const checkVictoryCondition = useCallback((finalState) => {
-      if (!plugin.evaluateResult) {
-          console.warn("⚠️ Le plugin n'a pas de fonction evaluateResult !");
-          return;
-      }
+      if (!plugin.evaluateResult) return;
 
-      // On rassemble les métriques (générique)
       const metrics = {
           blockCount: workspaceRef.current?.getAllBlocks(false).length || 0,
-          // On pourrait ajouter le temps ici plus tard
       };
 
-      // ON DÉLÈGUE AU PLUGIN !
       const result = plugin.evaluateResult(finalState, safeData, metrics, solutionLines);
 
       if (result.status === 'WIN') {
@@ -66,8 +88,7 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
           setGameStats({ stars: 0, feedback: result.feedback });
           setGameState('FAILED');
       }
-  }, [plugin, safeData]);
-
+  }, [plugin, safeData, solutionLines]);
 
   const reset = useCallback(() => {
     if (executionRef.current) clearTimeout(executionRef.current);
@@ -80,7 +101,7 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
     if (workspaceRef.current) workspaceRef.current.highlightBlock(null);
   }, [workspaceRef]);
 
-  // --- 3. EXÉCUTION ---
+  // --- 3. EXECUTE SINGLE STEP (Définie avant runLoop) ---
   const executeSingleStep = useCallback(() => {
     const actions = actionsRef.current;
     const step = stepRef.current;
@@ -105,8 +126,6 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
     setEngineState(result.newState);
     stepRef.current += 1; 
 
-    // Victoire Immédiate (ex: Case arrivée atteinte pendant le mouvement) ?
-    // Dans la nouvelle logique, on préfère évaluer à la fin, mais si le plugin renvoie 'WIN'/'LOST' dans status, on respecte.
     if (result.status === 'WIN') {
         setTimeout(() => checkVictoryCondition(result.newState), 500);
         return false; 
@@ -115,7 +134,6 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
         return false; 
     }
 
-    // Fin de la liste d'actions
     if (stepRef.current >= actions.length) {
         if (workspaceRef.current) workspaceRef.current.highlightBlock(null);
         setTimeout(() => {
@@ -125,20 +143,30 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
     }
 
     return true; 
-}, [plugin, safeData, solutionLines]);
+  }, [plugin, safeData, checkVictoryCondition, workspaceRef]);
 
-  // ... (runLoop, run, pause, stepForward restent globalement identiques 
-  // MAIS il faut nettoyer la partie "API SIMULATION" dans run() et stepForward() 
-  // car elle utilisait MAZE_CONFIG en dur) ...
+  // --- 4. RUN LOOP (Définie avant run) ---
+  const runLoop = useCallback(() => {
+    const shouldContinue = executeSingleStep();
+    
+    if (shouldContinue) {
+        const prevAction = actionsRef.current[stepRef.current - 1];
+        let delay = Math.max(5, (100 - speed) * 10);
+        
+        if (prevAction && (prevAction.type === 'SCAN' || prevAction.type === 'LOOP_CHECK')) {
+            delay = Math.max(delay, 500);
+        }
 
-  // ⚠️ Pour l'instant, comme la simulation JS (api.move...) est générée par le plugin Maze
-  // et que ce code JS appelle des fonctions globales, nous devons adapter `run` 
-  // pour qu'il injecte une API fournie par le plugin, pas codée en dur ici.
-  
-  // SOLUTION PRAGMATIQUE POUR CETTE ÉTAPE :
-  // On va simplifier `run` pour l'instant en gardant l'API Maze injectée ici
-  // MAIS en utilisant `plugin.config` au lieu de l'import `MAZE_CONFIG`.
-  
+        executionRef.current = setTimeout(runLoop, delay);
+    }
+  }, [executeSingleStep, speed]);
+
+  const pause = useCallback(() => { 
+      if (executionRef.current) clearTimeout(executionRef.current); 
+      setGameState('PAUSED'); 
+  }, []);
+
+  // --- 5. RUN (Utilise runLoop) ---
   const run = useCallback(() => {
     if (!workspaceRef.current) return;
     if (gameState === 'PAUSED') {
@@ -158,10 +186,10 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
         });
     }
 
-    // --- API SIMULATION GÉNÉRIQUE ---
-    // Idéalement : const api = plugin.getApi(simState, safeData);
-    // Pour l'instant on adapte l'existant en remplaçant MAZE_CONFIG par plugin.config
-    
+    // --- API SIMULATION ---
+    // Utilisation de plugin.config au lieu de MAZE_CONFIG en dur
+    const config = plugin.config || {}; 
+
     let simState = { 
         x: safeData.startPos.x, 
         y: safeData.startPos.y, 
@@ -171,9 +199,6 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
     let loopCount = 0;
     const MAX_LOOPS = 1000; 
 
-    // ATTENTION : Cette API est très couplée au Maze. 
-    // Pour rendre ça 100% agnostique, le plugin devrait fournir cette fonction `api`.
-    // On garde ça pour l'étape suivante, ici on répare juste les imports.
     const api = {
         move: () => {
             let nextX = simState.x, nextY = simState.y;
@@ -182,21 +207,33 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
             else if (simState.dir === 2) nextX--; 
             else if (simState.dir === 3) nextY--;
             
-            // UTILISATION DE plugin.config
-            if (plugin.config && plugin.config.checkMove(safeData.grid, nextX, nextY) !== 'WALL') {
+            // Vérification générique si le plugin fournit une config grid
+            if (config.checkMove) {
+                if (config.checkMove(safeData.grid, nextX, nextY) !== 'WALL') {
+                    simState.x = nextX; simState.y = nextY;
+                }
+            } else {
+                // Par défaut (ex: Turtle), on bouge sans collision murale
                 simState.x = nextX; simState.y = nextY;
             }
         },
         turn: (d) => { 
+            // Simulation direction simple 0-3
             simState.dir = (d === 'LEFT') ? (simState.dir + 3) % 4 : (simState.dir + 1) % 4;
         },
-        isPath: (d) => plugin.config ? plugin.config.look(safeData.grid, simState.x, simState.y, simState.dir, d) : false,
-        isDone: () => plugin.config ? plugin.config.checkMove(safeData.grid, simState.x, simState.y) === 'WIN' : false,
+        isPath: (d) => config.look ? config.look(safeData.grid, simState.x, simState.y, simState.dir, d) : true,
+        isDone: () => config.checkMove ? config.checkMove(safeData.grid, simState.x, simState.y) === 'WIN' : false,
         safeCheck: () => { 
             loopCount++; 
-            if (loopCount > MAX_LOOPS) return false; 
+            if (loopCount > MAX_LOOPS) {
+                console.warn("Arrêt préventif boucle infinie");
+                return false; 
+            }
             return true; 
-        }
+        },
+        // Méthodes Turtle (vides pour Maze, mais évitent crash si bloc présent)
+        pen: () => {},
+        color: () => {} 
     };
 
     try {
@@ -216,17 +253,54 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
     }
   }, [workspaceRef, safeData, runLoop, reset, gameState, plugin]);
 
-  // (Faire la même modif pour stepForward qui duplique cette logique, ou mieux, factoriser)
+  // --- 6. STEP FORWARD ---
   const stepForward = useCallback(() => {
-      // ... (Copier la logique de run() en remplaçant MAZE_CONFIG par plugin.config)
-      // Je simplifie ici pour la lisibilité de la réponse, mais il faut le faire dans le fichier réel.
+      // Si on n'est pas déjà en train de courir, on initialise comme RUN
       if (gameState === 'IDLE' || gameState === 'WON' || gameState === 'LOST' || gameState === 'FAILED') {
-          // ... Initialisation identique à RUN ...
-          // ... Utilisation de plugin.config ...
-          // ... setGameState('PAUSED'); executeSingleStep(); ...
+          // On appelle RUN, mais on force la pause tout de suite après
+          // (C'est un peu tricky car RUN est asynchrone dans sa logique de state)
+          // Duplication simplifiée de l'init de RUN pour le mode Pas-à-Pas
+          if (!workspaceRef.current) return;
+          
+          javascriptGenerator.init(workspaceRef.current);
+          const userCode = javascriptGenerator.workspaceToCode(workspaceRef.current);
+          
+          const config = plugin.config || {};
+          let simState = { x: safeData.startPos.x, y: safeData.startPos.y, dir: safeData.startPos.dir || 0 };
+          let loopCount = 0;
+          
+          const api = {
+            move: () => { 
+                let nextX = simState.x, nextY = simState.y;
+                if (simState.dir === 0) nextX++; else if (simState.dir === 1) nextY++; else if (simState.dir === 2) nextX--; else if (simState.dir === 3) nextY--; 
+                if (!config.checkMove || config.checkMove(safeData.grid, nextX, nextY) !== 'WALL') { simState.x = nextX; simState.y = nextY; } 
+            },
+            turn: (d) => { simState.dir = (d === 'LEFT') ? (simState.dir + 3) % 4 : (simState.dir + 1) % 4; },
+            isPath: (d) => config.look ? config.look(safeData.grid, simState.x, simState.y, simState.dir, d) : true,
+            isDone: () => config.checkMove ? config.checkMove(safeData.grid, simState.x, simState.y) === 'WIN' : false,
+            safeCheck: () => (++loopCount <= 1000),
+            pen: () => {}, color: () => {}
+          };
+
+          try {
+            const gen = [];
+            const fn = new Function('actions', 'api', userCode);
+            fn(gen, api);
+            
+            actionsRef.current = gen;
+            stepRef.current = 0;
+            currentStateRef.current = null;
+            
+            // On lance 1 step
+            setGameState('PAUSED');
+            executeSingleStep();
+          } catch(e) { alert("Erreur code : " + e.message); }
+
       } else {
+          // Si déjà lancé (PAUSED ou RUNNING)
           if (gameState === 'RUNNING') pause();
           executeSingleStep();
+          // On reste en PAUSED après le pas
           if (gameState !== 'WON' && gameState !== 'FAILED' && gameState !== 'LOST') {
               setGameState('PAUSED');
           }

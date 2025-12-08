@@ -94,7 +94,13 @@ const stylesCSS = `
 }
 `;
 
-export default function MazeRender({ grid, playerPos, playerDir, lastAction }) {
+// Ajoutez la prop initialLevelIndex (défaut à -1 pour le mode élève classique)
+export default function Runner({ campaign, ltiConfig, isTeacherMode, onBackToBuilder, initialLevelIndex = -1 }) {
+  
+  const normalizedCampaign = campaign.levels ? campaign : { title: "Campagne", levels: [campaign] };
+  
+  // --- MODIFICATION : Initialisation avec la prop ---
+  const [activeLevelIndex, setActiveLevelIndex] = useState(initialLevelIndex);
   const rotation = playerDir * 90 + 90; 
   const rows = grid.length;
   const cols = grid[0].length;

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import LevelEditor from './LevelEditor';
 import LZString from 'lz-string';
 import { getPlugin, getAllPlugins } from '../../core/PluginRegistry';
-// -------------------------------
 
 const getLevelIcon = (type) => {
     const p = getPlugin(type);
@@ -10,6 +9,11 @@ const getLevelIcon = (type) => {
 };
 
 export default function Builder({ onTest }) {
+  const [currentLevelIndex, setCurrentLevelIndex] = useState(() => {
+      // Si on revient d'un test, on récupère l'index sauvegardé
+      const savedIndex = sessionStorage.getItem('blokaly_editor_last_level');
+      return savedIndex ? parseInt(savedIndex, 10) : 0;
+  });
   // 1. CHARGEMENT
   const [campaign, setCampaign] = useState(() => {
     const saved = localStorage.getItem('blokaly_builder_autosave');
@@ -40,6 +44,16 @@ export default function Builder({ onTest }) {
   useEffect(() => {
     localStorage.setItem('blokaly_builder_autosave', JSON.stringify(campaign));
   }, [campaign]);
+
+  const handleQuickTest = () => {
+      // 1. Sauvegarde campagne
+      localStorage.setItem('blokaly_builder_autosave', JSON.stringify(campaign));
+      // 2. Sauvegarde position (pour le retour)
+      sessionStorage.setItem('blokaly_editor_last_level', currentLevelIndex);
+      
+      // 3. Lancement du test AVEC l'index actuel
+      if (onTest) onTest(campaign, currentLevelIndex); 
+  };
 
   // --- GESTION DRAG & DROP ---
   const handleDragStart = (e, position) => {
