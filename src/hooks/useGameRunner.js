@@ -50,7 +50,7 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
       };
 
       // ON DÉLÈGUE AU PLUGIN !
-      const result = plugin.evaluateResult(finalState, safeData, metrics);
+      const result = plugin.evaluateResult(finalState, safeData, metrics, solutionLines);
 
       if (result.status === 'WIN') {
           setGameStats({ 
@@ -125,7 +125,7 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
     }
 
     return true; 
-  }, [plugin, safeData, checkVictoryCondition, workspaceRef]);
+}, [plugin, safeData, solutionLines]);
 
   // ... (runLoop, run, pause, stepForward restent globalement identiques 
   // MAIS il faut nettoyer la partie "API SIMULATION" dans run() et stepForward() 

@@ -21,18 +21,6 @@ export const registerAllBlocks = () => {
   // Les blocs Maze sont maintenant gérés par features/maze/logic.js
   // ---------------------------------------------------------
 
-  // --- 2. TURTLE (À migrer plus tard, on garde pour l'instant) ---
-  Blockly.defineBlocksWithJsonArray([
-    { "type": "turtle_move", "message0": "avancer ✥ de %1 pas", "args0": [{ "type": "input_value", "name": "VALUE", "check": "Number" }], "previousStatement": null, "nextStatement": null, "colour": 160 },
-    { "type": "turtle_turn", "message0": "pivoter %1 de %2 degrés 🗘", "args0": [ { "type": "field_dropdown", "name": "DIR", "options": [["↺ gauche", "LEFT"], ["↻ droite", "RIGHT"]] }, { "type": "input_value", "name": "VALUE", "check": "Number" } ], "previousStatement": null, "nextStatement": null, "colour": 160 },
-    { "type": "turtle_pen", "message0": "stylo %1", "args0": [ { "type": "field_dropdown", "name": "STATE", "options": [["levé ⬆️", "UP"], ["baissé ⬇️", "DOWN"]] } ], "previousStatement": null, "nextStatement": null, "colour": 160 },
-    { "type": "turtle_color", "message0": "couleur %1", "args0": [{ "type": "field_colour", "name": "COLOR", "colour": "#ff0000" }], "previousStatement": null, "nextStatement": null, "colour": 160 }
-  ]);
-  javascriptGenerator.forBlock['turtle_move'] = (block) => `actions.push({type: 'MOVE', id: "${block.id}", dist: ${javascriptGenerator.valueToCode(block, 'VALUE', javascriptGenerator.ORDER_ATOMIC) || '0'}});\n`;
-  javascriptGenerator.forBlock['turtle_turn'] = (block) => `actions.push({type: 'TURN', id: "${block.id}", angle: ${block.getFieldValue('DIR') === 'LEFT' ? '-' : ''}${javascriptGenerator.valueToCode(block, 'VALUE', javascriptGenerator.ORDER_ATOMIC) || '0'}});\n`;
-  javascriptGenerator.forBlock['turtle_pen'] = (block) => `actions.push({type: 'PEN', id: "${block.id}", state: '${block.getFieldValue('STATE')}'});\n`;
-  javascriptGenerator.forBlock['turtle_color'] = (block) => `actions.push({type: 'COLOR', id: "${block.id}", color: '${block.getFieldValue('COLOR')}'});\n`;
-
   // --- VARIABLES & SYSTÈME (On garde tout ça) ---
   javascriptGenerator.forBlock['variables_set'] = (block) => `try { ${block.getField('VAR').getText()} = ${javascriptGenerator.valueToCode(block, 'VALUE', javascriptGenerator.ORDER_ATOMIC) || '0'}; actions.push({type: 'SET', id: "${block.id}", var: '${block.getField('VAR').getText()}', val: ${block.getField('VAR').getText()}}); } catch(e) { console.error(e); }\n`;
   if (!Blockly.Blocks['text_print']) { Blockly.defineBlocksWithJsonArray([{ "type": "text_print", "message0": "afficher %1", "args0": [{ "type": "input_value", "name": "TEXT" }], "previousStatement": null, "nextStatement": null, "colour": 160 }]); }
