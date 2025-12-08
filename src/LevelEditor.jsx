@@ -5,8 +5,7 @@ import MathEditor from './editors/MathEditor';
 import TurtleEditor from './editors/TurtleEditor';
 import { BlocklyWorkspace } from 'react-blockly';
 import * as Blockly from 'blockly';
-// 👇 AJOUT IMPORTANT : Import du générateur JavaScript
-import { javascriptGenerator } from 'blockly/javascript'; 
+import { javascriptGenerator } from 'blockly/javascript'; // Import nécessaire pour v10+
 
 import { MathPlugin } from '../../plugins/MathPlugin';
 import { TurtlePlugin } from '../../plugins/TurtlePlugin';
@@ -30,12 +29,10 @@ export default function LevelEditor({ levelData, onUpdate }) {
   useEffect(() => {
     const timer = setTimeout(() => {
         try {
-            // Enregistre les blocs généraux
             registerAllBlocks();
             
-            // Enregistre les blocs spécifiques du Maze
+            // Enregistrement des blocs du plugin
             if (MazeFeature.registerBlocks) {
-                // 👇 MODIFICATION : On passe 'javascriptGenerator' importé ci-dessus
                 MazeFeature.registerBlocks(Blockly, javascriptGenerator); 
             }
             
@@ -47,7 +44,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
 
   const editorConfig = { scrollbars: true, trashcan: true, readOnly: false };
   
-  // --- 2. GESTION DU TYPE DE NIVEAU ---
+  // --- 2. GESTION DU TYPE ---
   const handleTypeChange = (newType) => {
     let newDefaults = {};
     if (newType === 'MAZE') {
@@ -72,7 +69,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
 
   const currentType = levelData.type || 'MAZE';
 
-  // --- 3. LOGIQUE TOOLBOX DYNAMIQUE ---
+  // --- 3. LOGIQUE TOOLBOX DYNAMIQUE (Correction du bug Mix Block/Category) ---
   
   const pluginInfo = useMemo(() => {
       if (currentType === 'MAZE' && MazeFeature.getCategory) {
@@ -89,21 +86,39 @@ export default function LevelEditor({ levelData, onUpdate }) {
       return { categoryName: null, blocks: [], xml: '' };
   }, [currentType]);
 
+  // Fonction utilitaire pour fusionner proprement les XML
+  const mergeToolboxXml = (standardResult, pluginXml) => {
+      let finalXml = standardResult.xml;
+      
+      // Si on a un plugin qui ajoute une catégorie (ex: Maze)
+      if (pluginXml) {
+          // Si la toolbox standard n'a PAS de catégories (juste des blocs en vrac)
+          // On doit l'envelopper pour éviter l'erreur "Unable to find [block][toolboxitem]"
+          if (!standardResult.hasCategories) {
+             // On retire les balises <xml> externes pour récupérer le contenu
+             const content = finalXml.replace(/<xml[^>]*>|<\/xml>/g, '');
+             
+             // On crée une catégorie par défaut pour les blocs standards
+             const wrappedStandard = `<category name="Outils" colour="#A0A0A0">${content}</category>`;
+             
+             // On reconstruit le XML : Plugin (en premier) + Standard (enveloppé)
+             finalXml = `<xml xmlns="https://developers.google.com/blockly/xml">${pluginXml}${wrappedStandard}</xml>`;
+          } else {
+             // Si standard a déjà des catégories, on injecte simplement celle du plugin au début
+             finalXml = finalXml.replace(/(<xml[^>]*>)/, `$1${pluginXml}`);
+          }
+          return { xml: finalXml, hasCategories: true };
+      }
+      
+      return standardResult;
+  };
+
   const masterToolboxResult = useMemo(() => {
       const standard = generateMasterToolbox(
           currentType, 
           levelData.inputs, levelData.hiddenVars, levelData.lockedVars
       );
-
-      if (pluginInfo.xml) {
-          const newXml = standard.xml.replace(
-              /(<xml[^>]*>)/, 
-              `$1${pluginInfo.xml}`
-          );
-          return { ...standard, xml: newXml };
-      }
-      return standard;
-
+      return mergeToolboxXml(standard, pluginInfo.xml);
   }, [currentType, levelData.inputs, levelData.hiddenVars, levelData.lockedVars, pluginInfo]);
 
   const studentToolboxResult = useMemo(() => {
@@ -112,21 +127,21 @@ export default function LevelEditor({ levelData, onUpdate }) {
           levelData.inputs, levelData.hiddenVars, levelData.lockedVars
       );
       
+      // Pour l'élève, on n'ajoute la catégorie plugin que si des blocs sont autorisés
+      let pluginXmlToInject = '';
       if (pluginInfo.xml && levelData.allowedBlocks) {
-          let pluginBlocksXml = '';
           const allowedPluginBlocks = pluginInfo.blocks.filter(b => levelData.allowedBlocks.includes(b));
-          
           if (allowedPluginBlocks.length > 0) {
-              const newXml = standard.xml.replace(/(<xml[^>]*>)/, `$1${pluginInfo.xml}`);
-              return { ...standard, xml: newXml };
+              pluginXmlToInject = pluginInfo.xml;
           }
       }
-      return standard;
+
+      return mergeToolboxXml(standard, pluginXmlToInject);
   }, [levelData.allowedBlocks, levelData.inputs, levelData.hiddenVars, levelData.lockedVars, pluginInfo]);
 
   const activeToolbox = codeMode === 'SOLUTION' ? masterToolboxResult : studentToolboxResult;
   const editorToolboxXML = activeToolbox.xml;
-  const hasCategories = activeToolbox.hasCategories || (pluginInfo.xml !== '');
+  const hasCategories = activeToolbox.hasCategories;
 
   const workspaceKey = `${levelData.id}-${currentType}-${codeMode}-${hasCategories ? 'CAT' : 'FLY'}`;
 
@@ -163,10 +178,15 @@ export default function LevelEditor({ levelData, onUpdate }) {
 
   const displayedCategories = useMemo(() => {
       const coreCats = CATEGORIES_BY_TYPE[currentType] || [];
+      
+      // Si on a transformé une toolbox plate en catégorie "Outils", il faut l'afficher dans l'interface
+      // (Optionnel : dépend de comment tu gères l'affichage des checkbox, ici on garde la logique existante)
+      let categories = [...coreCats];
+      
       if (pluginInfo.categoryName) {
-          return [pluginInfo.categoryName, ...coreCats];
+          categories = [pluginInfo.categoryName, ...categories];
       }
-      return coreCats;
+      return categories;
   }, [currentType, pluginInfo]);
 
   const getTabStyle = (isActive) => ({ flex: 1, padding: '6px', border: 'none', borderRadius: '4px', cursor: 'pointer', background: isActive ? 'white' : '#eee', fontWeight: isActive ? 'bold' : 'normal', fontSize: '0.8rem', transition: 'all 0.2s' });

@@ -1,8 +1,22 @@
 import * as Blockly from 'blockly';
 import { javascriptGenerator } from 'blockly/javascript';
 
+// --- CORRECTIF VITAL POUR VITE / BLOCKLY ---
+// On force l'enregistrement du champ Couleur s'il n'est pas trouvé
+// On utilise l'objet Blockly global pour récupérer la classe FieldColour
+try {
+    if (Blockly.FieldColour) {
+        // On tente de l'enregistrer (si déjà fait, ça lèvera une erreur qu'on ignore)
+        Blockly.fieldRegistry.register('field_colour', Blockly.FieldColour);
+    }
+} catch (e) {
+    // Si l'erreur est "déjà enregistré", c'est parfait, on continue.
+    // console.log("FieldColour déjà enregistré ou autre erreur non critique");
+}
+
 // ICÔNES ANIMÉES (SVG en Base64)
 const ICON_RADAR = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgdmlld0JveD0iMCAwIDIwIDIwIj48Y2lyY2xlIGN4PSIxMCIgY3k9IjEwIiByPSIzIiBmaWxsPSJ3aGl0ZSIvPjxjaXJjbGUgY3g9IjEwIiBjeT0iMTAiIHI9IjEwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIG9wYWNpdHk9IjAuNSI+PGFuaW1hdGUgYXR0cmlidXRlTmFtZT0iciIgZnJvbT0iMyIgdG89IjEwIiBkdXI9IjEuNXMiIHJlcGVhdENvdW50PSJpbmRlZmluaXRlIi8+PGFuaW1hdGUgYXR0cmlidXRlTmFtZT0ib3BhY2l0eSIgZnJvbT0iMSIgdG89IjAiIGR1cj0iMS41cyIgcmVwZWF0Q291bnQ9ImluZGVmaW5pdGUiLz48L2NpcmNsZT48L3N2Zz4=";
+const ICON_FLAG = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgdmlld0JveD0iMCAwIDIwIDIwIj48cGF0aCBkPSZNMiwyIFYxOCBNMiwyIEgxMiBMOSw1IEwxMiw4IEgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiLz48L3N2Zz4=";
 
 let isRegistered = false;
 

@@ -1,5 +1,3 @@
-import { MAZE_CONFIG } from './adapters/MazeAdapter';
-
 export const BLOCK_DEFINITIONS = {
   // ... (MAZE, TURTLE inchangés) ...
   'maze_move_forward': '<block type="maze_move_forward"></block>',
