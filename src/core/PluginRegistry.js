@@ -1,8 +1,8 @@
 // On importe uniquement les plugins qui sont prêts (Features)
 import MazeFeature from '../features/maze';
+import TurtleFeature from '../features/turtle';
 
 // Plus tard, on décommentera ceux-là quand ils seront migrés
-// import TurtleFeature from '../features/turtle';
 // import MathFeature from '../features/math';
 
 const REGISTRY = {};

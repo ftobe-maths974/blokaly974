@@ -1,18 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import LevelEditor from './LevelEditor';
 import LZString from 'lz-string';
-
-// --- NOUVEAU ---
 import { getPlugin, getAllPlugins } from '../../core/PluginRegistry';
-// ---------------
+// -------------------------------
 
-// Mapping des icônes (On peut maintenant utiliser p.icon du plugin)
 const getLevelIcon = (type) => {
     const p = getPlugin(type);
     return p ? p.icon : '❓';
 };
 
 export default function Builder({ onTest }) {
+  // 1. CHARGEMENT
   const [campaign, setCampaign] = useState(() => {
     const saved = localStorage.getItem('blokaly_builder_autosave');
     if (saved) {
@@ -119,11 +117,14 @@ export default function Builder({ onTest }) {
   // --- ACTIONS CRUD ---
 
   const addLevel = () => {
+    // CORRECTION ICI : On récupère dynamiquement le plugin par défaut
+    const defaultPlugin = getAllPlugins()[0] || getPlugin('MAZE');
+    
     const newLevel = {
       id: Date.now(), 
-      type: 'MAZE',
-      // Utilisation de la config du Feature
-      grid: MazeFeature.config.defaultGrid,
+      type: defaultPlugin ? defaultPlugin.id : 'MAZE',
+      // On utilise la config du plugin trouvé
+      grid: defaultPlugin?.config?.defaultGrid,
       startPos: {x: 1, y: 1},
       maxBlocks: 10
     };
@@ -162,22 +163,18 @@ export default function Builder({ onTest }) {
     setCampaign({ ...campaign, levels: newLevels });
   };
 
-// Modifiez cette fonction ou créez-en une nouvelle pour le test rapide
+  // Nouvelle fonction pour tester via App.jsx
   const handleQuickTest = () => {
-      // On sauvegarde d'abord (bonne pratique)
       localStorage.setItem('blokaly_builder_autosave', JSON.stringify(campaign));
-      // On déclenche le switch vers le Runner via App.jsx
       if (onTest) onTest(campaign);
   };
 
   const generateLink = () => {
-    // ... (code existant pour générer un lien partageable LZString)
     const json = JSON.stringify(campaign);
     const compressed = LZString.compressToEncodedURIComponent(json);
     const url = new URL(window.location.href);
-    url.search = `?data=${compressed}`; // Plus besoin de &preview=1 pour le partage élève
+    url.search = `?data=${compressed}`; 
     url.hash = ''; 
-    // Copie dans le presse-papier par exemple, ou ouverture nouvel onglet
     prompt("Lien à partager aux élèves :", url.toString());
   };
 
@@ -227,7 +224,6 @@ export default function Builder({ onTest }) {
               </div>
 
               <div style={{display: 'flex', gap: '5px'}}>
-                  {/* BOUTON DUPLIQUER */}
                   <button 
                     onClick={(e) => { e.stopPropagation(); duplicateLevel(index); }}
                     style={{background:'none', border:'none', cursor:'pointer', fontSize:'0.8rem', opacity: 0.7}}
@@ -308,7 +304,6 @@ export default function Builder({ onTest }) {
              </span>
           </h2>
           <div style={{display:'flex', gap:'10px'}}>
-              {/* BOUTON TEST RAPIDE (Switch rôle temporaire) */}
               <button 
                 onClick={handleQuickTest} 
                 className="generate-btn" 
@@ -317,7 +312,6 @@ export default function Builder({ onTest }) {
                 ▶️ TESTER (Mode Élève)
               </button>
 
-              {/* BOUTON PARTAGE (Génère lien) */}
               <button 
                 onClick={generateLink} 
                 className="generate-btn" 
