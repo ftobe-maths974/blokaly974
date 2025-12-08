@@ -174,7 +174,10 @@ export default function LevelEditor({ levelData, onUpdate }) {
   // Styles
   const getTabStyle = (isActive) => ({ flex: 1, padding: '6px', border: 'none', borderRadius: '4px', cursor: 'pointer', background: isActive ? 'white' : '#eee', fontWeight: isActive ? 'bold' : 'normal', fontSize: '0.8rem', transition: 'all 0.2s', display:'flex', alignItems:'center', justifyContent:'center', gap:'5px' });
   const tabStyle = (isActive, mode) => ({ padding: '10px 20px', cursor: 'pointer', border: 'none', borderBottom: isActive ? (mode === 'SOLUTION' ? '3px solid #27ae60' : '3px solid #2980b9') : '3px solid transparent', background: isActive ? (mode === 'SOLUTION' ? '#f0fbf4' : '#f0f8ff') : 'transparent', fontWeight: isActive ? 'bold' : 'normal', color: isActive ? (mode === 'SOLUTION' ? '#27ae60' : '#2980b9') : '#7f8c8d', fontSize: '0.95rem', transition: 'all 0.2s' });
-  const workspaceKey = `editor-${safeLevelData.id}-${codeMode}`;
+  
+  // 👇 MODIFICATION ICI : On ajoute 'currentType' dans la clé unique
+  // Cela force React à "jeter" l'ancien éditeur et en créer un neuf propre quand on change de plugin.
+  const workspaceKey = `editor-${safeLevelData.id}-${currentType}-${codeMode}`;
 
   return (
     <div className="editor-wrapper" style={{display: 'flex', flexDirection: 'column', height: '100%'}}>

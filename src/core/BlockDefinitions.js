@@ -93,7 +93,7 @@ export const generateMasterToolbox = (type, levelInputs, hiddenVars = [], locked
 };
 const buildToolboxXML = (allowedBlocks, levelInputs, hiddenVars, lockedVars, forceFull = false) => {
   let xmlContent = ''; let remainingBlocks = new Set(allowedBlocks || []);
-  const totalBlocksCount = (allowedBlocks || []).length; const useCategories = forceFull || (totalBlocksCount >= 6);
+  const totalBlocksCount = (allowedBlocks || []).length; const useCategories = forceFull || (totalBlocksCount > 0);
   let hasCategories = false; let variableXml = '';
   if (levelInputs && Object.keys(levelInputs).length > 0) {
       const visibleKeys = Object.keys(levelInputs).filter(k => !hiddenVars.includes(k));
