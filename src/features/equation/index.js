@@ -13,85 +13,34 @@ export default {
         category: 'Algèbre' 
     }),
     executeStep: EquationLogic.executeStep,
-    
-    // --- NOUVELLE LOGIQUE DE VALIDATION FLEXIBLE ---
     evaluateResult: (state, levelData, metrics) => {
-        const validation = levelData.validation || { strategy: 'ISOLATION' };
-        const strategy = validation.strategy || 'ISOLATION';
-        
-        let isSuccess = false;
-        let successMessage = "Niveau réussi.";
-
-        // 1. VÉRIFICATION DES CONDITIONS DE VICTOIRE
-        const hasSolvedIsolation = !!state.finalSolutionLatex; // A trouvé x = ...
-        const hasVerifiedCorrectly = state.verification && state.verification.isCorrect; // Le bloc vert a dit VRAI
-
-        if (strategy === 'ISOLATION' && hasSolvedIsolation) {
-            isSuccess = true;
-            successMessage = "Équation résolue !";
-        } 
-        else if (strategy === 'VERIFICATION' && hasVerifiedCorrectly) {
-            isSuccess = true;
-            successMessage = "Vérification correcte !";
-        }
-        else if (strategy === 'FLEXIBLE') {
-            if (hasSolvedIsolation) {
-                isSuccess = true; 
-                successMessage = "Équation résolue !";
-            } else if (hasVerifiedCorrectly) {
-                isSuccess = true;
-                successMessage = "Vérification validée !";
-            }
-        }
-
-        if (!isSuccess) {
-            return { status: 'RUNNING', feedback: null };
-        }
-
-        // 2. CALCUL DU SCORE (ÉTOILES)
-        // On récupère les seuils définis dans le niveau (ou valeurs par défaut)
-        const targetBlocks = validation.stars?.blocks || levelData.maxBlocks || 10;
-        const targetSteps = validation.stars?.steps || 20; // Nouveau critère : Pas d'exécution
-
-        const usedBlocks = metrics.blockCount || 0;
-        const usedSteps = metrics.steps || 0;
-
-        let stars = 3;
-        const penalties = [];
-
-        // Pénalité BLOCS
-        if (usedBlocks > targetBlocks) {
-            stars -= 1;
-            penalties.push("Trop de blocs");
-        }
-        
-        // Pénalité ÉTAPES (Optionnel, si configuré)
-        if (validation.stars?.steps && usedSteps > targetSteps) {
-            stars -= 1;
-            penalties.push("Trop d'étapes");
-        }
-
-        // Bornage des étoiles (Min 1 si réussi)
-        stars = Math.max(1, stars);
-
-        let feedbackMsg = successMessage;
-        if (stars < 3) {
-            feedbackMsg += " " + penalties.join(", ") + ".";
-        } else {
-            feedbackMsg += " Code optimal !";
-        }
-
-        return {
-            status: 'WIN',
-            score: { 
-                stars: stars, 
-                primaryMetric: `${usedBlocks} blocs`, 
-                targetMetric: `Obj: ${targetBlocks}`,
-                details: { blocks: usedBlocks, steps: usedSteps } 
-            },
-            feedback: { title: "Bravo !", message: feedbackMsg }
-        };
+         // ... (Ton code evaluateResult existant) ...
+         return { status: 'RUNNING' }; // Placeholder
     },
+    
+    // 👇 LE CATALOGUE VISUEL
+    catalog: [
+        {
+            category: 'Résolution',
+            color: 'indigo-500',
+            blocks: [
+                { type: 'equation_op_both', label: 'Opération (Les 2 côtés)', icon: '⚖️' },
+                { type: 'equation_term_x', label: 'Terme X', icon: '𝒙' },
+                { type: 'equation_verify', label: 'Vérifier la réponse', icon: '✅' },
+                { type: 'math_number', label: 'Nombre', icon: '123' }
+            ]
+        },
+        {
+            category: 'Solutions',
+            color: 'purple-500',
+            blocks: [
+                { type: 'equation_solution_state', label: 'Conclusion (Vide/Infini)', icon: '∅' },
+                { type: 'equation_solution_s', label: 'Écrire S = ...', icon: 'S' },
+                { type: 'equation_interval', label: 'Intervalle [ ; ]', icon: '[ ]' },
+                { type: 'math_infinity', label: 'Infini (∞)', icon: '∞' }
+            ]
+        }
+    ],
     
     RenderComponent: Runner,
     EditorComponent: Editor,

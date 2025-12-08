@@ -1,41 +1,5 @@
 export const BLOCK_DEFINITIONS = {
-  // ... (MAZE, TURTLE inchangés) ...
-  'maze_move_forward': '<block type="maze_move_forward"></block>',
-  'maze_forever': '<block type="maze_forever"></block>',
-  'maze_if': '<block type="maze_if"></block>',
-  'maze_if_else': '<block type="maze_if_else"></block>',
-  'maze_turn': `<block type="maze_turn"><field name="DIR">LEFT</field></block><block type="maze_turn"><field name="DIR">RIGHT</field></block>`,
-  
-  'turtle_move': `<block type="turtle_move"><value name="VALUE"><shadow type="math_number"><field name="NUM">50</field></shadow></value></block>`,
-  'turtle_turn': `<block type="turtle_turn"><value name="VALUE"><shadow type="math_number"><field name="NUM">90</field></shadow></value></block>`,
-  'turtle_pen': `<block type="turtle_pen"><field name="STATE">UP</field></block><block type="turtle_pen"><field name="STATE">DOWN</field></block>`,
-  'turtle_color': `<block type="turtle_color"><field name="COLOR">#ff0000</field></block>`,
-
-  // --- ALGEBRE ---
-  'equation_op_both': `<block type="equation_op_both"><value name="VAL"><shadow type="math_number"><field name="NUM">1</field></shadow></value></block>`,
-  'equation_term_x': `<block type="equation_term_x"><field name="COEFF">1</field></block>`,
-  'equation_verify': `<block type="equation_verify"><value name="VAL"><shadow type="math_number"><field name="NUM">1</field></shadow></value></block>`,
-  'equation_solution_state': `<block type="equation_solution_state"></block>`,
-  
-  // NOUVEAUX BLOCS CORRIGÉS
-  'equation_solution_s': `<block type="equation_solution_s"></block>`,
-  'equation_interval': `
-    <block type="equation_interval">
-        <value name="MIN">
-            <shadow type="math_infinity">
-                <field name="SIGN">NEG</field> 
-            </shadow>
-        </value>
-        <value name="MAX">
-            <shadow type="math_number">
-                <field name="NUM">0</field>
-            </shadow>
-        </value>
-    </block>
-  `,
-  'math_infinity': `<block type="math_infinity"></block>`,
-
-  // ... (Le reste inchangé) ...
+  // ... (Garde toutes tes définitions inchangées : controls_repeat_ext, etc.)
   'controls_repeat_ext': `<block type="controls_repeat_ext"><value name="TIMES"><shadow type="math_number"><field name="NUM">5</field></shadow></value></block>`,
   'controls_whileUntil': '<block type="controls_whileUntil"></block>',
   'controls_if': '<block type="controls_if"></block>',
@@ -56,33 +20,25 @@ export const BLOCK_DEFINITIONS = {
 };
 
 export const BLOCK_LABELS = {
-  'maze_move_forward': 'Avancer ✥', 'maze_turn': 'Pivoter 🗘', 'maze_if': 'Si chemin... 📡', 'maze_if_else': 'Si... Sinon... 📡', 'maze_forever': 'Répéter jusqu\'à 🏁',
-  'turtle_move': 'Avancer 🐢', 'turtle_turn': 'Pivoter 🐢', 'turtle_pen': 'Stylo ✏️', 'turtle_color': 'Couleur 🎨',
   'controls_repeat_ext': 'Répéter N fois', 'controls_whileUntil': 'Répéter tant que', 'controls_if': 'Si... Alors',
   'logic_compare': 'Comparaison', 'logic_operation': 'Opérateur',
   'math_number': 'Nombre', 'math_arithmetic': 'Calcul', 'math_modulo': 'Reste', 'math_random_int': 'Aléatoire',
-  'text_print': 'Afficher', 'text_prompt_ext': 'Demander', 'lists_create_with': 'Créer liste', 'lists_getIndex': 'Lire élément', 'lists_setIndex': 'Modifier élément', 'lists_length': 'Longueur liste', 'variables_set': 'Définir variable', 'variables_get': 'Lire variable',
-  'equation_op_both': 'Opération Équation', 'equation_term_x': 'Terme X (ax)', 'equation_verify': 'Vérifier si x = ?', 'equation_solution_state': 'Conclure sur les solutions',
-  'equation_solution_s': 'Solution S = ...', 'equation_interval': 'Intervalle [ ; ]', 'math_infinity': 'Infini (∞)'
+  'text_print': 'Afficher', 'text_prompt_ext': 'Demander', 'lists_create_with': 'Créer liste', 'lists_getIndex': 'Lire élément', 'lists_setIndex': 'Modifier élément', 'lists_length': 'Longueur liste', 'variables_set': 'Définir variable', 'variables_get': 'Lire variable'
 };
 
 export const CATEGORIES_BY_TYPE = {
-  'MAZE': ['Mouvements', 'Capteurs', 'Logique'],
-  'TURTLE': ['Tortue', 'Logique', 'Mathématiques', 'Variables'],
+  'MAZE': ['Logique'], 
+  'TURTLE': ['Logique', 'Mathématiques', 'Variables'],
   'MATH': ['Mathématiques', 'Listes', 'Variables', 'Interactions', 'Logique'],
-  'EQUATION': ['Algèbre']
+  'EQUATION': [] 
 };
 
 export const CATEGORY_CONTENTS = {
-  'Mouvements': ['maze_move_forward', 'maze_turn'],
-  'Capteurs': ['maze_if', 'maze_if_else', 'maze_forever'],
-  'Tortue': ['turtle_move', 'turtle_turn', 'turtle_pen', 'turtle_color'],
   'Logique': ['controls_repeat_ext', 'controls_whileUntil', 'controls_if', 'logic_compare', 'logic_operation'],
   'Mathématiques': ['math_number', 'math_arithmetic', 'math_modulo', 'math_random_int'],
   'Listes': ['lists_create_with', 'lists_getIndex', 'lists_setIndex', 'lists_length'],
-  'Variables': ['variables_set'],
-  'Interactions': ['text_print', 'text_prompt_ext'],
-  'Algèbre': ['equation_op_both', 'equation_term_x', 'equation_verify', 'equation_solution_state', 'equation_solution_s', 'equation_interval', 'math_infinity', 'math_number']
+  'Variables': ['variables_set', 'variables_get'],
+  'Interactions': ['text_print', 'text_prompt_ext']
 };
 
 export const generateToolbox = (allowedBlocks, levelInputs, hiddenVars = [], lockedVars = []) => buildToolboxXML(allowedBlocks, levelInputs, hiddenVars, lockedVars);
@@ -95,25 +51,24 @@ export const generateMasterToolbox = (type, levelInputs, hiddenVars = [], locked
 const buildToolboxXML = (allowedBlocks, levelInputs, hiddenVars, lockedVars, forceFull = false) => {
   let xmlContent = ''; 
   let remainingBlocks = new Set(allowedBlocks || []);
-  
-  // 🟢 FIX STABILITÉ : On force toujours les catégories.
-  // Cela empêche Blockly de détruire sa structure interne quand on vide la liste.
   const useCategories = true; 
 
+  // 1. Gestion des Variables
   let variableXml = '';
   if (levelInputs && Object.keys(levelInputs).length > 0) {
-      // ... (Logique variables inchangée)
       const visibleKeys = Object.keys(levelInputs).filter(k => !hiddenVars.includes(k));
       if (visibleKeys.length > 0) {
           visibleKeys.forEach(key => {
               if (lockedVars.includes(key)) variableXml += `<block type="system_var_get"><field name="VAR_NAME">${key}</field></block>`;
               else { 
                   variableXml += `<block type="variables_get"><field name="VAR">${key}</field></block>`; 
-                  if (remainingBlocks.has('variables_set')) variableXml += `<block type="variables_set"><field name="VAR">${key}</field></block>`; 
+                  if (remainingBlocks.has('variables_set') || forceFull) {
+                      variableXml += `<block type="variables_set"><field name="VAR">${key}</field></block>`; 
+                  }
               }
           });
+          
           if (variableXml) { 
-              // Toujours wrap dans une catégorie
               xmlContent += `<category name="Variables" colour="330">${variableXml}</category>`; 
               remainingBlocks.delete('variables_set'); 
               remainingBlocks.delete('variables_get'); 
@@ -121,6 +76,7 @@ const buildToolboxXML = (allowedBlocks, levelInputs, hiddenVars, lockedVars, for
       }
   }
 
+  // 2. Boucle sur les Catégories Standards
   Object.entries(CATEGORY_CONTENTS).forEach(([catName, catBlockList]) => {
     const selectedInCat = catBlockList.filter(b => remainingBlocks.has(b));
     if (selectedInCat.length === 0 && !forceFull) return;
@@ -136,33 +92,36 @@ const buildToolboxXML = (allowedBlocks, levelInputs, hiddenVars, lockedVars, for
             } 
         });
         
-        // Toujours avec catégories
         let colour = '0'; 
-        if (catName === 'Mouvements') colour = '120'; 
-        if (catName === 'Tortue') colour = '160'; 
         if (catName === 'Logique') colour = '210'; 
         if (catName === 'Mathématiques') colour = '230'; 
         if (catName === 'Listes') colour = '260'; 
         if (catName === 'Interactions') colour = '160'; 
-        if (catName === 'Algèbre') colour = '290';
+        if (catName === 'Variables') colour = '330';
         
         xmlContent += `<category name="${catName}" colour="${colour}">${catXml}</category>`;
     }
   });
 
-  // Gestion des orphelins (blocs restants)
-  let orphansXml = variableXml; // S'il reste des variables non placées
+  // 3. Gestion des Orphelins (Correction Duplication + Crash)
+  let orphansXml = ''; // On repart de zéro pour éviter de dupliquer variableXml
+  
   remainingBlocks.forEach(blockType => { 
       if (BLOCK_DEFINITIONS[blockType]) orphansXml += BLOCK_DEFINITIONS[blockType]; 
   });
 
   if (orphansXml) { 
-      // On met les orphelins dans une catégorie "Divers" pour ne pas casser la structure
-      xmlContent += `<category name="⭐ Divers" colour="0">${orphansXml}</category>`; 
+      xmlContent += `<category name="Divers" colour="0">${orphansXml}</category>`; 
   } 
+
+  // 👇 FIX ANTI-CRASH : Si la toolbox est totalement vide, on ajoute une catégorie placeholder
+  // Cela permet à Blockly de maintenir la structure "Catégories" et d'éviter l'erreur fatale.
+  if (xmlContent === '') {
+      xmlContent = '<category name="..." colour="#ffffff"></category>';
+  }
 
   return { 
       xml: `<xml xmlns="https://developers.google.com/blockly/xml" id="toolbox" style="display: none">${xmlContent}</xml>`, 
-      hasCategories: true // Toujours vrai
+      hasCategories: true 
   };
 };
