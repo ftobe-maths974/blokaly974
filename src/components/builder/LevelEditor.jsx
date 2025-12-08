@@ -3,9 +3,15 @@ import { BlocklyWorkspace } from 'react-blockly';
 import * as Blockly from 'blockly';
 import { javascriptGenerator } from 'blockly/javascript';
 
-import { getPlugin, getAllPlugins } from '../../core/PluginRegistry'; // <-- Le Registre
+import { getPlugin, getAllPlugins } from '../../core/PluginRegistry'; 
 import { registerAllBlocks } from '../../core/BlockRegistry';
-import { generateToolbox, generateMasterToolbox, CATEGORY_CONTENTS, BLOCK_LABELS } from '../../core/BlockDefinitions'; 
+import { 
+    generateToolbox, 
+    generateMasterToolbox, 
+    CATEGORIES_BY_TYPE, 
+    CATEGORY_CONTENTS, 
+    BLOCK_LABELS 
+} from '../../core/BlockDefinitions'; 
 
 export default function LevelEditor({ levelData, onUpdate }) {
   const workspaceRef = useRef(null);
@@ -13,25 +19,28 @@ export default function LevelEditor({ levelData, onUpdate }) {
   const [isReady, setIsReady] = useState(false);
   
   const currentType = levelData.type || 'MAZE';
-  const activeFeature = getPlugin(currentType); // <-- Récupération auto
+  const activeFeature = getPlugin(currentType); 
   
-  // Sécurité : Si le niveau charge un type inconnu (ex: TURTLE), on fallback sur le 1er dispo
+  // Sécurité : Fallback si le plugin n'existe pas
   const safeFeature = activeFeature || getAllPlugins()[0];
   const VisualEditor = safeFeature?.EditorComponent; 
 
+  // --- 1. INITIALISATION DES BLOCS ---
   useEffect(() => {
     setIsReady(false);
     const timer = setTimeout(() => {
         try {
+            // On charge d'abord les blocs généraux
             registerAllBlocks();
+            // Puis les blocs spécifiques au plugin
             if (safeFeature && safeFeature.registerBlocks) {
                 safeFeature.registerBlocks(Blockly, javascriptGenerator); 
             }
             setIsReady(true);
-        } catch(e) { console.error(e); }
+        } catch(e) { console.error("Erreur init blocks:", e); }
     }, 50);
     return () => clearTimeout(timer);
-  }, [safeFeature]);
+  }, [safeFeature]); // On recharge si on change de plugin
 
   const editorConfig = { scrollbars: true, trashcan: true, readOnly: false };
   
@@ -43,19 +52,18 @@ export default function LevelEditor({ levelData, onUpdate }) {
     if (targetPlugin.config && targetPlugin.config.defaultGrid) {
         newDefaults.grid = targetPlugin.config.defaultGrid;
     }
-    // On pourrait ajouter des defaults spécifiques dans le plugin lui-même (plugin.defaults)
     
     onUpdate({ 
         ...levelData, 
         type: newType, 
-        allowedBlocks: [], 
+        allowedBlocks: [], // Reset des blocs
         startBlocks: '<xml></xml>',
         solutionBlocks: '<xml></xml>',
         ...newDefaults
     });
   };
 
-  // --- MERGE TOOLBOX (Logic identique à GameEngine) ---
+  // --- 2. FUSION TOOLBOX XML (Pour Blockly) ---
   const getMergedToolbox = (isMaster) => {
       const standardResult = isMaster
           ? generateMasterToolbox(currentType, levelData.inputs, levelData.hiddenVars, levelData.lockedVars)
@@ -63,13 +71,18 @@ export default function LevelEditor({ levelData, onUpdate }) {
 
       if (safeFeature && safeFeature.getToolbox) {
           const featureToolbox = safeFeature.getToolbox();
-          if (featureToolbox.xml) {
+          // Si le plugin fournit du XML spécifique
+          if (featureToolbox.xml && featureToolbox.xml.trim() !== '') {
               let finalXml = standardResult.xml;
+              
               if (!standardResult.hasCategories) {
+                  // Si toolbox plate -> on encapsule
                   const content = finalXml.match(/<xml[^>]*>([\s\S]*)<\/xml>/)?.[1] || '';
                   const wrappedContent = content.trim() ? `<category name="Outils" colour="#A0A0A0">${content}</category>` : '';
                   finalXml = `<xml xmlns="https://developers.google.com/blockly/xml">${featureToolbox.xml}${wrappedContent}</xml>`;
+                  return { xml: finalXml, hasCategories: true };
               } else {
+                  // Si déjà catégories -> on injecte
                   finalXml = finalXml.replace(/(<xml[^>]*>)/, `$1${featureToolbox.xml}`);
               }
               return { xml: finalXml, hasCategories: true };
@@ -79,8 +92,10 @@ export default function LevelEditor({ levelData, onUpdate }) {
   };
 
   const activeToolboxResult = useMemo(() => getMergedToolbox(codeMode === 'SOLUTION'), [codeMode, currentType, safeFeature, levelData]);
+  
   const editorToolboxXML = activeToolboxResult.xml;
-  const workspaceKey = `editor-${currentType}-${levelData.id}-${codeMode}`;
+  // Clé unique pour forcer le remontage propre de l'éditeur en cas de changement structurel
+  const workspaceKey = `editor-${currentType}-${levelData.id}-${codeMode}-${activeToolboxResult.hasCategories ? 'CAT' : 'FLY'}`;
 
   const handleInject = (newWorkspace) => {
     workspaceRef.current = newWorkspace;
@@ -89,16 +104,22 @@ export default function LevelEditor({ levelData, onUpdate }) {
 
   useEffect(() => {
     if (workspaceRef.current && isReady) {
-        try { workspaceRef.current.updateToolbox(editorToolboxXML); Blockly.svgResize(workspaceRef.current); } catch(e) {}
+        try { 
+            workspaceRef.current.updateToolbox(editorToolboxXML); 
+            Blockly.svgResize(workspaceRef.current); 
+        } catch(e) {
+            console.warn("Toolbox update skipped (mode change pending)");
+        }
     }
   }, [editorToolboxXML, isReady]);
 
-  // Sidebar Logic
+  // --- 3. GESTION SIDEBAR (Catégories) ---
   const toggleBlock = (blockType) => {
     const currentAllowed = levelData.allowedBlocks || [];
     const newAllowed = currentAllowed.includes(blockType) ? currentAllowed.filter(t => t !== blockType) : [...currentAllowed, blockType];
     onUpdate({ ...levelData, allowedBlocks: newAllowed });
   };
+  
   const toggleCategory = (catName, blocks) => {
     const categoryBlocks = blocks || CATEGORY_CONTENTS[catName] || [];
     const currentAllowed = levelData.allowedBlocks || [];
@@ -107,22 +128,24 @@ export default function LevelEditor({ levelData, onUpdate }) {
     onUpdate({ ...levelData, allowedBlocks: newAllowed });
   };
 
-  // On récupère les catégories dynamiquement !
+  // 👇 CORRECTION DOUBLONS : Dédoublonnage des catégories
   const displayedCategories = useMemo(() => {
-      // Catégories Système (Codées en dur pour l'instant dans Definitions, à migrer plus tard ?)
-      // Pour l'instant on garde CATEGORIES_BY_TYPE du core, mais on pourrait demander au plugin ses catégories préférées.
-      // Simplification : On affiche les catégories système génériques (Maths, Logique...) + celle du plugin
+      // 1. Catégories standard pour ce type (ex: pour MATH -> ['Mathématiques', 'Listes'...])
+      const coreCats = CATEGORIES_BY_TYPE[currentType] || [];
       
-      const coreCats = ['Mouvements', 'Capteurs', 'Logique', 'Mathématiques', 'Variables']; // Liste générique
-      
-      let cats = [];
+      let featureCats = [];
       if (safeFeature && safeFeature.getToolbox) {
           const tb = safeFeature.getToolbox();
-          if (tb.category) cats.push(tb.category);
+          // Si le plugin déclare une catégorie principale (ex: 'Labyrinthe')
+          if (tb.category) featureCats.push(tb.category);
       }
-      // On ajoute les catégories système
-      return [...cats, ...coreCats];
-  }, [safeFeature]);
+      
+      // 2. Fusion et Dédoublonnage avec Set
+      // Cela évite d'avoir deux fois "Mathématiques" si le plugin et le core le déclarent
+      const uniqueCats = Array.from(new Set([...featureCats, ...coreCats]));
+      
+      return uniqueCats;
+  }, [currentType, safeFeature]);
 
   const getTabStyle = (isActive) => ({ flex: 1, padding: '6px', border: 'none', borderRadius: '4px', cursor: 'pointer', background: isActive ? 'white' : '#eee', fontWeight: isActive ? 'bold' : 'normal', fontSize: '0.8rem', transition: 'all 0.2s', display:'flex', alignItems:'center', justifyContent:'center', gap:'5px' });
   const tabStyle = (isActive, mode) => ({ padding: '10px 20px', cursor: 'pointer', border: 'none', borderBottom: isActive ? (mode === 'SOLUTION' ? '3px solid #27ae60' : '3px solid #2980b9') : '3px solid transparent', background: isActive ? (mode === 'SOLUTION' ? '#f0fbf4' : '#f0f8ff') : 'transparent', fontWeight: isActive ? 'bold' : 'normal', color: isActive ? (mode === 'SOLUTION' ? '#27ae60' : '#2980b9') : '#7f8c8d', fontSize: '0.95rem', transition: 'all 0.2s' });
@@ -133,8 +156,8 @@ export default function LevelEditor({ levelData, onUpdate }) {
     <div className="editor-wrapper" style={{display: 'flex', flexDirection: 'column', height: '100%'}}>
       <div style={{display: 'flex', gap: '15px', flex: 1, minHeight: '400px'}}>
         
+        {/* GAUCHE : Visualisation */}
         <div style={{flex: 3, display: 'flex', flexDirection: 'column'}}>
-            {/* ONGLETS DYNAMIQUES */}
             <div style={{display: 'flex', marginBottom: '10px', background: '#ecf0f1', padding: '4px', borderRadius: '6px', gap:'5px'}}>
                 {getAllPlugins().map(p => (
                     <button key={p.id} onClick={() => handleTypeChange(p.id)} style={getTabStyle(currentType === p.id)}>
@@ -148,22 +171,35 @@ export default function LevelEditor({ levelData, onUpdate }) {
             </div>
         </div>
 
+        {/* DROITE : Propriétés et Sidebar */}
         <div style={{flex: 1, minWidth: '220px', background: 'white', padding: '15px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)', overflowY: 'auto', border: '1px solid #eee'}}>
-          {/* ... (Partie Propriétés - Consigne, Objectif... inchangée) ... */}
+          
+          <div style={{marginBottom: '10px'}}>
+              <label style={{fontWeight: 'bold', fontSize: '0.8rem', display: 'block', marginBottom: '3px', color:'#7f8c8d'}}>Consigne</label>
+              <textarea value={levelData.instruction || ""} onChange={(e) => onUpdate({ ...levelData, instruction: e.target.value })} style={{width: '100%', height: '60px', padding: '5px', fontSize: '0.8rem', border: '1px solid #ccc', borderRadius: '4px', resize: 'vertical'}} placeholder="Ex: Dessine un carré..." />
+          </div>
+
+          <div style={{marginBottom: '15px', display:'flex', alignItems:'center', justifyContent:'space-between', background:'#f8f9fa', padding:'5px 8px', borderRadius:'4px'}}>
+              <label style={{fontWeight: 'bold', fontSize: '0.8rem', color:'#27ae60'}}>🏆 Objectif</label>
+              <div style={{display:'flex', alignItems:'center', gap:'5px'}}>
+                <input type="number" min="1" value={levelData.maxBlocks || 5} onChange={(e) => onUpdate({ ...levelData, maxBlocks: parseInt(e.target.value) })} style={{width: '40px', padding: '2px', textAlign: 'center', border:'1px solid #ddd', borderRadius:'3px'}} />
+                <span style={{fontSize:'0.8rem', color:'#7f8c8d'}}>blocs</span>
+              </div>
+          </div>
           
           <h4 style={{marginTop: '15px', marginBottom: '5px', color: '#2c3e50', borderBottom:'2px solid #eee', paddingBottom:'5px'}}>🧰 Toolbox Élève</h4>
+          
           <div style={{fontSize: '0.85rem'}}>
             {displayedCategories.map(catName => {
+                // On cherche les blocs de cette catégorie
                 let categoryBlocks = CATEGORY_CONTENTS[catName] || [];
                 
-                // Cas spécial Feature
-                if (safeFeature.name === catName || (safeFeature.getToolbox().category === catName)) {
-                    // On triche un peu ici pour récupérer les blocs du plugin
-                    // Idéalement le plugin devrait exposer une liste "blocks"
-                    // Pour le Maze, on sait que c'est :
-                    if (safeFeature.id === 'MAZE') categoryBlocks = ['maze_move_forward', 'maze_turn', 'maze_if', 'maze_if_else', 'maze_forever'];
+                // Cas spécial : Si la catégorie vient du plugin mais n'est pas dans CATEGORY_CONTENTS
+                // (Ex: Maze V10 définit "Labyrinthe" mais les blocs ne sont pas dans BlockDefinitions)
+                if (categoryBlocks.length === 0 && safeFeature.id === 'MAZE' && catName === 'Labyrinthe') {
+                    categoryBlocks = ['maze_move_forward', 'maze_turn', 'maze_if', 'maze_if_else', 'maze_forever'];
                 }
-                
+
                 if (categoryBlocks.length === 0) return null;
                 
                 const currentAllowed = levelData.allowedBlocks || [];
