@@ -17,8 +17,8 @@ export default function LevelEditor({ levelData, onUpdate }) {
   const workspaceRef = useRef(null);
   const [codeMode, setCodeMode] = useState('START');
   
-  const [isReady, setIsReady] = useState(false);
-  const [forceUpdate, setForceUpdate] = useState(0); // Pour forcer le re-rendu après chargement
+  // NOUVEAU : On gère l'état de la toolbox séparément
+  const [toolboxXml, setToolboxXml] = useState('<xml></xml>');
   
   const currentType = levelData.type || 'MAZE';
   const activeFeature = getPlugin(currentType); 
@@ -32,44 +32,46 @@ export default function LevelEditor({ levelData, onUpdate }) {
       readOnly: false 
   };
 
-  // --- INITIALISATION ULTRA-SÉCURISÉE ---
+  // --- 1. INITIALISATION ROBUSTE ---
   useEffect(() => {
     let mounted = true;
-    setIsReady(false);
     
     const initEngine = async () => {
         try {
-            // 1. Charger Core
+            // A. On charge le Core
             registerAllBlocks();
             
-            // 2. Charger Feature
+            // B. On charge le Plugin
             if (safeFeature && safeFeature.registerBlocks) {
                 safeFeature.registerBlocks(Blockly, javascriptGenerator); 
             }
             
-            // 3. Attendre que Blockly ait bien digéré les définitions
-            await new Promise(r => setTimeout(r, 50));
-            
-            if (mounted) {
-                setIsReady(true);
-                setForceUpdate(prev => prev + 1); // Déclenche un rendu propre
+            // C. On attend un cycle de rendu (microtask)
+            await new Promise(r => setTimeout(r, 0));
+
+            // D. On vérifie si les blocs critiques sont là
+            const criticalBlock = safeFeature.id === 'MAZE' ? 'maze_move_forward' : 
+                                  safeFeature.id === 'TURTLE' ? 'turtle_move' : 'math_number';
+                                  
+            if (Blockly.Blocks[criticalBlock]) {
+                if (mounted) {
+                    // E. SEULEMENT MAINTENANT, on calcule la vraie toolbox !
+                    const tb = computeToolboxXml(codeMode === 'SOLUTION');
+                    setToolboxXml(tb.xml);
+                }
+            } else {
+                console.warn("⚠️ Blocs non prêts, nouvelle tentative dans 100ms...");
+                setTimeout(initEngine, 100);
             }
         } catch(e) { console.error("Erreur init:", e); }
     };
 
+    // On remet la toolbox à zéro au changement de plugin pour éviter les fantômes
+    setToolboxXml('<xml></xml>');
     initEngine();
+    
     return () => { mounted = false; };
-  }, [safeFeature]); // Recharge si le plugin change
-
-  // --- VÉRIFICATION FINALE AVANT RENDU ---
-  // Est-ce que les blocs du plugin sont vraiment là ?
-  const isBlocklyDefinitionsReady = () => {
-      if (!isReady) return false;
-      if (safeFeature.id === 'MAZE' && !Blockly.Blocks['maze_move_forward']) return false;
-      if (safeFeature.id === 'TURTLE' && !Blockly.Blocks['turtle_move']) return false;
-      if (safeFeature.id === 'EQUATION' && !Blockly.Blocks['equation_op_both']) return false;
-      return true;
-  };
+  }, [safeFeature, codeMode, currentType, levelData]); 
 
   const handleTypeChange = (newType) => {
     const targetPlugin = getPlugin(newType);
@@ -90,8 +92,8 @@ export default function LevelEditor({ levelData, onUpdate }) {
     });
   };
 
-  // --- MERGE TOOLBOX ---
-  const getMergedToolbox = (isMaster) => {
+  // --- CALCUL TOOLBOX (Extrait de useMemo pour être appelé impérativement) ---
+  const computeToolboxXml = (isMaster) => {
       const standardResult = isMaster
           ? generateMasterToolbox(currentType, levelData.inputs, levelData.hiddenVars, levelData.lockedVars)
           : generateToolbox(levelData.allowedBlocks, levelData.inputs, levelData.hiddenVars, levelData.lockedVars);
@@ -114,25 +116,16 @@ export default function LevelEditor({ levelData, onUpdate }) {
       return standardResult;
   };
 
-  const activeToolboxResult = useMemo(() => getMergedToolbox(codeMode === 'SOLUTION'), [codeMode, currentType, safeFeature, levelData]);
-  const editorToolboxXML = activeToolboxResult.xml;
-  const workspaceKey = `editor-${currentType}-${levelData.id}-${codeMode}-${forceUpdate}`;
+  // Clé unique pour forcer le remontage
+  // On utilise toolboxXml.length comme "version" simple pour forcer update
+  const workspaceKey = `editor-${currentType}-${levelData.id}-${codeMode}-${toolboxXml.length}`;
 
   const handleInject = (newWorkspace) => {
     workspaceRef.current = newWorkspace;
     window.setTimeout(() => Blockly.svgResize(newWorkspace), 0);
   };
 
-  useEffect(() => {
-    if (workspaceRef.current && isReady) {
-        try { 
-            workspaceRef.current.updateToolbox(editorToolboxXML); 
-            Blockly.svgResize(workspaceRef.current); 
-        } catch(e) {}
-    }
-  }, [editorToolboxXML, isReady]);
-
-  // Sidebar Logic
+  // --- GESTION SIDEBAR ---
   const toggleBlock = (blockType) => {
     const currentAllowed = levelData.allowedBlocks || [];
     const newAllowed = currentAllowed.includes(blockType) ? currentAllowed.filter(t => t !== blockType) : [...currentAllowed, blockType];
@@ -159,23 +152,16 @@ export default function LevelEditor({ levelData, onUpdate }) {
   const getTabStyle = (isActive) => ({ flex: 1, padding: '6px', border: 'none', borderRadius: '4px', cursor: 'pointer', background: isActive ? 'white' : '#eee', fontWeight: isActive ? 'bold' : 'normal', fontSize: '0.8rem', transition: 'all 0.2s', display:'flex', alignItems:'center', justifyContent:'center', gap:'5px' });
   const tabStyle = (isActive, mode) => ({ padding: '10px 20px', cursor: 'pointer', border: 'none', borderBottom: isActive ? (mode === 'SOLUTION' ? '3px solid #27ae60' : '3px solid #2980b9') : '3px solid transparent', background: isActive ? (mode === 'SOLUTION' ? '#f0fbf4' : '#f0f8ff') : 'transparent', fontWeight: isActive ? 'bold' : 'normal', color: isActive ? (mode === 'SOLUTION' ? '#27ae60' : '#2980b9') : '#7f8c8d', fontSize: '0.95rem', transition: 'all 0.2s' });
 
-  // 🔴 CORRECTION : On attend que tout soit chargé AVANT de rendre le Workspace
-  if (!isBlocklyDefinitionsReady()) {
-      return (
-        <div className="flex items-center justify-center h-full bg-slate-50 text-slate-400">
-            <div className="animate-pulse flex flex-col items-center gap-2">
-                <span className="text-2xl">⚡</span>
-                <span className="font-bold text-sm uppercase tracking-wider">Initialisation du moteur...</span>
-            </div>
-        </div>
-      );
-  }
+  // Si toolboxXml est vide, c'est qu'on charge encore.
+  // On affiche quand même le composant avec XML vide pour qu'il s'initialise,
+  // mais on cache le contenu avec du CSS ou un loader par dessus.
+  const isLoading = toolboxXml === '<xml></xml>';
 
   return (
     <div className="editor-wrapper" style={{display: 'flex', flexDirection: 'column', height: '100%'}}>
       <div style={{display: 'flex', gap: '15px', flex: 1, minHeight: '400px'}}>
         
-        {/* GAUCHE : Visualisation */}
+        {/* GAUCHE */}
         <div style={{flex: 3, display: 'flex', flexDirection: 'column'}}>
             <div style={{display: 'flex', marginBottom: '10px', background: '#ecf0f1', padding: '4px', borderRadius: '6px', gap:'5px'}}>
                 {getAllPlugins().map(p => (
@@ -184,13 +170,12 @@ export default function LevelEditor({ levelData, onUpdate }) {
                     </button>
                 ))}
             </div>
-            
             <div style={{flex: 1, background: 'white', padding: '15px', borderRadius: '8px', border: '1px solid #ddd', overflowY: 'auto'}}>
                 {VisualEditor ? <VisualEditor levelData={levelData} onUpdate={onUpdate} /> : <div>Aucun éditeur</div>}
             </div>
         </div>
 
-        {/* DROITE : Propriétés */}
+        {/* DROITE */}
         <div style={{flex: 1, minWidth: '220px', background: 'white', padding: '15px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)', overflowY: 'auto', border: '1px solid #eee'}}>
           
           <div style={{marginBottom: '10px'}}>
@@ -247,14 +232,30 @@ export default function LevelEditor({ levelData, onUpdate }) {
         </div>
       </div>
 
-      <div style={{height: '350px', marginTop: '15px', background: 'white', padding: '0', borderRadius: '8px', border: '1px solid #ccc', display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
+      <div style={{height: '350px', marginTop: '15px', background: 'white', padding: '0', borderRadius: '8px', border: '1px solid #ccc', display: 'flex', flexDirection: 'column', overflow: 'hidden', position:'relative'}}>
         <div style={{display: 'flex', background: '#ecf0f1', borderBottom: '1px solid #bdc3c7'}}>
             <button onClick={() => setCodeMode('START')} style={tabStyle(codeMode === 'START', 'START')}>🧩 Code Élève (Preview)</button>
             <button onClick={() => setCodeMode('SOLUTION')} style={tabStyle(codeMode === 'SOLUTION', 'SOLUTION')}>✅ Solution Prof (Complet)</button>
         </div>
         <div style={{flex: 1, position: 'relative', background: codeMode === 'SOLUTION' ? '#f0fbf4' : 'white'}}>
-           {/* On affiche le workspace seulement quand tout est vraiment prêt (déjà géré par le if return plus haut) */}
-           <BlocklyWorkspace key={workspaceKey} className="blockly-div" toolboxConfiguration={editorToolboxXML} workspaceConfiguration={editorConfig} initialXml={codeMode === 'START' ? (levelData.startBlocks || '<xml></xml>') : (levelData.solutionBlocks || '<xml></xml>')} onXmlChange={(xml) => { if (codeMode === 'START') onUpdate({ ...levelData, startBlocks: xml }); else onUpdate({ ...levelData, solutionBlocks: xml }); }} onInject={handleInject} />
+           
+           {/* BLOCKLY WORKSPACE TOUJOURS PRÉSENT MAIS VIDE AU DÉBUT */}
+           <BlocklyWorkspace 
+               key={workspaceKey} 
+               className="blockly-div" 
+               toolboxConfiguration={toolboxXml} // <-- C'est ici que ça se joue
+               workspaceConfiguration={editorConfig} 
+               initialXml={codeMode === 'START' ? (levelData.startBlocks || '<xml></xml>') : (levelData.solutionBlocks || '<xml></xml>')} 
+               onXmlChange={(xml) => { if (codeMode === 'START') onUpdate({ ...levelData, startBlocks: xml }); else onUpdate({ ...levelData, solutionBlocks: xml }); }} 
+               onInject={handleInject} 
+           />
+
+           {isLoading && (
+               <div style={{position:'absolute', inset:0, background:'white', zIndex:100, display:'flex', alignItems:'center', justifyContent:'center'}}>
+                   <span style={{color:'#aaa'}}>Chargement des blocs...</span>
+               </div>
+           )}
+
            {codeMode === 'START' && <div style={{position:'absolute', right:10, top:5, zIndex:10, fontSize:'0.75rem', color:'#aaa', background:'rgba(255,255,255,0.8)', padding:'2px 5px', borderRadius:'3px'}}>Vue : Toolbox Élève</div>}
         </div>
       </div>
