@@ -16,21 +16,23 @@ import {
 export default function LevelEditor({ levelData, onUpdate }) {
   const workspaceRef = useRef(null);
   const [codeMode, setCodeMode] = useState('START');
+  
   const [isReady, setIsReady] = useState(false);
+  const [forceUpdate, setForceUpdate] = useState(0); // Pour forcer le re-rendu après chargement
   
   const currentType = levelData.type || 'MAZE';
   const activeFeature = getPlugin(currentType); 
+  
   const safeFeature = activeFeature || getAllPlugins()[0];
   const VisualEditor = safeFeature?.EditorComponent; 
 
-  // --- CONFIG BLOCKLY ---
   const editorConfig = { 
       scrollbars: true, 
       trashcan: true, 
       readOnly: false 
   };
 
-  // --- INITIALISATION RENFORCÉE ---
+  // --- INITIALISATION ULTRA-SÉCURISÉE ---
   useEffect(() => {
     let mounted = true;
     setIsReady(false);
@@ -45,23 +47,29 @@ export default function LevelEditor({ levelData, onUpdate }) {
                 safeFeature.registerBlocks(Blockly, javascriptGenerator); 
             }
             
-            // 3. Petite pause pour laisser Blockly digérer
+            // 3. Attendre que Blockly ait bien digéré les définitions
             await new Promise(r => setTimeout(r, 50));
             
-            // 4. VÉRIFICATION DE SÉCURITÉ
-            // Si on est en mode Maze, on vérifie que le bloc principal est bien là
-            if (currentType === 'MAZE' && !Blockly.Blocks['maze_move_forward']) {
-                console.warn("⚠️ Bloc Maze non trouvé, tentative de rechargement...");
-                if (safeFeature.registerBlocks) safeFeature.registerBlocks(Blockly, javascriptGenerator);
+            if (mounted) {
+                setIsReady(true);
+                setForceUpdate(prev => prev + 1); // Déclenche un rendu propre
             }
-
-            if (mounted) setIsReady(true);
         } catch(e) { console.error("Erreur init:", e); }
     };
 
     initEngine();
     return () => { mounted = false; };
-  }, [safeFeature, currentType]); 
+  }, [safeFeature]); // Recharge si le plugin change
+
+  // --- VÉRIFICATION FINALE AVANT RENDU ---
+  // Est-ce que les blocs du plugin sont vraiment là ?
+  const isBlocklyDefinitionsReady = () => {
+      if (!isReady) return false;
+      if (safeFeature.id === 'MAZE' && !Blockly.Blocks['maze_move_forward']) return false;
+      if (safeFeature.id === 'TURTLE' && !Blockly.Blocks['turtle_move']) return false;
+      if (safeFeature.id === 'EQUATION' && !Blockly.Blocks['equation_op_both']) return false;
+      return true;
+  };
 
   const handleTypeChange = (newType) => {
     const targetPlugin = getPlugin(newType);
@@ -108,7 +116,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
 
   const activeToolboxResult = useMemo(() => getMergedToolbox(codeMode === 'SOLUTION'), [codeMode, currentType, safeFeature, levelData]);
   const editorToolboxXML = activeToolboxResult.xml;
-  const workspaceKey = `editor-${currentType}-${levelData.id}-${codeMode}-${activeToolboxResult.hasCategories ? 'CAT' : 'FLY'}`;
+  const workspaceKey = `editor-${currentType}-${levelData.id}-${codeMode}-${forceUpdate}`;
 
   const handleInject = (newWorkspace) => {
     workspaceRef.current = newWorkspace;
@@ -130,7 +138,6 @@ export default function LevelEditor({ levelData, onUpdate }) {
     const newAllowed = currentAllowed.includes(blockType) ? currentAllowed.filter(t => t !== blockType) : [...currentAllowed, blockType];
     onUpdate({ ...levelData, allowedBlocks: newAllowed });
   };
-  
   const toggleCategory = (catName, blocks) => {
     const categoryBlocks = blocks || CATEGORY_CONTENTS[catName] || [];
     const currentAllowed = levelData.allowedBlocks || [];
@@ -152,12 +159,13 @@ export default function LevelEditor({ levelData, onUpdate }) {
   const getTabStyle = (isActive) => ({ flex: 1, padding: '6px', border: 'none', borderRadius: '4px', cursor: 'pointer', background: isActive ? 'white' : '#eee', fontWeight: isActive ? 'bold' : 'normal', fontSize: '0.8rem', transition: 'all 0.2s', display:'flex', alignItems:'center', justifyContent:'center', gap:'5px' });
   const tabStyle = (isActive, mode) => ({ padding: '10px 20px', cursor: 'pointer', border: 'none', borderBottom: isActive ? (mode === 'SOLUTION' ? '3px solid #27ae60' : '3px solid #2980b9') : '3px solid transparent', background: isActive ? (mode === 'SOLUTION' ? '#f0fbf4' : '#f0f8ff') : 'transparent', fontWeight: isActive ? 'bold' : 'normal', color: isActive ? (mode === 'SOLUTION' ? '#27ae60' : '#2980b9') : '#7f8c8d', fontSize: '0.95rem', transition: 'all 0.2s' });
 
-  if (!isReady) {
+  // 🔴 CORRECTION : On attend que tout soit chargé AVANT de rendre le Workspace
+  if (!isBlocklyDefinitionsReady()) {
       return (
         <div className="flex items-center justify-center h-full bg-slate-50 text-slate-400">
             <div className="animate-pulse flex flex-col items-center gap-2">
-                <span className="text-2xl">⏳</span>
-                <span className="font-bold text-sm uppercase tracking-wider">Chargement...</span>
+                <span className="text-2xl">⚡</span>
+                <span className="font-bold text-sm uppercase tracking-wider">Initialisation du moteur...</span>
             </div>
         </div>
       );
@@ -245,8 +253,9 @@ export default function LevelEditor({ levelData, onUpdate }) {
             <button onClick={() => setCodeMode('SOLUTION')} style={tabStyle(codeMode === 'SOLUTION', 'SOLUTION')}>✅ Solution Prof (Complet)</button>
         </div>
         <div style={{flex: 1, position: 'relative', background: codeMode === 'SOLUTION' ? '#f0fbf4' : 'white'}}>
-           {codeMode === 'START' && <div style={{position:'absolute', right:10, top:5, zIndex:10, fontSize:'0.75rem', color:'#aaa', background:'rgba(255,255,255,0.8)', padding:'2px 5px', borderRadius:'3px'}}>Vue : Toolbox Élève</div>}
+           {/* On affiche le workspace seulement quand tout est vraiment prêt (déjà géré par le if return plus haut) */}
            <BlocklyWorkspace key={workspaceKey} className="blockly-div" toolboxConfiguration={editorToolboxXML} workspaceConfiguration={editorConfig} initialXml={codeMode === 'START' ? (levelData.startBlocks || '<xml></xml>') : (levelData.solutionBlocks || '<xml></xml>')} onXmlChange={(xml) => { if (codeMode === 'START') onUpdate({ ...levelData, startBlocks: xml }); else onUpdate({ ...levelData, solutionBlocks: xml }); }} onInject={handleInject} />
+           {codeMode === 'START' && <div style={{position:'absolute', right:10, top:5, zIndex:10, fontSize:'0.75rem', color:'#aaa', background:'rgba(255,255,255,0.8)', padding:'2px 5px', borderRadius:'3px'}}>Vue : Toolbox Élève</div>}
         </div>
       </div>
     </div>

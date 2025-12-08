@@ -19,13 +19,17 @@ export const registerAllBlocks = () => {
 
   console.log("🧹 Nettoyage et 🏗️ Enregistrement des blocs SYSTÈME...");
 
-  // LISTE DES BLOCS À NETTOYER (Pour éviter les conflits de rechargement)
+  // MODIFICATION ICI : On ne nettoie QUE les blocs système
   const blocksToClean = [
-      'turtle_move', 'turtle_turn', 'turtle_pen', 'turtle_color', 
       'variables_set', 'text_print', 'system_var_get',
-      'equation_op_both', 'equation_term_x', 'equation_verify', 'equation_solution_state',
-      'equation_solution_s', 'equation_interval', 'math_infinity'
+      'lists_create_with', 'lists_getIndex', 'lists_setIndex', 'lists_length'
+      // J'ai RETIRÉ : maze_*, turtle_*, equation_*
   ];
+
+  blocksToClean.forEach(b => {
+      delete Blockly.Blocks[b];
+      if (javascriptGenerator.forBlock) delete javascriptGenerator.forBlock[b];
+  });
 
   blocksToClean.forEach(b => {
       delete Blockly.Blocks[b];

@@ -12,12 +12,6 @@ export const MazePlugin = {
   RenderComponent: Runner,
 
   registerBlocks: (Blockly, javascriptGenerator) => {
-    // Si déjà enregistré, on ne fait rien !
-    if (isRegistered) return;
-    isRegistered = true;
-
-    console.log("🏰 Enregistrement des blocs MAZE...");
-
     const blocks = [
       // 1. AVANCER
       {
