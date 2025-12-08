@@ -20,30 +20,49 @@ export default function LevelEditor({ levelData, onUpdate }) {
   
   const currentType = levelData.type || 'MAZE';
   const activeFeature = getPlugin(currentType); 
-  
-  // Sécurité : Fallback si le plugin n'existe pas
   const safeFeature = activeFeature || getAllPlugins()[0];
   const VisualEditor = safeFeature?.EditorComponent; 
 
-  // --- 1. INITIALISATION DES BLOCS ---
+  // --- CONFIG BLOCKLY ---
+  const editorConfig = { 
+      scrollbars: true, 
+      trashcan: true, 
+      readOnly: false 
+  };
+
+  // --- INITIALISATION RENFORCÉE ---
   useEffect(() => {
+    let mounted = true;
     setIsReady(false);
-    const timer = setTimeout(() => {
+    
+    const initEngine = async () => {
         try {
-            // On charge d'abord les blocs généraux
+            // 1. Charger Core
             registerAllBlocks();
-            // Puis les blocs spécifiques au plugin
+            
+            // 2. Charger Feature
             if (safeFeature && safeFeature.registerBlocks) {
                 safeFeature.registerBlocks(Blockly, javascriptGenerator); 
             }
-            setIsReady(true);
-        } catch(e) { console.error("Erreur init blocks:", e); }
-    }, 50);
-    return () => clearTimeout(timer);
-  }, [safeFeature]); // On recharge si on change de plugin
+            
+            // 3. Petite pause pour laisser Blockly digérer
+            await new Promise(r => setTimeout(r, 50));
+            
+            // 4. VÉRIFICATION DE SÉCURITÉ
+            // Si on est en mode Maze, on vérifie que le bloc principal est bien là
+            if (currentType === 'MAZE' && !Blockly.Blocks['maze_move_forward']) {
+                console.warn("⚠️ Bloc Maze non trouvé, tentative de rechargement...");
+                if (safeFeature.registerBlocks) safeFeature.registerBlocks(Blockly, javascriptGenerator);
+            }
 
-  const editorConfig = { scrollbars: true, trashcan: true, readOnly: false };
-  
+            if (mounted) setIsReady(true);
+        } catch(e) { console.error("Erreur init:", e); }
+    };
+
+    initEngine();
+    return () => { mounted = false; };
+  }, [safeFeature, currentType]); 
+
   const handleTypeChange = (newType) => {
     const targetPlugin = getPlugin(newType);
     if (!targetPlugin) return;
@@ -56,14 +75,14 @@ export default function LevelEditor({ levelData, onUpdate }) {
     onUpdate({ 
         ...levelData, 
         type: newType, 
-        allowedBlocks: [], // Reset des blocs
+        allowedBlocks: [], 
         startBlocks: '<xml></xml>',
         solutionBlocks: '<xml></xml>',
         ...newDefaults
     });
   };
 
-  // --- 2. FUSION TOOLBOX XML (Pour Blockly) ---
+  // --- MERGE TOOLBOX ---
   const getMergedToolbox = (isMaster) => {
       const standardResult = isMaster
           ? generateMasterToolbox(currentType, levelData.inputs, levelData.hiddenVars, levelData.lockedVars)
@@ -71,18 +90,14 @@ export default function LevelEditor({ levelData, onUpdate }) {
 
       if (safeFeature && safeFeature.getToolbox) {
           const featureToolbox = safeFeature.getToolbox();
-          // Si le plugin fournit du XML spécifique
           if (featureToolbox.xml && featureToolbox.xml.trim() !== '') {
               let finalXml = standardResult.xml;
-              
               if (!standardResult.hasCategories) {
-                  // Si toolbox plate -> on encapsule
                   const content = finalXml.match(/<xml[^>]*>([\s\S]*)<\/xml>/)?.[1] || '';
                   const wrappedContent = content.trim() ? `<category name="Outils" colour="#A0A0A0">${content}</category>` : '';
                   finalXml = `<xml xmlns="https://developers.google.com/blockly/xml">${featureToolbox.xml}${wrappedContent}</xml>`;
                   return { xml: finalXml, hasCategories: true };
               } else {
-                  // Si déjà catégories -> on injecte
                   finalXml = finalXml.replace(/(<xml[^>]*>)/, `$1${featureToolbox.xml}`);
               }
               return { xml: finalXml, hasCategories: true };
@@ -92,9 +107,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
   };
 
   const activeToolboxResult = useMemo(() => getMergedToolbox(codeMode === 'SOLUTION'), [codeMode, currentType, safeFeature, levelData]);
-  
   const editorToolboxXML = activeToolboxResult.xml;
-  // Clé unique pour forcer le remontage propre de l'éditeur en cas de changement structurel
   const workspaceKey = `editor-${currentType}-${levelData.id}-${codeMode}-${activeToolboxResult.hasCategories ? 'CAT' : 'FLY'}`;
 
   const handleInject = (newWorkspace) => {
@@ -107,13 +120,11 @@ export default function LevelEditor({ levelData, onUpdate }) {
         try { 
             workspaceRef.current.updateToolbox(editorToolboxXML); 
             Blockly.svgResize(workspaceRef.current); 
-        } catch(e) {
-            console.warn("Toolbox update skipped (mode change pending)");
-        }
+        } catch(e) {}
     }
   }, [editorToolboxXML, isReady]);
 
-  // --- 3. GESTION SIDEBAR (Catégories) ---
+  // Sidebar Logic
   const toggleBlock = (blockType) => {
     const currentAllowed = levelData.allowedBlocks || [];
     const newAllowed = currentAllowed.includes(blockType) ? currentAllowed.filter(t => t !== blockType) : [...currentAllowed, blockType];
@@ -128,29 +139,29 @@ export default function LevelEditor({ levelData, onUpdate }) {
     onUpdate({ ...levelData, allowedBlocks: newAllowed });
   };
 
-  // 👇 CORRECTION DOUBLONS : Dédoublonnage des catégories
   const displayedCategories = useMemo(() => {
-      // 1. Catégories standard pour ce type (ex: pour MATH -> ['Mathématiques', 'Listes'...])
-      const coreCats = CATEGORIES_BY_TYPE[currentType] || [];
-      
-      let featureCats = [];
+      const coreCats = ['Mouvements', 'Capteurs', 'Logique', 'Mathématiques', 'Variables'];
+      let cats = [];
       if (safeFeature && safeFeature.getToolbox) {
           const tb = safeFeature.getToolbox();
-          // Si le plugin déclare une catégorie principale (ex: 'Labyrinthe')
-          if (tb.category) featureCats.push(tb.category);
+          if (tb.category) cats.push(tb.category);
       }
-      
-      // 2. Fusion et Dédoublonnage avec Set
-      // Cela évite d'avoir deux fois "Mathématiques" si le plugin et le core le déclarent
-      const uniqueCats = Array.from(new Set([...featureCats, ...coreCats]));
-      
-      return uniqueCats;
-  }, [currentType, safeFeature]);
+      return Array.from(new Set([...cats, ...coreCats]));
+  }, [safeFeature]);
 
   const getTabStyle = (isActive) => ({ flex: 1, padding: '6px', border: 'none', borderRadius: '4px', cursor: 'pointer', background: isActive ? 'white' : '#eee', fontWeight: isActive ? 'bold' : 'normal', fontSize: '0.8rem', transition: 'all 0.2s', display:'flex', alignItems:'center', justifyContent:'center', gap:'5px' });
   const tabStyle = (isActive, mode) => ({ padding: '10px 20px', cursor: 'pointer', border: 'none', borderBottom: isActive ? (mode === 'SOLUTION' ? '3px solid #27ae60' : '3px solid #2980b9') : '3px solid transparent', background: isActive ? (mode === 'SOLUTION' ? '#f0fbf4' : '#f0f8ff') : 'transparent', fontWeight: isActive ? 'bold' : 'normal', color: isActive ? (mode === 'SOLUTION' ? '#27ae60' : '#2980b9') : '#7f8c8d', fontSize: '0.95rem', transition: 'all 0.2s' });
 
-  if (!isReady) return <div style={{padding: 50, textAlign: 'center', color: '#666'}}>Chargement éditeur...</div>;
+  if (!isReady) {
+      return (
+        <div className="flex items-center justify-center h-full bg-slate-50 text-slate-400">
+            <div className="animate-pulse flex flex-col items-center gap-2">
+                <span className="text-2xl">⏳</span>
+                <span className="font-bold text-sm uppercase tracking-wider">Chargement...</span>
+            </div>
+        </div>
+      );
+  }
 
   return (
     <div className="editor-wrapper" style={{display: 'flex', flexDirection: 'column', height: '100%'}}>
@@ -171,7 +182,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
             </div>
         </div>
 
-        {/* DROITE : Propriétés et Sidebar */}
+        {/* DROITE : Propriétés */}
         <div style={{flex: 1, minWidth: '220px', background: 'white', padding: '15px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)', overflowY: 'auto', border: '1px solid #eee'}}>
           
           <div style={{marginBottom: '10px'}}>
@@ -191,15 +202,14 @@ export default function LevelEditor({ levelData, onUpdate }) {
           
           <div style={{fontSize: '0.85rem'}}>
             {displayedCategories.map(catName => {
-                // On cherche les blocs de cette catégorie
                 let categoryBlocks = CATEGORY_CONTENTS[catName] || [];
                 
-                // Cas spécial : Si la catégorie vient du plugin mais n'est pas dans CATEGORY_CONTENTS
-                // (Ex: Maze V10 définit "Labyrinthe" mais les blocs ne sont pas dans BlockDefinitions)
-                if (categoryBlocks.length === 0 && safeFeature.id === 'MAZE' && catName === 'Labyrinthe') {
-                    categoryBlocks = ['maze_move_forward', 'maze_turn', 'maze_if', 'maze_if_else', 'maze_forever'];
+                if (safeFeature.name === catName || (safeFeature.getToolbox().category === catName)) {
+                    if (safeFeature.id === 'MAZE') categoryBlocks = ['maze_move_forward', 'maze_turn', 'maze_if', 'maze_if_else', 'maze_forever'];
+                    if (safeFeature.id === 'TURTLE') categoryBlocks = ['turtle_move', 'turtle_turn', 'turtle_pen', 'turtle_color'];
+                    if (safeFeature.id === 'EQUATION') categoryBlocks = ['equation_op_both', 'equation_term_x', 'equation_verify', 'equation_solution_state', 'equation_solution_s', 'equation_interval', 'math_infinity'];
                 }
-
+                
                 if (categoryBlocks.length === 0) return null;
                 
                 const currentAllowed = levelData.allowedBlocks || [];
