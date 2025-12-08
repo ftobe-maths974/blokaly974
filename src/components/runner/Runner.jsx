@@ -1,54 +1,76 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import GameEngine from './GameEngine';
 import CampaignMenu from './CampaignMenu';
 import ScormService from '../../core/scorm/ScormService';
 
-// 👇 AJOUT : on récupère 'initialLevelIndex' (par défaut -1)
 export default function Runner({ campaign, ltiConfig, isTeacherMode, onBackToBuilder, initialLevelIndex = -1 }) {
   
-  const normalizedCampaign = campaign.levels ? campaign : { title: "Campagne", levels: [campaign] };
-  
-  // 👇 MODIFICATION : On utilise cette prop pour l'état initial
-  // Si le prof a demandé le niveau 2, on commence direct à 2. Sinon menu (-1).
+  // 1. Sécurité : Si pas de campagne, on attend
+  if (!campaign) {
+      return (
+          <div className="flex items-center justify-center h-screen bg-slate-100 text-slate-500 font-bold">
+              ⏳ Chargement de la campagne...
+          </div>
+      );
+  }
+
+  // 2. Normalisation stable avec useMemo (évite les recalculs/erreurs à chaque rendu)
+  const normalizedCampaign = useMemo(() => {
+      console.log("📦 Chargement Campagne :", campaign);
+      // Si c'est déjà une campagne (avec un tableau levels)
+      if (campaign.levels && Array.isArray(campaign.levels)) {
+          return campaign;
+      }
+      // Sinon c'est un niveau unique qu'on encapsule
+      return { title: "Niveau Unique", levels: [campaign] };
+  }, [campaign]);
+
+  // 3. Gestion de l'index actif
   const [activeLevelIndex, setActiveLevelIndex] = useState(initialLevelIndex);
-  
-  // --- Le reste du fichier est inchangé ---
-  
-  // --- 1. CHARGEMENT PERSISTANCE (optionnel, on garde votre logique) ---
+
+  // Sécurité : Si l'index demandé est hors limites (ex: 0 alors qu'il n'y a pas de niveaux), on revient au menu (-1)
+  useEffect(() => {
+      if (activeLevelIndex >= 0 && (!normalizedCampaign.levels || !normalizedCampaign.levels[activeLevelIndex])) {
+          console.warn(`⚠️ Niveau ${activeLevelIndex} introuvable. Retour menu.`);
+          setActiveLevelIndex(-1);
+      }
+  }, [activeLevelIndex, normalizedCampaign]);
+
+  // --- PERSISTANCE ---
   const [progress, setProgress] = useState(() => {
-    const saved = localStorage.getItem('blokaly_progress');
-    if (saved) {
-        try { return JSON.parse(saved); } catch (e) { console.error("Erreur lecture sauvegarde", e); }
-    }
-    return {};
+    try {
+        const saved = localStorage.getItem('blokaly_progress');
+        return saved ? JSON.parse(saved) : {};
+    } catch (e) { return {}; }
   });
 
-  // --- INITIALISATION SCORM ---
+  // --- SCORM ---
   useEffect(() => {
-    if (!ltiConfig && !isTeacherMode) {
-        ScormService.init();
-    }
+    if (!ltiConfig && !isTeacherMode) ScormService.init();
     return () => ScormService.terminate();
   }, [ltiConfig, isTeacherMode]);
 
+  // --- LOGIQUE VICTOIRE ---
   const handleLevelWin = useCallback((stats) => {
     setProgress(prev => {
         const newProgress = { ...prev, [activeLevelIndex]: { stars: stats.stars } };
         localStorage.setItem('blokaly_progress', JSON.stringify(newProgress));
 
-        const totalLevels = normalizedCampaign.levels.length;
-        let totalStars = 0;
-        Object.values(newProgress).forEach(p => totalStars += p.stars);
-        const maxStars = totalLevels * 3;
-        const scorePercent = maxStars > 0 ? (totalStars / maxStars) : 0;
-
-        ScormService.setScore(scorePercent);
+        // Calcul score global
+        if (normalizedCampaign.levels) {
+            const totalLevels = normalizedCampaign.levels.length;
+            let totalStars = 0;
+            Object.values(newProgress).forEach(p => totalStars += p.stars);
+            const maxStars = totalLevels * 3;
+            const scorePercent = maxStars > 0 ? (totalStars / maxStars) : 0;
+            ScormService.setScore(scorePercent);
+        }
         return newProgress;
     });
   }, [activeLevelIndex, normalizedCampaign]);
 
   const handleNextLevel = useCallback(() => {
-      if (activeLevelIndex < normalizedCampaign.levels.length - 1) {
+      if (normalizedCampaign.levels && activeLevelIndex < normalizedCampaign.levels.length - 1) {
           setActiveLevelIndex(prev => prev + 1);
       } else {
           setActiveLevelIndex(-1);
@@ -57,7 +79,7 @@ export default function Runner({ campaign, ltiConfig, isTeacherMode, onBackToBui
 
   const handleBackToMenu = () => setActiveLevelIndex(-1);
 
-  // --- AFFICHAGE MENU ---
+  // --- AFFICHAGE : MENU ---
   if (activeLevelIndex === -1) {
     return (
       <div className="min-h-screen bg-slate-100 font-sans">
@@ -85,7 +107,14 @@ export default function Runner({ campaign, ltiConfig, isTeacherMode, onBackToBui
     );
   }
 
-  // --- AFFICHAGE JEU ---
+  // --- AFFICHAGE : JEU ---
+  // Sécurité ultime : on vérifie que le niveau existe avant de le rendre
+  const currentLevel = normalizedCampaign.levels ? normalizedCampaign.levels[activeLevelIndex] : null;
+
+  if (!currentLevel) {
+      return <div className="p-10 text-center text-red-500 font-bold">Erreur : Niveau introuvable ({activeLevelIndex})</div>;
+  }
+
   return (
     <div className="h-screen flex flex-col font-sans bg-slate-50">
       <div className="h-14 bg-slate-900 text-white flex items-center justify-between px-6 shadow-md z-30">
@@ -118,7 +147,7 @@ export default function Runner({ campaign, ltiConfig, isTeacherMode, onBackToBui
       
       <GameEngine
         key={activeLevelIndex} 
-        levelData={normalizedCampaign.levels[activeLevelIndex]} 
+        levelData={currentLevel} 
         levelIndex={activeLevelIndex}
         onWin={handleLevelWin}
         onNextLevel={handleNextLevel} 
