@@ -7,7 +7,21 @@ export default {
     id: 'MAZE',
     name: 'Labyrinthe',
     icon: '🏰',
-    ...MazePlugin, // <--- C'est ici que getToolboxXML est transmis
+    
+    // On expose directement les méthodes du plugin logique
+    registerBlocks: MazePlugin.registerBlocks,
+    
+    // On normalise la récupération de la toolbox
+    getToolbox: () => {
+        // Si logic.js renvoie du JSON ou du XML, on normalise ici
+        return {
+            xml: MazePlugin.getToolboxXML(), 
+            category: 'Labyrinthe'
+        };
+    },
+
+    executeStep: MazePlugin.executeStep,
+    
     RenderComponent: Runner,
     EditorComponent: Editor,
     config: MAZE_CONFIG
