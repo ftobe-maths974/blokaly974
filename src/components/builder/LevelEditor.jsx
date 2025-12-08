@@ -1,3 +1,4 @@
+// 📄 src/components/builder/LevelEditor.jsx
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { BlocklyWorkspace } from 'react-blockly';
 import * as Blockly from 'blockly';
@@ -5,39 +6,14 @@ import { javascriptGenerator } from 'blockly/javascript';
 
 import { getPlugin, getAllPlugins } from '../../core/PluginRegistry'; 
 import { registerAllBlocks } from '../../core/BlockRegistry';
-import { 
-    generateToolbox, 
-    generateMasterToolbox, 
-    CATEGORY_CONTENTS, 
-    BLOCK_LABELS 
-} from '../../core/BlockDefinitions'; 
-
-// Composant Checkbox pour gérer l'état "indéterminé" sans bug visuel
-const CategoryCheckbox = ({ checked, indeterminate, onChange, label }) => {
-    const ref = useRef(null);
-    useEffect(() => {
-        if (ref.current) ref.current.indeterminate = indeterminate;
-    }, [indeterminate]);
-
-    return (
-        <label style={{cursor: 'pointer', background: '#f9f9f9', padding: '6px', fontWeight: 'bold', color: '#555', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: '4px'}}>
-            <span>{label}</span>
-            <input 
-                type="checkbox" 
-                ref={ref}
-                checked={checked} 
-                onChange={onChange}
-                onClick={(e) => e.stopPropagation()} 
-            />
-        </label>
-    );
-};
+import { generateToolbox, generateMasterToolbox } from '../../core/BlockDefinitions'; 
+import ToolboxConfigurator from './ToolboxConfigurator'; // 👈 IMPORT NOUVEAU
 
 export default function LevelEditor({ levelData, onUpdate }) {
   const workspaceRef = useRef(null);
-  const [codeMode, setCodeMode] = useState('START');
+  const [codeMode, setCodeMode] = useState('START'); // START | SOLUTION
   
-  // Sécurisation : on s'assure que allowedBlocks est toujours un tableau
+  // Sécurisation
   const safeLevelData = {
       ...levelData,
       allowedBlocks: Array.isArray(levelData.allowedBlocks) ? levelData.allowedBlocks : []
@@ -50,61 +26,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
 
   const editorConfig = { scrollbars: true, trashcan: true, readOnly: false };
 
-  // --- 1. STRUCTURE DES CATÉGORIES (Source de vérité) ---
-  const categoryStructure = useMemo(() => {
-      const structure = [];
-      const coreCats = ['Mouvements', 'Capteurs', 'Logique', 'Mathématiques', 'Variables', 'Listes', 'Interactions'];
-      
-      let featureCatName = safeFeature.name;
-      // Si le plugin définit un nom de catégorie spécifique dans son toolbox
-      if (safeFeature.getToolbox) {
-          const tb = safeFeature.getToolbox([]); // On appelle avec [] juste pour voir la structure
-          if (tb.category) featureCatName = tb.category;
-      }
-
-      const allCatNames = Array.from(new Set([featureCatName, ...coreCats]));
-
-      allCatNames.forEach(catName => {
-          let blocks = CATEGORY_CONTENTS[catName] || [];
-
-          // Définitions manuelles pour garantir l'affichage des blocs Plugin
-          if (safeFeature.id === 'MAZE' && catName === 'Labyrinthe') {
-              blocks = ['maze_move_forward', 'maze_turn', 'maze_if', 'maze_if_else', 'maze_forever'];
-          }
-          else if (safeFeature.id === 'TURTLE' && catName === 'Tortue') {
-              blocks = ['turtle_move', 'turtle_turn', 'turtle_pen', 'turtle_color'];
-          }
-          else if (safeFeature.id === 'EQUATION' && catName === 'Algèbre') {
-              blocks = ['equation_op_both', 'equation_term_x', 'equation_verify', 'equation_solution_state', 'equation_solution_s', 'equation_interval', 'math_infinity', 'math_number'];
-          }
-
-          if (blocks.length > 0) {
-              structure.push({ name: catName, blocks: blocks });
-          }
-      });
-      return structure;
-  }, [safeFeature]);
-
-  // --- 2. LOGIQUE ACTIONS CHECKBOX ---
-  const toggleBlock = (blockType) => {
-    const currentAllowed = safeLevelData.allowedBlocks;
-    const newAllowed = currentAllowed.includes(blockType) 
-        ? currentAllowed.filter(t => t !== blockType) 
-        : [...currentAllowed, blockType];
-    onUpdate({ ...safeLevelData, allowedBlocks: newAllowed });
-  };
-
-  const toggleCategory = (blocksInCategory) => {
-    const currentAllowed = safeLevelData.allowedBlocks;
-    const allChecked = blocksInCategory.every(b => currentAllowed.includes(b));
-    
-    const newAllowed = allChecked
-        ? currentAllowed.filter(b => !blocksInCategory.includes(b)) // Tout décocher
-        : [...new Set([...currentAllowed, ...blocksInCategory])]; // Tout cocher
-    
-    onUpdate({ ...safeLevelData, allowedBlocks: newAllowed });
-  };
-
+  // --- ACTIONS ---
   const handleTypeChange = (newType) => {
     const targetPlugin = getPlugin(newType);
     if (!targetPlugin) return;
@@ -113,17 +35,20 @@ export default function LevelEditor({ levelData, onUpdate }) {
     onUpdate({ 
         ...safeLevelData, 
         type: newType, 
-        allowedBlocks: [], 
+        allowedBlocks: [], // Reset propre
         startBlocks: '<xml></xml>',
         solutionBlocks: '<xml></xml>',
         ...newDefaults
     });
   };
 
-  // --- 3. GÉNÉRATION XML DYNAMIQUE ---
+  const handleUpdateAllowed = (newAllowed) => {
+      onUpdate({ ...safeLevelData, allowedBlocks: newAllowed });
+  };
+
+  // --- GÉNÉRATION XML ---
   const editorToolboxXML = useMemo(() => {
       const isMaster = codeMode === 'SOLUTION';
-      // Si mode solution -> on veut tout (null). Si mode élève -> on filtre.
       const blocksToShow = isMaster ? null : safeLevelData.allowedBlocks;
 
       // Base Standard
@@ -133,136 +58,123 @@ export default function LevelEditor({ levelData, onUpdate }) {
 
       // Injection Plugin Filtrée
       if (safeFeature && safeFeature.getToolbox) {
-          // 👉 C'EST ICI LA CLÉ : On passe la liste filtrée au plugin !
           const featureToolbox = safeFeature.getToolbox(blocksToShow);
           
           if (featureToolbox.xml && featureToolbox.xml.trim() !== '') {
-              if (!standardResult.xml.includes(featureToolbox.xml)) {
-                  let finalXml = standardResult.xml;
-                  if (!standardResult.hasCategories) {
-                      const content = finalXml.match(/<xml[^>]*>([\s\S]*)<\/xml>/)?.[1] || '';
-                      const wrappedContent = content.trim() ? `<category name="Outils" colour="#A0A0A0">${content}</category>` : '';
-                      finalXml = `<xml xmlns="https://developers.google.com/blockly/xml">${featureToolbox.xml}${wrappedContent}</xml>`;
-                  } else {
-                      finalXml = finalXml.replace(/(<xml[^>]*>)/, `$1${featureToolbox.xml}`);
-                  }
-                  return finalXml;
+              // Fusion naïve pour l'instant (ajout à la fin)
+              let finalXml = standardResult.xml;
+              // Si pas de catégories dans le standard mais catégories dans le feature -> on wrap
+              if (!standardResult.hasCategories) {
+                  const content = finalXml.match(/<xml[^>]*>([\s\S]*)<\/xml>/)?.[1] || '';
+                  const wrappedContent = content.trim() ? `<category name="Système" colour="#A0A0A0">${content}</category>` : '';
+                  finalXml = `<xml xmlns="https://developers.google.com/blockly/xml">${wrappedContent}${featureToolbox.xml}</xml>`;
+              } else {
+                  finalXml = finalXml.replace(/(<\/xml>)/, `${featureToolbox.xml}$1`);
               }
+              return finalXml;
           }
       }
       return standardResult.xml;
   }, [codeMode, currentType, safeFeature, safeLevelData]);
 
-  // --- 4. INJECTION ---
+  // --- INJECTION & UPDATE ---
   const handleInject = (newWorkspace) => {
     workspaceRef.current = newWorkspace;
     try {
         registerAllBlocks();
         if (safeFeature?.registerBlocks) safeFeature.registerBlocks(Blockly, javascriptGenerator);
-        newWorkspace.updateToolbox(editorToolboxXML);
     } catch(e) { console.error(e); }
     window.setTimeout(() => Blockly.svgResize(newWorkspace), 0);
   };
 
-  useEffect(() => {
-    if (workspaceRef.current) {
-        workspaceRef.current.updateToolbox(editorToolboxXML);
-        Blockly.svgResize(workspaceRef.current);
-    }
-  }, [editorToolboxXML]);
-
-  // Styles
-  const getTabStyle = (isActive) => ({ flex: 1, padding: '6px', border: 'none', borderRadius: '4px', cursor: 'pointer', background: isActive ? 'white' : '#eee', fontWeight: isActive ? 'bold' : 'normal', fontSize: '0.8rem', transition: 'all 0.2s', display:'flex', alignItems:'center', justifyContent:'center', gap:'5px' });
-  const tabStyle = (isActive, mode) => ({ padding: '10px 20px', cursor: 'pointer', border: 'none', borderBottom: isActive ? (mode === 'SOLUTION' ? '3px solid #27ae60' : '3px solid #2980b9') : '3px solid transparent', background: isActive ? (mode === 'SOLUTION' ? '#f0fbf4' : '#f0f8ff') : 'transparent', fontWeight: isActive ? 'bold' : 'normal', color: isActive ? (mode === 'SOLUTION' ? '#27ae60' : '#2980b9') : '#7f8c8d', fontSize: '0.95rem', transition: 'all 0.2s' });
-  
-  // 👇 MODIFICATION ICI : On ajoute 'currentType' dans la clé unique
-  // Cela force React à "jeter" l'ancien éditeur et en créer un neuf propre quand on change de plugin.
+  // ⚠️ FIX CRASH : Utilisation d'une clé composée pour forcer le remount si le type change
+  // On ajoute aussi codeMode pour être sûr que la toolbox change proprement entre Start/Solution
   const workspaceKey = `editor-${safeLevelData.id}-${currentType}-${codeMode}`;
 
+  // Styles onglets
+  const getTabStyle = (isActive) => ({ flex: 1, padding: '8px', border: 'none', borderRadius: '6px', cursor: 'pointer', background: isActive ? 'white' : 'transparent', fontWeight: isActive ? 'bold' : 'normal', color: isActive ? '#3b82f6' : '#64748b', fontSize: '0.8rem', transition: 'all 0.2s', boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' });
+
   return (
-    <div className="editor-wrapper" style={{display: 'flex', flexDirection: 'column', height: '100%'}}>
-      <div style={{display: 'flex', gap: '15px', flex: 1, minHeight: '400px'}}>
-        {/* GAUCHE */}
-        <div style={{flex: 3, display: 'flex', flexDirection: 'column'}}>
-            <div style={{display: 'flex', marginBottom: '10px', background: '#ecf0f1', padding: '4px', borderRadius: '6px', gap:'5px'}}>
+    <div className="flex flex-col h-full gap-4">
+      
+      {/* 1. PARTIE HAUTE : CONTENU ET CONFIG */}
+      <div className="flex flex-col md:flex-row gap-4 h-[500px]">
+        
+        {/* A. VISUAL EDITOR (GAUCHE) */}
+        <div className="flex flex-col flex-[2] bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            {/* Barre de sélection du type */}
+            <div className="bg-slate-100 p-2 flex gap-2 border-b border-slate-200">
                 {getAllPlugins().map(p => (
                     <button key={p.id} onClick={() => handleTypeChange(p.id)} style={getTabStyle(currentType === p.id)}>
-                        <span>{p.icon}</span> {p.name}
+                        <span className="mr-2">{p.icon}</span> {p.name}
                     </button>
                 ))}
             </div>
-            <div style={{flex: 1, background: 'white', padding: '15px', borderRadius: '8px', border: '1px solid #ddd', overflowY: 'auto'}}>
-                {VisualEditor ? <VisualEditor levelData={safeLevelData} onUpdate={onUpdate} /> : <div>Aucun éditeur</div>}
+            <div className="flex-1 overflow-auto relative">
+                {VisualEditor ? <VisualEditor levelData={safeLevelData} onUpdate={onUpdate} /> : <div className="p-10 text-center text-slate-400">Aucun éditeur visuel</div>}
             </div>
         </div>
 
-        {/* DROITE : TOOLBOX */}
-        <div style={{flex: 1, minWidth: '220px', background: 'white', padding: '15px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)', overflowY: 'auto', border: '1px solid #eee'}}>
-          <div style={{marginBottom: '10px'}}>
-              <label style={{fontWeight: 'bold', fontSize: '0.8rem', display: 'block', marginBottom: '3px', color:'#7f8c8d'}}>Consigne</label>
-              <textarea value={safeLevelData.instruction || ""} onChange={(e) => onUpdate({ ...safeLevelData, instruction: e.target.value })} style={{width: '100%', height: '60px', padding: '5px', fontSize: '0.8rem', border: '1px solid #ccc', borderRadius: '4px', resize: 'vertical'}} placeholder="Ex: Dessine un carré..." />
-          </div>
-          <div style={{marginBottom: '15px', display:'flex', alignItems:'center', justifyContent:'space-between', background:'#f8f9fa', padding:'5px 8px', borderRadius:'4px'}}>
-              <label style={{fontWeight: 'bold', fontSize: '0.8rem', color:'#27ae60'}}>🏆 Objectif</label>
-              <div style={{display:'flex', alignItems:'center', gap:'5px'}}>
-                <input type="number" min="1" value={safeLevelData.maxBlocks || 5} onChange={(e) => onUpdate({ ...safeLevelData, maxBlocks: parseInt(e.target.value) })} style={{width: '40px', padding: '2px', textAlign: 'center', border:'1px solid #ddd', borderRadius:'3px'}} />
-                <span style={{fontSize:'0.8rem', color:'#7f8c8d'}}>blocs</span>
-              </div>
-          </div>
-          <h4 style={{marginTop: '15px', marginBottom: '5px', color: '#2c3e50', borderBottom:'2px solid #eee', paddingBottom:'5px'}}>🧰 Toolbox Élève</h4>
-          <div style={{fontSize: '0.85rem'}}>
-            {categoryStructure.map((cat) => {
-                const currentAllowed = safeLevelData.allowedBlocks;
-                const activeCount = cat.blocks.filter(b => currentAllowed.includes(b)).length;
-                const totalCount = cat.blocks.length;
-                const allChecked = totalCount > 0 && activeCount === totalCount;
-                const isIndeterminate = activeCount > 0 && activeCount < totalCount;
-
-                return (
-                  <details key={cat.name} open={activeCount > 0} style={{marginBottom: '5px', border:'1px solid #f0f0f0', borderRadius:'4px'}}>
-                    <summary style={{listStyle: 'none'}}>
-                        <CategoryCheckbox 
-                            label={cat.name}
-                            checked={allChecked}
-                            indeterminate={isIndeterminate}
-                            onChange={() => toggleCategory(cat.blocks)}
-                        />
-                    </summary>
-                    <div style={{padding: '5px 10px'}}>
-                        {cat.blocks.map(blockType => (
-                          <div key={blockType} style={{margin: '4px 0'}}>
-                            <label style={{cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#666'}}>
-                              <input type="checkbox" checked={currentAllowed.includes(blockType)} onChange={() => toggleBlock(blockType)} style={{marginRight: '6px'}} />
-                              {BLOCK_LABELS[blockType] || blockType} 
-                            </label>
-                          </div>
-                        ))}
-                    </div>
-                  </details>
-                );
-            })}
-          </div>
+        {/* B. TOOLBOX CONFIGURATOR (DROITE) */}
+        <div className="flex flex-col flex-1 min-w-[280px] bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">🧰 Boîte à Outils Élève</h3>
+                <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-1 rounded-full">
+                    {safeLevelData.allowedBlocks.length} blocs
+                </span>
+            </div>
+            <div className="flex-1 overflow-hidden p-2 bg-slate-50/50">
+                <ToolboxConfigurator 
+                    currentType={currentType} 
+                    allowedBlocks={safeLevelData.allowedBlocks} 
+                    onUpdate={handleUpdateAllowed} 
+                />
+            </div>
+            {/* Consigne rapide */}
+            <div className="p-3 border-t border-slate-200 bg-white">
+                <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Consigne Élève</label>
+                <textarea 
+                    value={safeLevelData.instruction || ""} 
+                    onChange={(e) => onUpdate({ ...safeLevelData, instruction: e.target.value })} 
+                    className="w-full h-16 p-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                    placeholder="Écris la mission ici..." 
+                />
+            </div>
         </div>
       </div>
 
-      <div style={{height: '350px', marginTop: '15px', background: 'white', padding: '0', borderRadius: '8px', border: '1px solid #ccc', display: 'flex', flexDirection: 'column', overflow: 'hidden', position:'relative'}}>
-        <div style={{display: 'flex', background: '#ecf0f1', borderBottom: '1px solid #bdc3c7'}}>
-            <button onClick={() => setCodeMode('START')} style={tabStyle(codeMode === 'START', 'START')}>🧩 Code Élève (Preview)</button>
-            <button onClick={() => setCodeMode('SOLUTION')} style={tabStyle(codeMode === 'SOLUTION', 'SOLUTION')}>✅ Solution Prof (Complet)</button>
+      {/* 2. PARTIE BASSE : CODE EDITOR */}
+      <div className="flex flex-col h-[400px] bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="flex border-b border-slate-200 bg-slate-50">
+            <button onClick={() => setCodeMode('START')} className={`flex-1 py-3 text-sm font-bold border-b-2 ${codeMode==='START' ? 'border-blue-500 text-blue-600 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+                🧩 Code de Départ (Trous)
+            </button>
+            <button onClick={() => setCodeMode('SOLUTION')} className={`flex-1 py-3 text-sm font-bold border-b-2 ${codeMode==='SOLUTION' ? 'border-emerald-500 text-emerald-600 bg-emerald-50/30' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+                ✅ Solution Idéale (Prof)
+            </button>
         </div>
-        <div style={{flex: 1, position: 'relative', background: codeMode === 'SOLUTION' ? '#f0fbf4' : 'white'}}>
+        
+        <div className="flex-1 relative">
            <BlocklyWorkspace 
-               key={workspaceKey} 
+               key={workspaceKey} // 👈 LA CLÉ MAGIQUE ANTI-CRASH
                className="blockly-div" 
                toolboxConfiguration={editorToolboxXML} 
                workspaceConfiguration={editorConfig} 
                initialXml={codeMode === 'START' ? (safeLevelData.startBlocks || '<xml></xml>') : (safeLevelData.solutionBlocks || '<xml></xml>')} 
-               onXmlChange={(xml) => { if (codeMode === 'START') onUpdate({ ...safeLevelData, startBlocks: xml }); else onUpdate({ ...safeLevelData, solutionBlocks: xml }); }} 
+               onXmlChange={(xml) => { 
+                   if (codeMode === 'START') onUpdate({ ...safeLevelData, startBlocks: xml }); 
+                   else onUpdate({ ...safeLevelData, solutionBlocks: xml }); 
+               }} 
                onInject={handleInject}
            />
-           {codeMode === 'START' && <div style={{position:'absolute', right:10, top:5, zIndex:10, fontSize:'0.75rem', color:'#aaa', background:'rgba(255,255,255,0.8)', padding:'2px 5px', borderRadius:'3px'}}>Vue : Toolbox Élève</div>}
+           {codeMode === 'START' && (
+               <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-3 py-1 rounded-lg text-xs font-bold text-slate-500 border border-slate-200 shadow-sm pointer-events-none">
+                   Vue : Ce que voit l'élève
+               </div>
+           )}
         </div>
       </div>
+
     </div>
   );
 }

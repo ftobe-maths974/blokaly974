@@ -91,34 +91,78 @@ export const generateMasterToolbox = (type, levelInputs, hiddenVars = [], locked
   let allBlocks = []; categories.forEach(cat => { if (CATEGORY_CONTENTS[cat]) allBlocks = [...allBlocks, ...CATEGORY_CONTENTS[cat]]; });
   return buildToolboxXML(allBlocks, levelInputs, hiddenVars, lockedVars, true);
 };
+
 const buildToolboxXML = (allowedBlocks, levelInputs, hiddenVars, lockedVars, forceFull = false) => {
-  let xmlContent = ''; let remainingBlocks = new Set(allowedBlocks || []);
-  const totalBlocksCount = (allowedBlocks || []).length; const useCategories = forceFull || (totalBlocksCount > 0);
-  let hasCategories = false; let variableXml = '';
+  let xmlContent = ''; 
+  let remainingBlocks = new Set(allowedBlocks || []);
+  
+  // 🟢 FIX STABILITÉ : On force toujours les catégories.
+  // Cela empêche Blockly de détruire sa structure interne quand on vide la liste.
+  const useCategories = true; 
+
+  let variableXml = '';
   if (levelInputs && Object.keys(levelInputs).length > 0) {
+      // ... (Logique variables inchangée)
       const visibleKeys = Object.keys(levelInputs).filter(k => !hiddenVars.includes(k));
       if (visibleKeys.length > 0) {
           visibleKeys.forEach(key => {
               if (lockedVars.includes(key)) variableXml += `<block type="system_var_get"><field name="VAR_NAME">${key}</field></block>`;
-              else { variableXml += `<block type="variables_get"><field name="VAR">${key}</field></block>`; if (remainingBlocks.has('variables_set')) variableXml += `<block type="variables_set"><field name="VAR">${key}</field></block>`; }
+              else { 
+                  variableXml += `<block type="variables_get"><field name="VAR">${key}</field></block>`; 
+                  if (remainingBlocks.has('variables_set')) variableXml += `<block type="variables_set"><field name="VAR">${key}</field></block>`; 
+              }
           });
-          if (variableXml) { if (useCategories) { xmlContent += `<category name="Variables" colour="330">${variableXml}</category>`; hasCategories = true; } else { xmlContent += variableXml; } variableXml = ''; remainingBlocks.delete('variables_set'); remainingBlocks.delete('variables_get'); }
+          if (variableXml) { 
+              // Toujours wrap dans une catégorie
+              xmlContent += `<category name="Variables" colour="330">${variableXml}</category>`; 
+              remainingBlocks.delete('variables_set'); 
+              remainingBlocks.delete('variables_get'); 
+          }
       }
   }
+
   Object.entries(CATEGORY_CONTENTS).forEach(([catName, catBlockList]) => {
     const selectedInCat = catBlockList.filter(b => remainingBlocks.has(b));
     if (selectedInCat.length === 0 && !forceFull) return;
+    
     const blocksToAdd = forceFull ? catBlockList : selectedInCat;
+    
     if (blocksToAdd.length > 0) {
         let catXml = '';
-        blocksToAdd.forEach(blockType => { if (BLOCK_DEFINITIONS[blockType]) { catXml += BLOCK_DEFINITIONS[blockType]; remainingBlocks.delete(blockType); } });
-        if (useCategories) {
-            let colour = '0'; if (catName === 'Mouvements') colour = '120'; if (catName === 'Tortue') colour = '160'; if (catName === 'Logique') colour = '210'; if (catName === 'Mathématiques') colour = '230'; if (catName === 'Listes') colour = '260'; if (catName === 'Interactions') colour = '160'; if (catName === 'Algèbre') colour = '290';
-            xmlContent += `<category name="${catName}" colour="${colour}">${catXml}</category>`; hasCategories = true;
-        } else { xmlContent += catXml; }
+        blocksToAdd.forEach(blockType => { 
+            if (BLOCK_DEFINITIONS[blockType]) { 
+                catXml += BLOCK_DEFINITIONS[blockType]; 
+                remainingBlocks.delete(blockType); 
+            } 
+        });
+        
+        // Toujours avec catégories
+        let colour = '0'; 
+        if (catName === 'Mouvements') colour = '120'; 
+        if (catName === 'Tortue') colour = '160'; 
+        if (catName === 'Logique') colour = '210'; 
+        if (catName === 'Mathématiques') colour = '230'; 
+        if (catName === 'Listes') colour = '260'; 
+        if (catName === 'Interactions') colour = '160'; 
+        if (catName === 'Algèbre') colour = '290';
+        
+        xmlContent += `<category name="${catName}" colour="${colour}">${catXml}</category>`;
     }
   });
-  let orphansXml = variableXml; remainingBlocks.forEach(blockType => { if (BLOCK_DEFINITIONS[blockType]) orphansXml += BLOCK_DEFINITIONS[blockType]; });
-  if (hasCategories) { if (orphansXml) xmlContent += `<category name="⭐ Divers" colour="0">${orphansXml}</category>`; } else { xmlContent += orphansXml; }
-  return { xml: `<xml xmlns="https://developers.google.com/blockly/xml" id="toolbox" style="display: none">${xmlContent}</xml>`, hasCategories };
+
+  // Gestion des orphelins (blocs restants)
+  let orphansXml = variableXml; // S'il reste des variables non placées
+  remainingBlocks.forEach(blockType => { 
+      if (BLOCK_DEFINITIONS[blockType]) orphansXml += BLOCK_DEFINITIONS[blockType]; 
+  });
+
+  if (orphansXml) { 
+      // On met les orphelins dans une catégorie "Divers" pour ne pas casser la structure
+      xmlContent += `<category name="⭐ Divers" colour="0">${orphansXml}</category>`; 
+  } 
+
+  return { 
+      xml: `<xml xmlns="https://developers.google.com/blockly/xml" id="toolbox" style="display: none">${xmlContent}</xml>`, 
+      hasCategories: true // Toujours vrai
+  };
 };
