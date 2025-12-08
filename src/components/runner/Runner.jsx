@@ -3,7 +3,7 @@ import GameEngine from './GameEngine';
 import CampaignMenu from './CampaignMenu';
 import ScormService from '../../core/scorm/ScormService';
 
-export default function Runner({ campaign, ltiConfig, isTeacherMode }) {
+export default function Runner({ campaign, ltiConfig, isTeacherMode, onBackToBuilder }) {
   // Normalisation
   const normalizedCampaign = campaign.levels ? campaign : { title: "Campagne", levels: [campaign] };
   
@@ -60,58 +60,80 @@ export default function Runner({ campaign, ltiConfig, isTeacherMode }) {
 
   const handleBackToMenu = () => setActiveLevelIndex(-1);
 
-  // --- AFFICHAGE MENU ---
+  // --- AFFICHAGE MENU (Liste des niveaux) ---
   if (activeLevelIndex === -1) {
     return (
       <div className="min-h-screen bg-slate-100 font-sans">
-        {/* Header Menu */}
         <div className="bg-slate-800 text-white p-4 flex justify-between items-center shadow-md">
+          
+          {/* LOGIQUE DE RÔLE ICI */}
           {isTeacherMode ? (
               <button 
-                onClick={() => window.location.href = window.location.pathname} 
-                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-bold transition-colors"
+                onClick={onBackToBuilder} // Utilise la fonction passée par App.jsx
+                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-bold transition-colors flex items-center gap-2"
               >
-                ⬅ Retour Éditeur
+                🛠️ Retour Atelier
               </button>
           ) : (
-              <span className="font-bold text-slate-400">Blokaly 974</span>
+              // L'élève voit juste le titre ou un bouton Accueil
+              <button 
+                onClick={() => window.location.href = window.location.pathname} // Recharge pour revenir à Home
+                className="text-slate-400 hover:text-white transition-colors font-bold"
+              >
+                🏠 Accueil
+              </button>
           )}
+          
           {ltiConfig && <span className="bg-emerald-600 px-2 py-1 rounded text-xs font-bold">Mode Noté (LTI)</span>}
         </div>
         
+        {/* ... (CampaignMenu inchangé) */}
         <CampaignMenu campaign={normalizedCampaign} progress={progress} onSelectLevel={setActiveLevelIndex} />
       </div>
     );
   }
 
-  // --- AFFICHAGE JEU ---
+  // --- AFFICHAGE JEU (GameEngine) ---
   return (
     <div className="h-screen flex flex-col font-sans bg-slate-50">
-      {/* Header Jeu */}
       <div className="h-14 bg-slate-900 text-white flex items-center justify-between px-6 shadow-md z-30">
         <div className="flex items-center gap-4">
+          
           <button 
             onClick={handleBackToMenu} 
             className="text-slate-400 hover:text-white transition-colors flex items-center gap-2 text-sm font-bold"
           >
-            <span>☰</span> Menu
+            <span>☰</span> Niveaux
           </button>
+
+          {/* BOUTON "EMERGENCY EXIT" POUR LE PROF EN PLEIN JEU */}
+          {isTeacherMode && (
+             <button 
+                onClick={onBackToBuilder}
+                className="bg-red-500/20 hover:bg-red-500 text-red-300 hover:text-white border border-red-500/50 px-3 py-1 rounded text-xs font-bold transition-all ml-4"
+             >
+                🛠️ Sortir
+             </button>
+          )}
+
           <div className="h-4 w-px bg-slate-700 mx-2"></div>
           <span className="font-bold text-lg tracking-wide">
             Niveau {activeLevelIndex + 1}
           </span>
         </div>
+        
         <span className="text-xs text-slate-500 uppercase tracking-wider font-bold">
-            {ltiConfig ? "🟢 Suivi Activé" : "Mode Entraînement"}
+            {isTeacherMode ? "👀 Vue Élève (Test)" : (ltiConfig ? "🟢 Suivi Activé" : "Mode Entraînement")}
         </span>
       </div>
       
+      {/* ... (GameEngine inchangé) */}
       <GameEngine
-        key={activeLevelIndex} // Force le reset complet quand le niveau change
+        key={activeLevelIndex} 
         levelData={normalizedCampaign.levels[activeLevelIndex]} 
         levelIndex={activeLevelIndex}
         onWin={handleLevelWin}
-        onNextLevel={handleNextLevel} // <--- ON PASSE LA FONCTION ICI
+        onNextLevel={handleNextLevel} 
       />
     </div>
   );

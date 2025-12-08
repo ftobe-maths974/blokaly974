@@ -12,7 +12,7 @@ import {
     BLOCK_LABELS 
 } from '../../core/BlockDefinitions'; 
 
-// --- 1. IMPORTS DES MODULES (Anciens et Nouveaux) ---
+// --- 1. IMPORTS DES MODULES ---
 import MazeFeature from '../../features/maze'; 
 import { MathPlugin } from '../../plugins/MathPlugin';
 import { TurtlePlugin } from '../../plugins/TurtlePlugin';
@@ -20,14 +20,11 @@ import { TurtlePlugin } from '../../plugins/TurtlePlugin';
 // --- 2. IMPORTS DES ÉDITEURS VISUELS ---
 import MathEditor from './editors/MathEditor';
 import TurtleEditor from './editors/TurtleEditor';
-// Pour Maze, l'éditeur est déjà dans la Feature, on le récupère plus bas.
 
-// --- 3. CRÉATION DES ADAPTATEURS (Le "Pont") ---
-// Cela permet de traiter Turtle et Math exactement comme Maze
+// --- 3. ADAPTATEURS (Pour compatibilité) ---
 const TurtleAdapter = {
     ...TurtlePlugin,
-    EditorComponent: TurtleEditor, // On attache manuellement l'éditeur React
-    // On simule la fonction getToolbox du nouveau système
+    EditorComponent: TurtleEditor, 
     getToolbox: () => ({
         xml: TurtlePlugin.getToolboxXML ? TurtlePlugin.getToolboxXML([]) : '', 
         category: 'Tortue'
@@ -45,9 +42,9 @@ const MathAdapter = {
 
 // --- 4. TABLE DE CORRESPONDANCE ---
 const FEATURES = {
-    'MAZE': MazeFeature,     // Déjà compatible (New System)
-    'TURTLE': TurtleAdapter, // Adapté
-    'MATH': MathAdapter      // Adapté
+    'MAZE': MazeFeature,
+    'TURTLE': TurtleAdapter,
+    'MATH': MathAdapter
 };
 
 export default function LevelEditor({ levelData, onUpdate }) {
@@ -55,35 +52,27 @@ export default function LevelEditor({ levelData, onUpdate }) {
   const [codeMode, setCodeMode] = useState('START');
   const [isReady, setIsReady] = useState(false);
   
-  // On récupère la Feature active grâce au type (plus de if/else géant !)
   const currentType = levelData.type || 'MAZE';
   const activeFeature = FEATURES[currentType] || MazeFeature;
-  const VisualEditor = activeFeature.EditorComponent; // Composant React dynamique
+  const VisualEditor = activeFeature.EditorComponent; 
 
   // --- INITIALISATION ---
   useEffect(() => {
     const timer = setTimeout(() => {
         try {
-            // 1. Charger les blocs système (Variables, Boucles...)
             registerAllBlocks();
-            
-            // 2. Charger les blocs spécifiques à la feature active (Maze, Turtle...)
             if (activeFeature && activeFeature.registerBlocks) {
-                // On passe les dépendances pour éviter les doublons d'import
                 activeFeature.registerBlocks(Blockly, javascriptGenerator); 
             }
-            
             setIsReady(true);
         } catch(e) { console.error("Erreur init blocks:", e); }
     }, 10);
     return () => clearTimeout(timer);
-  }, [currentType, activeFeature]); // Recharger si le type change
+  }, [currentType, activeFeature]);
 
   const editorConfig = { scrollbars: true, trashcan: true, readOnly: false };
   
-  // --- GESTION DU CHANGEMENT DE TYPE ---
   const handleTypeChange = (newType) => {
-    // Configuration par défaut selon le type
     let newDefaults = {};
     if (newType === 'MAZE') {
         newDefaults = {
@@ -100,33 +89,48 @@ export default function LevelEditor({ levelData, onUpdate }) {
     onUpdate({ 
         ...levelData, 
         type: newType, 
-        allowedBlocks: undefined, // Reset des blocs autorisés
+        allowedBlocks: undefined, 
         ...newDefaults
     });
   };
 
-  // --- GÉNÉRATION DE LA TOOLBOX DYNAMIQUE ---
-  // Cette fonction fusionne la toolbox "Système" avec celle de la Feature
+  // --- CORRECTION CRITIQUE : FUSION TOOLBOX SÉCURISÉE ---
   const getMergedToolbox = (isMaster) => {
-      // 1. Générer la base (Système)
+      // 1. Générer la base standard
       const standardResult = isMaster
           ? generateMasterToolbox(currentType, levelData.inputs, levelData.hiddenVars, levelData.lockedVars)
           : generateToolbox(levelData.allowedBlocks, levelData.inputs, levelData.hiddenVars, levelData.lockedVars);
 
-      // 2. Injecter la Feature (si disponible)
+      // 2. Injecter la Feature (si présente)
       if (activeFeature && activeFeature.getToolbox) {
           const featureToolbox = activeFeature.getToolbox();
           
-          // Condition : Pour l'élève, on n'affiche la catégorie que si des blocs sont autorisés
-          // (Simplification : ici on l'injecte toujours si master, ou si xml existe)
           if (featureToolbox.xml && featureToolbox.xml.trim() !== '') {
-              // Hack propre : on insère le XML de la feature juste après la balise <xml> d'ouverture
-              // Cela place la catégorie du jeu tout en haut
-              const newXml = standardResult.xml.replace(
-                  /(<xml[^>]*>)/, 
-                  `$1${featureToolbox.xml}`
-              );
-              return { xml: newXml, hasCategories: true }; // Force l'affichage en catégories
+              let finalXml = standardResult.xml;
+              
+              // SI la toolbox standard n'a PAS de catégories (mode liste simple)
+              // ALORS on doit l'envelopper pour ne pas mélanger <block> et <category>
+              if (!standardResult.hasCategories) {
+                  // Extraction du contenu brut (sans les balises <xml>)
+                  const contentMatch = finalXml.match(/<xml[^>]*>([\s\S]*)<\/xml>/);
+                  const content = contentMatch ? contentMatch[1] : '';
+                  
+                  // On crée une catégorie "Outils" pour les blocs orphelins
+                  const wrappedContent = content.trim() 
+                      ? `<category name="Outils" colour="#A0A0A0">${content}</category>` 
+                      : '';
+                  
+                  // On reconstruit le XML : Plugin (Catégorie) + Standard (Catégorie)
+                  finalXml = `<xml xmlns="https://developers.google.com/blockly/xml">${featureToolbox.xml}${wrappedContent}</xml>`;
+              } else {
+                  // Si on a déjà des catégories, on insère simplement celle du plugin au début
+                  finalXml = finalXml.replace(
+                      /(<xml[^>]*>)/, 
+                      `$1${featureToolbox.xml}`
+                  );
+              }
+              
+              return { xml: finalXml, hasCategories: true };
           }
       }
       return standardResult;
@@ -137,7 +141,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
   ]);
 
   const editorToolboxXML = activeToolboxResult.xml;
-  const workspaceKey = `${levelData.id}-${currentType}-${codeMode}`;
+  const workspaceKey = `${levelData.id}-${currentType}-${codeMode}`; // Plus besoin de CAT/FLY ici car c'est géré dynamiquement
 
   // --- GESTION WORKSPACE ---
   const handleInject = (newWorkspace) => {
@@ -147,12 +151,17 @@ export default function LevelEditor({ levelData, onUpdate }) {
 
   useEffect(() => {
     if (workspaceRef.current && isReady) {
-        workspaceRef.current.updateToolbox(editorToolboxXML);
-        Blockly.svgResize(workspaceRef.current);
+        // Mise à jour sécurisée de la toolbox
+        try {
+            workspaceRef.current.updateToolbox(editorToolboxXML);
+            Blockly.svgResize(workspaceRef.current);
+        } catch(e) {
+            console.warn("Toolbox update warning:", e);
+        }
     }
   }, [editorToolboxXML, isReady]);
 
-  // --- LOGIQUE SIDEBAR (Autorisation des blocs) ---
+  // --- LOGIQUE SIDEBAR ---
   const toggleBlock = (blockType) => {
     const currentAllowed = levelData.allowedBlocks || [];
     const newAllowed = currentAllowed.includes(blockType) ? currentAllowed.filter(t => t !== blockType) : [...currentAllowed, blockType];
@@ -170,10 +179,8 @@ export default function LevelEditor({ levelData, onUpdate }) {
     onUpdate({ ...levelData, allowedBlocks: newAllowed });
   };
 
-  // Liste des catégories à afficher dans la sidebar
   const displayedCategories = useMemo(() => {
       const coreCats = CATEGORIES_BY_TYPE[currentType] || [];
-      // On ajoute la catégorie de la Feature en premier si elle existe
       if (activeFeature.getToolbox) {
           const tb = activeFeature.getToolbox();
           if (tb.category) return [tb.category, ...coreCats];
@@ -181,7 +188,6 @@ export default function LevelEditor({ levelData, onUpdate }) {
       return coreCats;
   }, [currentType, activeFeature]);
 
-  // Styles onglets
   const getTabStyle = (isActive) => ({ flex: 1, padding: '6px', border: 'none', borderRadius: '4px', cursor: 'pointer', background: isActive ? 'white' : '#eee', fontWeight: isActive ? 'bold' : 'normal', fontSize: '0.8rem', transition: 'all 0.2s' });
   const tabStyle = (isActive, mode) => ({ padding: '10px 20px', cursor: 'pointer', border: 'none', borderBottom: isActive ? (mode === 'SOLUTION' ? '3px solid #27ae60' : '3px solid #2980b9') : '3px solid transparent', background: isActive ? (mode === 'SOLUTION' ? '#f0fbf4' : '#f0f8ff') : 'transparent', fontWeight: isActive ? 'bold' : 'normal', color: isActive ? (mode === 'SOLUTION' ? '#27ae60' : '#2980b9') : '#7f8c8d', fontSize: '0.95rem', transition: 'all 0.2s' });
 
@@ -191,7 +197,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
     <div className="editor-wrapper" style={{display: 'flex', flexDirection: 'column', height: '100%'}}>
       <div style={{display: 'flex', gap: '15px', flex: 1, minHeight: '400px'}}>
         
-        {/* GAUCHE : EDITEUR VISUEL DYNAMIQUE */}
+        {/* GAUCHE : EDITEUR VISUEL */}
         <div style={{flex: 3, display: 'flex', flexDirection: 'column'}}>
             <div style={{display: 'flex', marginBottom: '10px', background: '#ecf0f1', padding: '4px', borderRadius: '6px', gap:'5px'}}>
                 <button onClick={() => handleTypeChange('MAZE')} style={getTabStyle(currentType === 'MAZE')}>🏰 Labyrinthe</button>
@@ -199,7 +205,6 @@ export default function LevelEditor({ levelData, onUpdate }) {
                 <button onClick={() => handleTypeChange('MATH')} style={getTabStyle(currentType === 'MATH')}>🧪 Labo</button>
             </div>
             <div style={{flex: 1, background: 'white', padding: '15px', borderRadius: '8px', border: '1px solid #ddd', overflowY: 'auto'}}>
-                {/* ICI LA MAGIE : On affiche le composant de la feature active */}
                 {VisualEditor ? (
                     <VisualEditor levelData={levelData} onUpdate={onUpdate} />
                 ) : (
@@ -231,17 +236,8 @@ export default function LevelEditor({ levelData, onUpdate }) {
           
           <div style={{fontSize: '0.85rem'}}>
             {displayedCategories.map(catName => {
-                // Logique pour trouver les blocs de la catégorie
                 let categoryBlocks = CATEGORY_CONTENTS[catName] || [];
-                
-                // Si c'est la catégorie spéciale de la Feature (ex: Labyrinthe)
-                // Il faut récupérer la liste des blocs depuis la Feature si possible
-                // (Ici simplifié : on suppose que getToolboxXML contient les blocs, mais pour la sidebar
-                // il faudrait idéalement que la feature expose une liste de blocs.
-                // Pour l'instant on se base sur CATEGORY_CONTENTS ou on adapte si besoin)
-                
-                // Hack temporaire : Si catName correspond à la feature, on triche un peu ou on utilise une liste définie
-                // Pour Maze V10, les blocs sont : maze_move_forward, maze_turn, etc.
+                // Pour Maze, on force les blocs si la catégorie est "Labyrinthe" (car ils ne sont pas dans BlockDefinitions)
                 if (activeFeature.id === 'MAZE' && catName === 'Labyrinthe') {
                     categoryBlocks = ['maze_move_forward', 'maze_turn', 'maze_if_path', 'maze_forever'];
                 }
@@ -281,7 +277,6 @@ export default function LevelEditor({ levelData, onUpdate }) {
         </div>
       </div>
 
-      {/* ZONE BASSE : BLOCKLY */}
       <div style={{height: '350px', marginTop: '15px', background: 'white', padding: '0', borderRadius: '8px', border: '1px solid #ccc', display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
         <div style={{display: 'flex', background: '#ecf0f1', borderBottom: '1px solid #bdc3c7'}}>
             <button onClick={() => setCodeMode('START')} style={tabStyle(codeMode === 'START', 'START')}>🧩 Code Élève (Preview)</button>

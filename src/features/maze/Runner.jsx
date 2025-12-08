@@ -1,23 +1,96 @@
 import React from 'react';
-import { MAZE_CONFIG } from './config'; // Import local
-
-const pulseStyle = {
-  position: 'absolute',
-  width: '100%', height: '100%',
-  top: 0, left: 0,
-  backgroundColor: 'rgba(46, 204, 113, 0.5)', 
-  borderRadius: '50%',
-  animation: 'radarPing 0.5s ease-out forwards',
-  zIndex: 5
-};
+import { MAZE_CONFIG } from './config';
 
 const stylesCSS = `
 @keyframes radarPing {
   0% { transform: scale(0.2); opacity: 0.8; }
   100% { transform: scale(1.5); opacity: 0; }
 }
-.maze-container-responsive {
-    container-type: size;
+
+.maze-wrapper {
+    width: 100%;
+    height: 100%;
+    container-type: size; /* Active les Container Queries */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #2c3e50;
+    padding: 20px;
+    box-sizing: border-box; /* Le padding est inclus dans la taille */
+}
+
+.maze-grid {
+    display: grid;
+    gap: 1px;
+    background-color: #34495e;
+    border: 4px solid #34495e;
+    box-sizing: content-box; /* La bordure s'ajoute à l'extérieur des dimensions calculées */
+    
+    /* --- FORMULE MATHÉMATIQUE POUR LE RATIO 1:1 --- */
+    
+    /* 1. Espace disponible = Taille conteneur - (Padding Wrapper 20px*2) - (Bordure Grille 4px*2) */
+    --safe-w: calc(100cqw - 40px - 8px);
+    --safe-h: calc(100cqh - 40px - 8px);
+    
+    /* 2. Taille max d'une case = Le plus petit (min) entre la dispo largeur et la dispo hauteur */
+    --cell-size: min(
+        var(--safe-w) / var(--cols), 
+        var(--safe-h) / var(--rows)
+    );
+    
+    /* 3. Application des dimensions strictes */
+    width: calc(var(--cell-size) * var(--cols));
+    height: calc(var(--cell-size) * var(--rows));
+    
+    /* Configuration de la grille */
+    grid-template-columns: repeat(var(--cols), 1fr);
+    grid-template-rows: repeat(var(--rows), 1fr);
+    
+    margin: auto;
+}
+
+.maze-cell {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    background: #ecf0f1;
+    overflow: visible;
+}
+
+.maze-emoji {
+    z-index: 1;
+    /* La police fait 70% de la case, toujours centrée */
+    font-size: calc(var(--cell-size) * 0.7);
+    line-height: 1;
+    user-select: none;
+    cursor: default;
+}
+
+.maze-player {
+    position: absolute;
+    z-index: 10;
+    transition: transform 0.2s ease, top 0.2s ease, left 0.2s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    font-size: calc(var(--cell-size) * 0.7);
+}
+
+.scan-pulse {
+    position: absolute;
+    width: 100%; 
+    height: 100%;
+    top: 0; 
+    left: 0;
+    background-color: rgba(46, 204, 113, 0.5); 
+    border-radius: 50%;
+    animation: radarPing 0.5s ease-out forwards;
+    z-index: 5;
 }
 `;
 
@@ -49,64 +122,44 @@ export default function MazeRender({ grid, playerPos, playerDir, lastAction }) {
   }
 
   return (
-    <div style={styles.container}>
+    <>
       <style>{stylesCSS}</style>
-      <div 
-        className="maze-container-responsive"
-        style={{
-            ...styles.grid,
-            gridTemplateColumns: `repeat(${cols}, 1fr)`,
-            aspectRatio: `${cols} / ${rows}`,
-        }}
-      >
-        {grid.map((row, rowIndex) => (
-          row.map((cell, colIndex) => {
-            const isPlayerHere = playerPos.x === colIndex && playerPos.y === rowIndex;
-            const isScanned = scanTarget && scanTarget.x === colIndex && scanTarget.y === rowIndex;
-            const fontSize = `min(40px, ${60/Math.max(rows,cols)}vmin)`;
+      <div className="maze-wrapper">
+        <div 
+          className="maze-grid"
+          // On passe les variables CSS dynamiques ici
+          style={{
+              '--rows': rows,
+              '--cols': cols,
+          }}
+        >
+          {grid.map((row, rowIndex) => (
+            row.map((cell, colIndex) => {
+              const isPlayerHere = playerPos.x === colIndex && playerPos.y === rowIndex;
+              const isScanned = scanTarget && scanTarget.x === colIndex && scanTarget.y === rowIndex;
 
-            return (
-              <div key={`${rowIndex}-${colIndex}`} style={styles.cell}>
-                <span style={{zIndex: 1, fontSize}}>
-                  {MAZE_CONFIG.THEME[cell] || '❓'}
-                </span>
+              return (
+                <div key={`${rowIndex}-${colIndex}`} className="maze-cell">
+                  <span className="maze-emoji">
+                    {MAZE_CONFIG.THEME[cell] || ''}
+                  </span>
 
-                {isPlayerHere && (
-                  <div style={{
-                      ...styles.player, 
-                      transform: `rotate(${rotation}deg)`,
-                      fontSize
-                  }}>
-                    {MAZE_CONFIG.THEME.PLAYER}
-                  </div>
-                )}
+                  {isPlayerHere && (
+                    <div 
+                        className="maze-player"
+                        style={{ transform: `rotate(${rotation}deg)` }}
+                    >
+                      {MAZE_CONFIG.THEME.PLAYER}
+                    </div>
+                  )}
 
-                {isScanned && <div key={lastAction._uid} style={pulseStyle}></div>}
-              </div>
-            );
-          })
-        ))}
+                  {isScanned && <div key={lastAction._uid} className="scan-pulse"></div>}
+                </div>
+              );
+            })
+          ))}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
-
-const styles = {
-  container: {
-    display: 'flex', justifyContent: 'center', alignItems: 'center',
-    background: '#2c3e50', padding: '10px', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
-    width: '100%', height: '100%', overflow: 'hidden'
-  },
-  grid: {
-    display: 'grid', gap: '1px', backgroundColor: '#34495e', border: '4px solid #34495e',
-    width: 'auto', height: 'auto', maxWidth: '100%', maxHeight: '100%', margin: 'auto' 
-  },
-  cell: {
-    width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center',
-    position: 'relative', background: '#ecf0f1', overflow: 'visible'
-  },
-  player: {
-    position: 'absolute', zIndex: 10, transition: 'transform 0.2s ease, top 0.2s ease, left 0.2s ease',
-    display:'flex', justifyContent:'center', alignItems:'center', width:'100%', height:'100%'
-  }
-};

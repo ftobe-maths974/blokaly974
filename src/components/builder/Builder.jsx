@@ -3,30 +3,30 @@ import LevelEditor from './LevelEditor';
 import LZString from 'lz-string';
 
 // --- NOUVEAU ---
-import MazeFeature from '../../features/maze';
+import { getPlugin, getAllPlugins } from '../../core/PluginRegistry';
 // ---------------
 
-// Mapping des icônes par type de jeu
-const LEVEL_ICONS = {
-  'MAZE': '🏰',
-  'TURTLE': '🐢',
-  'MATH': '🧪'
+// Mapping des icônes (On peut maintenant utiliser p.icon du plugin)
+const getLevelIcon = (type) => {
+    const p = getPlugin(type);
+    return p ? p.icon : '❓';
 };
 
-export default function Builder() {
-  // 1. CHARGEMENT
+export default function Builder({ onTest }) {
   const [campaign, setCampaign] = useState(() => {
     const saved = localStorage.getItem('blokaly_builder_autosave');
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
+    
+    // Initialisation dynamique avec le premier plugin disponible (ex: Maze)
+    const defaultPlugin = getAllPlugins()[0]; 
     return {
       title: "Ma Nouvelle Campagne",
       levels: [{
         id: 1,
-        type: 'MAZE',
-        // Utilisation de la config du Feature
-        grid: MazeFeature.config.defaultGrid,
+        type: defaultPlugin ? defaultPlugin.id : 'MAZE',
+        grid: defaultPlugin?.config?.defaultGrid,
         startPos: {x: 1, y: 1},
         maxBlocks: 5
       }]
@@ -162,15 +162,23 @@ export default function Builder() {
     setCampaign({ ...campaign, levels: newLevels });
   };
 
+// Modifiez cette fonction ou créez-en une nouvelle pour le test rapide
+  const handleQuickTest = () => {
+      // On sauvegarde d'abord (bonne pratique)
+      localStorage.setItem('blokaly_builder_autosave', JSON.stringify(campaign));
+      // On déclenche le switch vers le Runner via App.jsx
+      if (onTest) onTest(campaign);
+  };
+
   const generateLink = () => {
+    // ... (code existant pour générer un lien partageable LZString)
     const json = JSON.stringify(campaign);
     const compressed = LZString.compressToEncodedURIComponent(json);
-    
     const url = new URL(window.location.href);
-    url.search = `?data=${compressed}&preview=1`; 
+    url.search = `?data=${compressed}`; // Plus besoin de &preview=1 pour le partage élève
     url.hash = ''; 
-    
-    window.location.href = url.toString();
+    // Copie dans le presse-papier par exemple, ou ouverture nouvel onglet
+    prompt("Lien à partager aux élèves :", url.toString());
   };
 
   return (
@@ -211,7 +219,7 @@ export default function Builder() {
               <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
                   <span style={{color: '#555', fontSize: '1.2rem'}}>⋮</span>
                   <span style={{fontSize: '1.2rem'}} title={lvl.type}>
-                    {LEVEL_ICONS[lvl.type] || '❓'}
+                    {getLevelIcon(lvl.type)}
                   </span>
                   <span style={{fontWeight: index === currentLevelIndex ? 'bold' : 'normal'}}>
                     Niveau {index + 1}
@@ -299,9 +307,25 @@ export default function Builder() {
                ({campaign.levels[currentLevelIndex]?.type})
              </span>
           </h2>
-          <button onClick={generateLink} className="generate-btn" style={{margin: 0, width: 'auto', fontSize: '0.9rem', background: 'linear-gradient(135deg, #3498db, #2980b9)', padding: '8px 15px', boxShadow:'none'}}>
-            🚀 TESTER / PARTAGER
-          </button>
+          <div style={{display:'flex', gap:'10px'}}>
+              {/* BOUTON TEST RAPIDE (Switch rôle temporaire) */}
+              <button 
+                onClick={handleQuickTest} 
+                className="generate-btn" 
+                style={{margin: 0, width: 'auto', fontSize: '0.9rem', background: '#27ae60', padding: '8px 15px', border:'none', color:'white', fontWeight:'bold', cursor:'pointer', borderRadius:'4px'}}
+              >
+                ▶️ TESTER (Mode Élève)
+              </button>
+
+              {/* BOUTON PARTAGE (Génère lien) */}
+              <button 
+                onClick={generateLink} 
+                className="generate-btn" 
+                style={{margin: 0, width: 'auto', fontSize: '0.9rem', background: '#3498db', padding: '8px 15px', border:'none', color:'white', fontWeight:'bold', cursor:'pointer', borderRadius:'4px'}}
+              >
+                🔗 Partager
+              </button>
+          </div>
         </div>
 
         <div style={{flex: 1, overflowY: 'auto', padding: '20px', background: '#f4f4f4'}}>
