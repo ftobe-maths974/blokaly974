@@ -1,419 +1,231 @@
-// main.js - v0.3 (Fix Sécurité PointerLock & Éclairage Garanti)
+import nerdamer from 'nerdamer/all.min';
 
-import * as THREE from 'three';
-import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+// Gardien anti-doublon
+let isRegistered = false;
 
-// --- CONFIGURATION ---
-const CHUNK_SIZE = 16;
+export const EquationLogic = {
+  registerBlocks: (Blockly, javascriptGenerator) => {
+    if (isRegistered) return;
+    isRegistered = true;
+    console.log("📐 Enregistrement blocs EQUATION...");
 
-// Types de blocs
-const BLOCKS = {
-    AIR: 0, DIRT: 1, GRASS: 2, STONE: 3, 
-    WOOD: 4, LEAVES: 5, PLANKS: 6, BRICK: 7
-};
 
-// Couleurs Vives (Pour être sûr qu'on les voit)
-const BLOCK_COLORS = {
-    [BLOCKS.DIRT]: '#8B4513',   // Marron
-    [BLOCKS.GRASS]: '#32CD32',  // Vert Citron
-    [BLOCKS.STONE]: '#A9A9A9',  // Gris
-    [BLOCKS.WOOD]: '#5D4037',   // Bois fonce
-    [BLOCKS.LEAVES]: '#006400', // Vert fonce
-    [BLOCKS.PLANKS]: '#DEB887', // Beige
-    [BLOCKS.BRICK]: '#800000'   // Rouge brique
-};
+    // Définitions
+    const blocks = [
+        { "type": "equation_op_both", "message0": "Aux deux côtés %1 %2", "args0": [ { "type": "field_dropdown", "name": "OP", "options": [["Ajouter +", "ADD"], ["Soustraire -", "SUB"], ["Multiplier ×", "MUL"], ["Diviser /", "DIV"]] }, { "type": "input_value", "name": "VAL" } ], "previousStatement": null, "nextStatement": null, "colour": 230 },
+        { "type": "equation_term_x", "message0": "%1 x", "args0": [ { "type": "field_number", "name": "COEFF", "value": 1, "precision": 1 } ], "output": null, "colour": 230 },
+        { "type": "equation_verify", "message0": "Vérifier si x = %1", "args0": [ { "type": "input_value", "name": "VAL", "check": "Number" } ], "previousStatement": null, "nextStatement": null, "colour": 100 },
+        { "type": "equation_solution_state", "message0": "Conclusion : %1", "args0": [ { "type": "field_dropdown", "name": "STATE", "options": [["Pas de solution ∅", "NO_SOLUTION"], ["Infinité de solutions", "INFINITE"]] } ], "previousStatement": null, "nextStatement": null, "colour": 100 },
+        { "type": "equation_solution_s", "message0": "Solution S = %1", "args0": [ { "type": "input_value", "name": "INTERVAL" } ], "previousStatement": null, "nextStatement": null, "colour": 290 },
+        { "type": "equation_interval", "message0": "%1 %2 ; %3 %4", "args0": [ { "type": "field_dropdown", "name": "L_BRACKET", "options": [["[", "["], ["]", "]"]] }, { "type": "input_value", "name": "MIN" }, { "type": "input_value", "name": "MAX" }, { "type": "field_dropdown", "name": "R_BRACKET", "options": [["]", "]"], ["[", "["]] } ], "output": null, "colour": 290, "inputsInline": true },
+        { "type": "math_infinity", "message0": "%1 ∞", "args0": [ { "type": "field_dropdown", "name": "SIGN", "options": [["+", "POS"], ["-", "NEG"]] } ], "output": "Number", "colour": 230 }
+    ];
+    Blockly.common.defineBlocksWithJsonArray(blocks);
 
-const BLOCK_NAMES = {
-    1: "Terre", 2: "Herbe", 3: "Pierre", 4: "Bois Brut", 
-    5: "Feuilles", 6: "Planches", 7: "Pierre Taillée"
-};
+    // Générateurs
+    javascriptGenerator.forBlock['equation_op_both'] = (block) => {
+        const op = block.getFieldValue('OP'); 
+        const val = javascriptGenerator.valueToCode(block, 'VAL', javascriptGenerator.ORDER_ATOMIC) || '0';
+        const symbolMap = { 'ADD': '+', 'SUB': '-', 'MUL': '*', 'DIV': '/' };
+        return `actions.push({ type: 'OP_BOTH', operator: '${symbolMap[op]}', value: ${val}, id: '${block.id}' });\n`;
+    };
+    javascriptGenerator.forBlock['equation_term_x'] = (block) => [`"${block.getFieldValue('COEFF')}*x"`, javascriptGenerator.ORDER_ATOMIC];
+    javascriptGenerator.forBlock['equation_verify'] = (block) => `actions.push({ type: 'VERIFY', value: ${javascriptGenerator.valueToCode(block, 'VAL', javascriptGenerator.ORDER_ATOMIC) || '0'}, id: '${block.id}' });\n`;
+    javascriptGenerator.forBlock['equation_solution_state'] = (block) => `actions.push({ type: 'DECLARE_SOLUTION', kind: '${block.getFieldValue('STATE')}', id: '${block.id}' });\n`;
+    javascriptGenerator.forBlock['equation_solution_s'] = (block) => {
+        const interval = javascriptGenerator.valueToCode(block, 'INTERVAL', javascriptGenerator.ORDER_ATOMIC) || 'null';
+        return `actions.push({ type: 'DECLARE_INTERVAL', interval: ${interval}, id: '${block.id}' });\n`;
+    };
+    javascriptGenerator.forBlock['equation_interval'] = (block) => {
+        const left = block.getFieldValue('L_BRACKET'); const right = block.getFieldValue('R_BRACKET');
+        const min = javascriptGenerator.valueToCode(block, 'MIN', javascriptGenerator.ORDER_ATOMIC) || '0';
+        const max = javascriptGenerator.valueToCode(block, 'MAX', javascriptGenerator.ORDER_ATOMIC) || '0';
+        return [`{ left: '${left}', right: '${right}', min: '${min}', max: '${max}' }`, javascriptGenerator.ORDER_ATOMIC];
+    };
+    javascriptGenerator.forBlock['math_infinity'] = (block) => {
+        const sign = block.getFieldValue('SIGN') === 'NEG' ? '-' : '';
+        return [`${sign}Infinity`, javascriptGenerator.ORDER_ATOMIC];
+    };
+  },
 
-const RECIPES = [
-    { id: "planks", name: "Planches", input: { id: BLOCKS.WOOD, count: 1 }, output: { id: BLOCKS.PLANKS, count: 4 } },
-    { id: "brick", name: "Pierre Taillée", input: { id: BLOCKS.STONE, count: 2 }, input2: { id: BLOCKS.PLANKS, count: 1 }, output: { id: BLOCKS.BRICK, count: 4 } }
-];
+  getToolboxXML: (allowedBlocks) => {
+    const allBlocks = [
+        { type: 'equation_op_both', xml: '<block type="equation_op_both"><value name="VAL"><shadow type="math_number"><field name="NUM">1</field></shadow></value></block>' },
+        { type: 'equation_term_x', xml: '<block type="equation_term_x"></block>' },
+        { type: 'equation_verify', xml: '<block type="equation_verify"><value name="VAL"><shadow type="math_number"><field name="NUM">1</field></shadow></value></block>' },
+        { type: 'equation_solution_state', xml: '<block type="equation_solution_state"></block>' },
+        { type: 'equation_solution_s', xml: '<block type="equation_solution_s"></block>' },
+        { type: 'equation_interval', xml: '<block type="equation_interval"><value name="MIN"><shadow type="math_number"><field name="NUM">0</field></shadow></value><value name="MAX"><shadow type="math_number"><field name="NUM">10</field></shadow></value></block>' },
+        { type: 'math_infinity', xml: '<block type="math_infinity"></block>' },
+        { type: 'math_number', xml: '<block type="math_number"></block>' }
+    ];
 
-// --- TEXTURES (Génération Robustes) ---
-function createTextureAtlas() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 128; canvas.height = 128;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    
-    // Fond de secours (Magenta pour repérer les bugs, mais on dessine par dessus)
-    ctx.fillStyle = '#FF00FF';
-    ctx.fillRect(0,0,128,128);
+    let xml = '<category name="Algèbre" colour="#5b67a5">';
+    allBlocks.forEach(b => {
+        if (!allowedBlocks || allowedBlocks.includes(b.type)) {
+            xml += b.xml;
+        }
+    });
+    xml += '</category>';
+    return xml;
+  },
 
-    const drawTile = (index, color) => {
-        const x = (index % 4) * 32;
-        const y = Math.floor(index / 4) * 32;
-        
-        ctx.fillStyle = color;
-        ctx.fillRect(x, y, 32, 32);
-        
-        // Bordure claire pour bien voir les cubes
-        ctx.strokeStyle = "rgba(255,255,255,0.3)";
-        ctx.strokeRect(x,y,32,32);
-        
-        // Bruit simple
-        ctx.fillStyle = "rgba(0,0,0,0.1)";
-        ctx.fillRect(x+8, y+8, 16, 16);
+  executeStep: (currentState, action, levelData) => {
+    // 1. Initialisation complète avec Options (Implicit, Graph)
+    const state = currentState || { 
+      lhs: levelData.equation?.lhs || "x", 
+      rhs: levelData.equation?.rhs || "0", 
+      initialLhs: levelData.equation?.lhs || "x",
+      initialRhs: levelData.equation?.rhs || "0",
+      sign: levelData.equation?.sign || '=', 
+      initialSign: levelData.equation?.sign || '=', 
+      // 👇 RECUPERATION DES OPTIONS
+      implicit: levelData.equation?.implicit || false, 
+      showGraph: levelData.equation?.showGraph || false,
+      history: [],
+      verification: null,
+      solutionState: null,
+      finalSolutionLatex: null
     };
 
-    drawTile(0, BLOCK_COLORS[BLOCKS.DIRT]);
-    drawTile(1, BLOCK_COLORS[BLOCKS.GRASS]); 
-    drawTile(2, BLOCK_COLORS[BLOCKS.STONE]);
-    drawTile(3, BLOCK_COLORS[BLOCKS.WOOD]);
-    drawTile(4, BLOCK_COLORS[BLOCKS.LEAVES]);
-    drawTile(5, BLOCK_COLORS[BLOCKS.PLANKS]);
-    drawTile(6, BLOCK_COLORS[BLOCKS.BRICK]);
-    
-    // Side Herbe (Index 7 fictif)
-    const xSide = 3*32, ySide = 1*32;
-    ctx.fillStyle = BLOCK_COLORS[BLOCKS.DIRT];
-    ctx.fillRect(xSide, ySide, 32, 32);
-    ctx.fillStyle = BLOCK_COLORS[BLOCKS.GRASS];
-    ctx.fillRect(xSide, ySide, 32, 10);
-    
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.magFilter = THREE.NearestFilter;
-    texture.minFilter = THREE.NearestFilter;
-    texture.colorSpace = THREE.SRGBColorSpace;
-    return texture;
-}
+    if (!action) return { newState: state, status: 'RUNNING' };
 
-// --- MOTEUR ---
-class VoxelInstancer {
-    constructor(scene) {
-        this.scene = scene;
-        this.meshes = {}; 
-        this.dummy = new THREE.Object3D();
-        this.voxels = new Map();
-        this.texture = createTextureAtlas();
+    let { lhs, rhs, history, sign } = state;
+
+    // --- 1. CALCUL ---
+    if (action.type === 'OP_BOTH') {
+      const val = action.value; 
+      const op = action.operator; 
+      
+      if (op === '/' && (val == 0 || val === '0')) {
+          return { newState: { ...state, lastOp: { error: "Division par zéro !" } }, status: 'RUNNING' };
+      }
+
+      let newSign = sign;
+      const valNum = parseFloat(val);
+      if ((op === '*' || op === '/') && valNum < 0) {
+          if (sign === '<') newSign = '>'; else if (sign === '>') newSign = '<';
+          else if (sign === '\\leq') newSign = '\\geq'; else if (sign === '\\geq') newSign = '\\leq';
+      }
+      
+      const rawLhs = `(${lhs}) ${op} (${val})`;
+      const rawRhs = `(${rhs}) ${op} (${val})`;
+      const simpleLhs = nerdamer(rawLhs).text(); 
+      const simpleRhs = nerdamer(rawRhs).text();
+      const newHistory = [...history, { lhs: simpleLhs, rhs: simpleRhs, op, val, sign: newSign }];
+
+      return { 
+        newState: { ...state, lhs: simpleLhs, rhs: simpleRhs, sign: newSign, history: newHistory, lastOp: { op, val, rawLhs, rawRhs }, verification: null, solutionState: null, finalSolutionLatex: null },
+        status: 'RUNNING'
+      };
     }
 
-    init() {
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
-        // Lambert est plus performant et plus lumineux par défaut que Standard
-        const material = new THREE.MeshLambertMaterial({ map: this.texture });
+    // --- 2. VÉRIFICATION ---
+    if (action.type === 'VERIFY') {
+        const testVal = action.value;
+        const originLhs = state.initialLhs;
+        const originRhs = state.initialRhs;
+        const checkSign = state.initialSign; 
 
-        Object.values(BLOCKS).forEach(type => {
-            if (type === BLOCKS.AIR) return;
-            
-            const geo = geometry.clone();
-            const uvs = geo.attributes.uv;
-            let uIdx = 0, vIdx = 0;
+        const valLhs = parseFloat(nerdamer(originLhs, { x: testVal }).evaluate().text());
+        const valRhs = parseFloat(nerdamer(originRhs, { x: testVal }).evaluate().text());
 
-            if(type === BLOCKS.DIRT) { uIdx=0; vIdx=0; }
-            if(type === BLOCKS.GRASS) { uIdx=1; vIdx=0; }
-            if(type === BLOCKS.STONE) { uIdx=2; vIdx=0; }
-            if(type === BLOCKS.WOOD) { uIdx=3; vIdx=0; }
-            if(type === BLOCKS.LEAVES) { uIdx=0; vIdx=1; }
-            if(type === BLOCKS.PLANKS) { uIdx=1; vIdx=1; }
-            if(type === BLOCKS.BRICK) { uIdx=2; vIdx=1; }
+        const EPSILON = 0.0001;
+        const isBoundary = Math.abs(valLhs - valRhs) < EPSILON;
 
-            // Hack: Mapping Herbe Côté (toutes faces)
-            if (type === BLOCKS.GRASS) { uIdx=3; vIdx=1; } 
 
-            const step = 0.25;
-            for(let i=0; i < uvs.count; i++) {
-                uvs.setXY(i, (uvs.getX(i)*step) + uIdx*step, (uvs.getY(i)*step) + vIdx*step);
-            }
-            geo.attributes.uv.needsUpdate = true;
+        let isCorrect = false;
+        if (checkSign === '=') isCorrect = isBoundary;
+        else if (checkSign === '<') isCorrect = valLhs < valRhs - EPSILON;
+        else if (checkSign === '>') isCorrect = valLhs > valRhs + EPSILON;
+        else if (checkSign === '\\leq') isCorrect = valLhs <= valRhs + EPSILON;
+        else if (checkSign === '\\geq') isCorrect = valLhs >= valRhs - EPSILON;
 
-            const mesh = new THREE.InstancedMesh(geo, material, 10000);
-            mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-            mesh.count = 0;
-            this.scene.add(mesh);
-            this.meshes[type] = mesh;
-        });
-    }
-
-    setVoxel(x, y, z, type) {
-        const key = `${x},${y},${z}`;
-        if (type === BLOCKS.AIR) this.voxels.delete(key);
-        else this.voxels.set(key, type);
-    }
-
-    getVoxel(x, y, z) {
-        return this.voxels.get(`${x},${y},${z}`) || 0;
-    }
-
-    update() {
-        for(let t in this.meshes) this.meshes[t].count = 0;
-
-        this.voxels.forEach((type, key) => {
-            const [x,y,z] = key.split(',').map(Number);
-            // Culling simple
-            if (this.isSolid(x+1,y,z) && this.isSolid(x-1,y,z) &&
-                this.isSolid(x,y+1,z) && this.isSolid(x,y-1,z) &&
-                this.isSolid(x,y,z+1) && this.isSolid(x,y,z-1)) return;
-
-            const mesh = this.meshes[type];
-            if (mesh && mesh.count < 10000) {
-                this.dummy.position.set(x, y, z);
-                this.dummy.updateMatrix();
-                mesh.setMatrixAt(mesh.count++, this.dummy.matrix);
-            }
-        });
-        for(let t in this.meshes) this.meshes[t].instanceMatrix.needsUpdate = true;
-    }
-
-    isSolid(x,y,z) {
-        const t = this.getVoxel(x,y,z);
-        return t !== BLOCKS.AIR && t !== BLOCKS.LEAVES;
-    }
-
-    generate() {
-        const simplex = new SimplexNoise();
-        const size = 32; 
-        for (let x = -size; x < size; x++) {
-            for (let z = -size; z < size; z++) {
-                const n = simplex.noise2D(x/30, z/30);
-                const h = Math.floor(n * 5 + 8); 
-                
-                for(let y=0; y<=h; y++) {
-                    let t = BLOCKS.STONE;
-                    if(y===h) t = BLOCKS.GRASS;
-                    else if(y>h-3) t = BLOCKS.DIRT;
-                    this.setVoxel(x, y, z, t);
-                }
-                
-                // Arbre simple
-                if(x % 7 === 0 && z % 7 === 0 && h > 5) {
-                   this.setVoxel(x, h+1, z, BLOCKS.WOOD);
-                   this.setVoxel(x, h+2, z, BLOCKS.WOOD);
-                   this.setVoxel(x, h+3, z, BLOCKS.LEAVES);
-                }
+        let feedbackMsg = "";
+        if (checkSign !== '=') {
+            if (isBoundary) {
+                if (isCorrect) feedbackMsg = "✅ Vrai à la frontière : INCLURE (Crochet fermé).";
+                else feedbackMsg = "❌ Faux à la frontière : EXCLURE (Crochet ouvert).";
+            } else {
+                feedbackMsg = isCorrect ? "Vrai (dans la solution)." : "Faux (hors solution).";
             }
         }
-        this.update();
-    }
-}
 
-// --- INIT SCENE ---
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87CEEB);
-scene.fog = new THREE.Fog(0x87CEEB, 20, 60);
+        let solutionLatex = null;
+        if (isCorrect && checkSign === '=') solutionLatex = `S = \\{ ${testVal} \\}`;
 
-const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 100);
-const renderer = new THREE.WebGLRenderer({ antialias: false }); // Antialias false pour perf
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.getElementById('game-container').appendChild(renderer.domElement);
+        return {
+            newState: { 
+                ...state, 
+                verification: { testVal, originLhs, originRhs, valLhs, valRhs, isCorrect, checkSign, feedbackMsg },
+                finalSolutionLatex: solutionLatex,
+                lastOp: null 
+            },
+            status: 'RUNNING'
+        };
 
-// --- ÉCLAIRAGE PUISSANT (Anti-Noir) ---
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); // 80% luminosité de base
-scene.add(ambientLight);
-
-const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
-dirLight.position.set(50, 100, 50);
-scene.add(dirLight);
-
-// Setup Monde
-const world = new VoxelInstancer(scene);
-world.init();
-world.generate();
-
-// --- CONTROLES & ÉTAT DU JEU ---
-const controls = new PointerLockControls(camera, document.body);
-let isGameActive = false; // Nouvelle variable pour gérer l'état
-
-const player = {
-    velocity: new THREE.Vector3(),
-    direction: new THREE.Vector3(),
-    onGround: false,
-    inventory: {}, 
-    hotbar: [BLOCKS.DIRT, BLOCKS.STONE, BLOCKS.WOOD, 0, 0],
-    selectedSlot: 0,
-    gamemode: 'fps'
-};
-Object.values(BLOCKS).forEach(id => player.inventory[id] = 0);
-camera.position.set(0, 20, 0);
-
-// Selection
-const raycaster = new THREE.Raycaster();
-const center = new THREE.Vector2(0, 0);
-let highlightMesh = new THREE.Mesh(
-    new THREE.BoxGeometry(1.01, 1.01, 1.01),
-    new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: true, transparent: true, opacity: 0.5 })
-);
-scene.add(highlightMesh);
-let intersectedBlock = null;
-
-// --- BOUCLE DE JEU ---
-function updatePhysics(delta) {
-    // Si on vole ou si on est au sol, on freine
-    player.velocity.x -= player.velocity.x * 10.0 * delta;
-    player.velocity.z -= player.velocity.z * 10.0 * delta;
-    
-    // GRAVITÉ CONSTANTE (si pas en mode vol)
-    if (player.gamemode === 'fps') {
-        player.velocity.y -= 30.0 * delta; 
-    } else {
-        player.velocity.y -= player.velocity.y * 5.0 * delta;
     }
 
-    const speed = player.gamemode === 'fly' ? 50.0 : 40.0;
-    if (player.direction.z > 0) controls.moveForward(speed * delta);
-    if (player.direction.z < 0) controls.moveForward(-speed * delta);
-    if (player.direction.x > 0) controls.moveRight(speed * delta);
-    if (player.direction.x < 0) controls.moveRight(-speed * delta);
+    // --- 3. DÉCLARATION INTERVALLE ---
+    if (action.type === 'DECLARE_INTERVAL') {
+        const userInterval = action.interval; 
+        if (!userInterval) return { newState: state, status: 'RUNNING' };
 
-    if (player.gamemode === 'fps') {
-        const p = camera.position;
-        // Collision simple au pied
-        const voxelBelow = world.getVoxel(Math.round(p.x), Math.round(p.y - 1.6), Math.round(p.z));
+
+        const rawDiff = `${state.initialLhs} - (${state.initialRhs})`;
+        const diffText = nerdamer(rawDiff).simplify().text();
         
-        if (voxelBelow !== BLOCKS.AIR) {
-            // Stop chute
-            if(player.velocity.y < 0) {
-                player.velocity.y = 0;
-                player.onGround = true;
-                // Repositionnement au dessus du bloc pour ne pas traverser
-                const targetY = Math.round(p.y - 1.6) + 0.5 + 1.6;
-                if(p.y < targetY) camera.position.y = targetY;
-            }
-        } else {
-            player.onGround = false;
+        const valAt0 = nerdamer(diffText).evaluate({x: 0}).text();
+        const valAt1 = nerdamer(diffText).evaluate({x: 1}).text();
+
+        const B = parseFloat(valAt0);
+        const AplusB = parseFloat(valAt1);
+        const A = AplusB - B;
+
+        const pivot = (A === 0) ? 0 : -B / A; 
+        const startSign = state.initialSign;
+
+        const uMin = userInterval.min === '-Infinity' ? -Infinity : parseFloat(userInterval.min);
+        const uMax = userInterval.max === 'Infinity' ? Infinity : parseFloat(userInterval.max);
+        
+        const minIsPivot = Math.abs(uMin - pivot) < 0.01;
+        const maxIsPivot = Math.abs(uMax - pivot) < 0.01;
+        let isPivotCorrect = (uMin === -Infinity && maxIsPivot) || (uMax === Infinity && minIsPivot);
+        
+        let isDirectionCorrect = false;
+        if (isPivotCorrect) {
+            let testPoint = (uMin === -Infinity) ? uMax - 1 : uMin + 1;
+            const vL = parseFloat(nerdamer(state.initialLhs, {x: testPoint}).evaluate().text());
+            const vR = parseFloat(nerdamer(state.initialRhs, {x: testPoint}).evaluate().text());
+            
+            if (startSign === '<') isDirectionCorrect = vL < vR;
+            else if (startSign === '>') isDirectionCorrect = vL > vR;
+            else if (startSign === '\\leq') isDirectionCorrect = vL <= vR;
+            else if (startSign === '\\geq') isDirectionCorrect = vL >= vR;
         }
+
+        const isSuccess = isPivotCorrect && isDirectionCorrect;
+        let msg = "Bravo !";
+        if (!isPivotCorrect) msg = `Erreur de frontière (attendu : ${pivot.toFixed(2)})`;
+        else if (!isDirectionCorrect) msg = "L'intervalle est dans le mauvais sens.";
+
+        const minTex = uMin === -Infinity ? '-\\infty' : uMin;
+        const maxTex = uMax === Infinity ? '+\\infty' : uMax;
+        const solLatex = `S = ${userInterval.left} ${minTex} ; ${maxTex} ${userInterval.right}`;
+
+        return {
+            newState: { 
+                ...state, 
+                solutionState: { kind: 'INTERVAL', isSuccess, msg },
+                finalSolutionLatex: isSuccess ? solLatex : null,
+                lastOp: null 
+            },
+            status: 'RUNNING'
+        };
     }
-    
-    // Mort si tombe trop bas
-    if(camera.position.y < -20) {
-        camera.position.set(0, 30, 0);
-        player.velocity.set(0,0,0);
-    }
-}
 
-// Raycasting
-function updateRaycaster() {
-    raycaster.setFromCamera(center, camera);
-    const meshes = Object.values(world.meshes).filter(m => m.count > 0);
-    const intersects = raycaster.intersectObjects(meshes);
-
-    if (intersects.length > 0) {
-        const hit = intersects[0];
-        const matrix = new THREE.Matrix4();
-        hit.object.getMatrixAt(hit.instanceId, matrix);
-        const pos = new THREE.Vector3().setFromMatrixPosition(matrix);
-        highlightMesh.position.copy(pos);
-        highlightMesh.visible = true;
-        intersectedBlock = { x: Math.round(pos.x), y: Math.round(pos.y), z: Math.round(pos.z), face: hit.face };
-    } else {
-        highlightMesh.visible = false;
-        intersectedBlock = null;
-    }
-}
-
-// UI & Logic
-function updateUI() {
-    const hotbarEl = document.getElementById('hotbar');
-    if(!hotbarEl) return;
-    hotbarEl.innerHTML = '';
-    player.hotbar.forEach((itemId, idx) => {
-        const slot = document.createElement('div');
-        slot.className = 'slot' + (idx === player.selectedSlot ? ' active' : '');
-        if(itemId !== 0) {
-            slot.style.backgroundColor = BLOCK_COLORS[itemId];
-            slot.innerHTML = `<span class="qty">${player.inventory[itemId] || 0}</span>`;
-        }
-        hotbarEl.appendChild(slot);
-    });
-    document.getElementById('selected-item-name').innerText = player.hotbar[player.selectedSlot] ? BLOCK_NAMES[player.hotbar[player.selectedSlot]] : "Main vide";
-}
-
-function selectSlot(idx) { player.selectedSlot = idx; updateUI(); }
-
-// --- ENTRÉES UTILISATEUR ---
-const onKeyDown = (event) => {
-    switch (event.code) {
-        case 'ArrowUp': case 'KeyW': player.direction.z = 1; break;
-        case 'ArrowLeft': case 'KeyA': player.direction.x = 1; break;
-        case 'ArrowDown': case 'KeyS': player.direction.z = -1; break;
-        case 'ArrowRight': case 'KeyD': player.direction.x = -1; break;
-        case 'Space': 
-            if (player.onGround || player.gamemode === 'fly') player.velocity.y = 12; 
-            break;
-        case 'Digit1': selectSlot(0); break;
-        case 'Digit2': selectSlot(1); break;
-    }
+    if (action.type === 'DECLARE_SOLUTION') {
+        return { newState: state, status: 'RUNNING' };
+    return { newState: state, status: 'RUNNING' };
+  }
 };
-const onKeyUp = (event) => {
-    switch (event.code) {
-        case 'ArrowUp': case 'KeyW': player.direction.z = 0; break;
-        case 'ArrowLeft': case 'KeyA': player.direction.x = 0; break;
-        case 'ArrowDown': case 'KeyS': player.direction.z = 0; break;
-        case 'ArrowRight': case 'KeyD': player.direction.x = 0; break;
-    }
-};
-
-document.addEventListener('keydown', onKeyDown);
-document.addEventListener('keyup', onKeyUp);
-document.addEventListener('mousedown', (e) => {
-    // Permet de miner même si pointerlock a échoué, tant que le jeu est actif
-    if (!isGameActive) return;
-    
-    // Relance le lock si perdu
-    if(document.pointerLockElement !== document.body) {
-        controls.lock();
-    }
-    
-    if (e.button === 0 && intersectedBlock) { // Mine
-        world.setVoxel(intersectedBlock.x, intersectedBlock.y, intersectedBlock.z, BLOCKS.AIR);
-        world.update();
-        player.inventory[BLOCKS.DIRT]++;
-        updateUI();
-    }
-    if (e.button === 2 && intersectedBlock) { // Place
-        const b = player.hotbar[player.selectedSlot];
-        if(b) {
-            world.setVoxel(intersectedBlock.x + intersectedBlock.face.normal.x, intersectedBlock.y + intersectedBlock.face.normal.y, intersectedBlock.z + intersectedBlock.face.normal.z, b);
-            world.update();
-            updateUI();
-        }
-    }
-});
-
-// --- DÉMARRAGE ---
-function startGame(mode) {
-    player.gamemode = mode;
-    document.getElementById('title-screen').style.display = 'none';
-    document.getElementById('hud').style.display = 'block';
-    
-    isGameActive = true; // FORCE L'ACTIVATION DE LA PHYSIQUE
-    
-    // Tente de verrouiller, mais ne bloque pas le jeu si ça échoue
-    try {
-        controls.lock();
-    } catch(e) {
-        console.warn("Pointer lock failed, but game continues.");
-    }
-    updateUI();
-}
-
-document.getElementById('btn-play').onclick = () => startGame('fps');
-document.getElementById('btn-fly').onclick = () => startGame('fly');
-
-// --- LOOP PRINCIPALE ---
-const clock = new THREE.Clock();
-
-function animate() {
-    requestAnimationFrame(animate);
-    const delta = Math.min(clock.getDelta(), 0.1);
-
-    // CRUCIAL : On update la physique si le jeu est actif, 
-    // INDÉPENDAMMENT du PointerLock
-    if (isGameActive) {
-        updatePhysics(delta);
-        updateRaycaster();
-    }
-
-    renderer.render(scene, camera);
-}
-
-animate();
-
-window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-});
