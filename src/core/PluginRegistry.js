@@ -23,6 +23,7 @@ registerPlugin(MazeFeature);
 registerPlugin(TurtleFeature);
 registerPlugin(MathFeature);
 registerPlugin(EquationFeature);
+registerPlugin(IframeFeature);
 
 export const getPlugin = (id) => REGISTRY[id];
 export const getAllPlugins = () => Object.values(REGISTRY);

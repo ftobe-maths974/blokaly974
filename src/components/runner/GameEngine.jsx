@@ -1,66 +1,32 @@
-import React, { useState } from 'react';
-import { getPlugin } from '../../core/PluginRegistry';
-import InstructionPanel from './InstructionPanel';
-import BlocklyRunner from './BlocklyRunner';
+import MazeFeature from '../features/maze';
+import TurtleFeature from '../features/turtle';
+import MathFeature from '../features/math';
+import EquationFeature from '../features/equation';
+// 👇 AJOUT DE L'IMPORT OBLIGATOIRE
+import IframeFeature from '../features/iframe'; 
 
-// Ce composant est maintenant un "Router" de moteurs de jeu
-export default function GameEngine({ levelData, onWin, levelIndex, onNextLevel }) {
-  const plugin = getPlugin(levelData?.type);
-  const [isPanelOpen, setIsPanelOpen] = useState(true);
+const REGISTRY = {};
 
-  if (!plugin) return <div className="p-10 text-red-500 font-bold">🚫 Plugin introuvable : {levelData?.type}</div>;
+export const registerPlugin = (plugin) => {
+  if (!plugin) {
+      console.error("❌ Erreur : Tentative d'enregistrer un plugin vide/indéfini.");
+      return;
+  }
+  if (!plugin.id) {
+      console.error("❌ Erreur : Le plugin n'a pas d'ID.", plugin);
+      return;
+  }
+  
+  console.log(`✅ Succès : Plugin "${plugin.id}" ajouté au registre.`);
+  REGISTRY[plugin.id] = plugin;
+};
 
-  // Calcul du titre pour le panneau de consigne
-  const displayTitle = levelIndex !== undefined 
-    ? `Niveau ${levelIndex + 1}` 
-    : (typeof levelData.id === 'number' && levelData.id < 1000000 ? `Niveau ${levelData.id}` : "Niveau Test");
+registerPlugin(MazeFeature);
+registerPlugin(TurtleFeature);
+registerPlugin(MathFeature);
+registerPlugin(EquationFeature);
+// 👇 ENREGISTREMENT
+registerPlugin(IframeFeature); 
 
-  // SELECTION DU RUNNER
-  // Par défaut, on utilise BlocklyRunner.
-  // Plus tard, on pourra faire : if (plugin.runnerMode === 'IFRAME') return <IframeRunner ... />
-  let RunnerComponent = BlocklyRunner;
-
-  // Exemple futur (préparation) :
-  // if (plugin.config?.runnerMode === 'IFRAME') RunnerComponent = IframeRunner;
-
-  return (
-    <div style={{display: 'flex', height: '100%', flexDirection: 'row', overflow: 'hidden'}}>
-      
-     return (
-      {/* ... InstructionPanel ... */}
-
-      <div style={{flex: 1, minWidth: 0, height: '100%', position: 'relative'}}>
-        <RunnerComponent 
-            levelData={levelData} 
-            plugin={plugin} 
-            savedCode={savedCode}          // 👈 Transmis
-            onCodeChange={onCodeChange}    // 👈 Transmis
-            onWin={onWin} 
-            onNextLevel={onNextLevel} 
-        />
-      </div>
-
-      {/* 2. Le Moteur Spécifique (Blockly, Iframe, etc.) */}
-      <div style={{flex: 1, minWidth: 0, height: '100%', position: 'relative'}}>
-        <RunnerComponent 
-            levelData={levelData} 
-            plugin={plugin} 
-            onWin={onWin} 
-            onNextLevel={onNextLevel} 
-        />
-      </div>
-
-      <div style={{flex: 1, minWidth: 0, height: '100%', position: 'relative'}}>
-        <RunnerComponent 
-            levelData={levelData} 
-            plugin={plugin} 
-            savedCode={savedCode}          // 👈 Transmis
-            onCodeChange={onCodeChange}    // 👈 Transmis
-            onWin={onWin} 
-            onNextLevel={onNextLevel} 
-        />
-      </div>
-
-    </div>
-  );
-}
+export const getPlugin = (id) => REGISTRY[id];
+export const getAllPlugins = () => Object.values(REGISTRY);
