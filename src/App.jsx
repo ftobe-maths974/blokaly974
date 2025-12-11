@@ -5,37 +5,63 @@ import Runner from './components/runner/Runner';
 import Home from './components/Home';
 import './App.css';
 
+// Importation globale des blocs
+import { registerAllBlocks } from './core/BlockRegistry';
+// Sécurité pour éviter le double-enregistrement
+try { registerAllBlocks(); } catch(e) { console.warn("Blocks already registered"); }
+
 function App() {
-  // Modes : 'home', 'builder', 'runner', 'loading'
   const [mode, setMode] = useState('loading'); 
   const [campaignData, setCampaignData] = useState(null);
   const [ltiConfig, setLtiConfig] = useState(null);
-  
-  // RÔLES
   const [isTeacher, setIsTeacher] = useState(false);
-  
-  // ÉTAT MANQUANT QUI CAUSAIT L'ERREUR
   const [startLevelIndex, setStartLevelIndex] = useState(0);
 
-  // 1. Un élève charge un fichier depuis l'accueil
+  // --- ACTIONS ---
   const handleFileLoaded = (data) => {
       setCampaignData(data);
       setIsTeacher(false); 
-      setStartLevelIndex(0); // On commence au début
+      setStartLevelIndex(0);
       setMode('runner');
   };
 
-  // 2. Le prof teste depuis le Builder
   const handleTeacherTest = (currentCampaignData, levelIndex = 0) => {
       setCampaignData(currentCampaignData);
-      setStartLevelIndex(levelIndex); // On saute au niveau en cours d'édition
+      setStartLevelIndex(levelIndex);
       setMode('runner');
-      // On laisse isTeacher à true (défini à l'init)
   };
 
-  // 3. Retour à l'atelier
   const handleBackToBuilder = () => {
       setMode('builder');
+  };
+
+  // --- HELPER DE CHARGEMENT ROBUSTE ---
+  // C'est cette fonction qui corrige votre bug
+  const fetchCampaign = async (url) => {
+      console.log(`📥 Tentative chargement : "${url}"`);
+      
+      // 1. Essai Standard (Relatif)
+      let response = await fetch(url);
+      let contentType = response.headers.get("content-type");
+
+      // Si échec (404) ou si Vite renvoie index.html à la place du JSON
+      if (!response.ok || (contentType && contentType.includes("text/html"))) {
+          // Si c'est un chemin local relatif, on tente la racine absolue
+          if (!url.startsWith('http') && !url.startsWith('/')) {
+              console.warn(`⚠️ Échec relatif. Tentative à la racine : "/${url}"`);
+              const rootUrl = `/${url}`;
+              response = await fetch(rootUrl);
+              contentType = response.headers.get("content-type");
+          }
+      }
+
+      // Vérification finale
+      if (!response.ok) throw new Error(`Erreur HTTP ${response.status}`);
+      if (contentType && contentType.includes("text/html")) {
+          throw new Error(`Fichier introuvable. Vérifiez que "${url}" est bien dans le dossier /public/`);
+      }
+      
+      return await response.json();
   };
 
   useEffect(() => {
@@ -45,8 +71,6 @@ function App() {
     const jsonUrl = params.get('url');
     const ltiToken = params.get('lti_token');
     const gradeUrl = params.get('api_grade');
-    
-    // Détection explicite du mode éditeur
     const isEditorMode = params.get('mode') === 'editor'; 
 
     const initApp = async () => {
@@ -57,26 +81,30 @@ function App() {
             setIsTeacher(true);
             setMode('builder');
         }
-        // B. MODE LTI (Élève noté)
+        // B. MODE LTI (Noté)
         else if (ltiToken && jsonUrl) {
             console.log("🎓 Mode Élève LTI");
             setLtiConfig({ token: ltiToken, apiUrl: gradeUrl });
-            const response = await fetch(jsonUrl);
-            if (!response.ok) throw new Error("URL campagne invalide");
-            setCampaignData(await response.json());
+            
+            // Utilisation du fetch intelligent
+            const data = await fetchCampaign(jsonUrl);
+            
+            setCampaignData(data);
             setIsTeacher(false);
             setMode('runner');
         } 
         // C. MODE PARTAGE (Lien public)
         else if (jsonUrl) {
             console.log("🔗 Mode Élève (Lien)");
-            const response = await fetch(jsonUrl);
-            if (!response.ok) throw new Error("Fichier introuvable");
-            setCampaignData(await response.json());
+            
+            // Utilisation du fetch intelligent
+            const data = await fetchCampaign(jsonUrl);
+
+            setCampaignData(data);
             setIsTeacher(false); 
             setMode('runner');
         }
-        // D. MODE LZSTRING (Anciens liens)
+        // D. MODE LZSTRING
         else if (encodedData) {
             console.log("📦 Mode LZString");
             const jsonStr = LZString.decompressFromEncodedURIComponent(encodedData);
@@ -84,7 +112,7 @@ function App() {
             setIsTeacher(false);
             setMode('runner');
         }
-        // E. PAR DÉFAUT -> ACCUEIL
+        // E. ACCUEIL
         else {
             console.log("🏠 Accueil");
             setIsTeacher(false);
@@ -92,8 +120,8 @@ function App() {
         }
 
       } catch (e) {
-        console.error("Erreur init:", e);
-        alert("Erreur : " + e.message);
+        console.error("❌ Erreur init:", e);
+        alert("Impossible de charger l'exercice :\n" + e.message);
         setMode('home');
       }
     };
@@ -101,18 +129,14 @@ function App() {
     initApp();
   }, []);
 
-  if (mode === 'loading') return <div style={{padding:20, textAlign:'center'}}>Chargement...</div>;
+  if (mode === 'loading') return <div className="flex items-center justify-center h-screen text-slate-500">Chargement...</div>;
 
   return (
     <div className="App">
-      {mode === 'home' && (
-          <Home onFileLoaded={handleFileLoaded} />
-      )}
-
+      {mode === 'home' && <Home onFileLoaded={handleFileLoaded} />}
+      
       {mode === 'builder' && (
-        <Builder 
-            onTest={handleTeacherTest} // Passe la fonction au Builder
-        />
+        <Builder onTest={handleTeacherTest} />
       )}
 
       {mode === 'runner' && (
@@ -121,7 +145,7 @@ function App() {
             ltiConfig={ltiConfig}
             isTeacherMode={isTeacher} 
             onBackToBuilder={handleBackToBuilder}
-            initialLevelIndex={startLevelIndex} // Passe l'index de départ
+            initialLevelIndex={startLevelIndex}
         />
       )}
     </div>
