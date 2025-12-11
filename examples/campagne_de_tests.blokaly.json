@@ -671,7 +671,9 @@
       "allowedBlocks": [
         "equation_op_both",
         "equation_term_x",
-        "math_number"
+        "math_number",
+        "equation_verify",
+        "equation_solution_state"
       ],
       "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
       "solutionBlocks": "<xml></xml>",
