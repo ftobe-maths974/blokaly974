@@ -17,7 +17,8 @@ const workspaceConfig = {
 
 const btnStyle = { padding: '8px 16px', color: 'white', border:'none', borderRadius:'4px', cursor:'pointer', fontWeight:'bold', display: 'flex', alignItems: 'center', gap: '5px' };
 
-export default function BlocklyRunner({ levelData, plugin, onWin, onNextLevel }) {
+// 👇 AJOUT DES PROPS savedCode ET onCodeChange
+export default function BlocklyRunner({ levelData, plugin, onWin, onNextLevel, savedCode, onCodeChange }) {
   const GameView = plugin.RenderComponent;
   const [isReady, setIsReady] = useState(false);
   const [gameWidth, setGameWidth] = useState(40);
@@ -48,7 +49,7 @@ export default function BlocklyRunner({ levelData, plugin, onWin, onNextLevel })
     currentStep, totalSteps, timeTravel
   } = useGameRunner(workspaceRef, plugin, safeData);
 
-  // Remontée de la victoire au parent (GameEngine)
+  // Remontée de la victoire
   useEffect(() => {
     if (gameState === 'WON' && onWin) onWin(gameStats);
   }, [gameState, onWin, gameStats]);
@@ -81,8 +82,6 @@ export default function BlocklyRunner({ levelData, plugin, onWin, onNextLevel })
   }, []);
   const handleMouseMove = useCallback((e) => {
       if (!isResizing.current) return;
-      // On calcule par rapport à la fenêtre totale, mais attention si un panneau latéral existe
-      // Une approximation relative est souvent suffisante ici
       const newWidth = ((window.innerWidth - e.clientX) / window.innerWidth) * 100;
       if (newWidth > 20 && newWidth < 80) setGameWidth(newWidth);
   }, []);
@@ -113,10 +112,15 @@ export default function BlocklyRunner({ levelData, plugin, onWin, onNextLevel })
     workspaceRef.current = newWorkspace;
     javascriptGenerator.init(newWorkspace);
     newWorkspace.updateToolbox(currentToolbox);
-    if (safeData.startBlocks) {
+    
+    // 👇 LOGIQUE DE CHARGEMENT CORRIGÉE
+    // Priorité : 1. Code sauvegardé (Session élève) > 2. Code de départ (Prof) > 3. Vide
+    const codeToLoad = savedCode || safeData.startBlocks;
+
+    if (codeToLoad) {
        try {
            newWorkspace.clear();
-           const xmlDom = Blockly.utils.xml.textToDom(safeData.startBlocks);
+           const xmlDom = Blockly.utils.xml.textToDom(codeToLoad);
            Blockly.Xml.domToWorkspace(xmlDom, newWorkspace);
        } catch (e) { console.warn("Erreur code:", e); }
     }
@@ -127,14 +131,12 @@ export default function BlocklyRunner({ levelData, plugin, onWin, onNextLevel })
     if (workspaceRef.current && isReady) workspaceRef.current.updateToolbox(currentToolbox);
   }, [currentToolbox, isReady]);
 
-  // Resize quand la largeur change
   useEffect(() => {
     if (!workspaceRef.current) return;
     const timer = setTimeout(() => Blockly.svgResize(workspaceRef.current), 350);
     return () => clearTimeout(timer);
   }, [gameWidth]);
 
-  // --- PROPS DU JEU ---
   const renderProps = {
       grid: safeData.grid,
       playerPos: engineState ? {x: engineState.x, y: engineState.y} : {x: safeData.startPos.x, y: safeData.startPos.y},
@@ -190,10 +192,17 @@ export default function BlocklyRunner({ levelData, plugin, onWin, onNextLevel })
         )}
       </div>
 
-      {/* ZONE DE JEU (WORKSPACE + VISU) */}
+      {/* ZONE DE JEU */}
       <div style={{display: 'flex', flex: 1, overflow: 'hidden', position: 'relative'}}>
         <div className="blocklyContainer" style={{flex: 1, position: 'relative', minWidth: '0'}}>
-          <BlocklyWorkspace key={`${safeData.id}-${plugin.id}`} className="blockly-div" toolboxConfiguration={currentToolbox} workspaceConfiguration={workspaceConfig} onInject={handleInject} />
+          <BlocklyWorkspace 
+            key={`${safeData.id}-${plugin.id}`} 
+            className="blockly-div" 
+            toolboxConfiguration={currentToolbox} 
+            workspaceConfiguration={workspaceConfig} 
+            onInject={handleInject} 
+            onXmlChange={onCodeChange} // 👈 CONNEXION AU PARENT
+          />
         </div>
         
         <div onMouseDown={startResizing} style={{width: '8px', background: '#ddd', cursor: 'col-resize', display: 'flex', justifyContent: 'center', alignItems: 'center', borderLeft: '1px solid #ccc', borderRight: '1px solid #ccc', zIndex: 10}} title="Redimensionner">

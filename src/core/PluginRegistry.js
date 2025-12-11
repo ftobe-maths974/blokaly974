@@ -2,6 +2,8 @@ import MazeFeature from '../features/maze';
 import TurtleFeature from '../features/turtle';
 import MathFeature from '../features/math';
 import EquationFeature from '../features/equation';
+// 👇 AJOUT DE L'IMPORT OBLIGATOIRE
+import IframeFeature from '../features/iframe'; 
 
 const REGISTRY = {};
 
@@ -23,7 +25,8 @@ registerPlugin(MazeFeature);
 registerPlugin(TurtleFeature);
 registerPlugin(MathFeature);
 registerPlugin(EquationFeature);
-registerPlugin(IframeFeature);
+// 👇 ENREGISTREMENT
+registerPlugin(IframeFeature); 
 
 export const getPlugin = (id) => REGISTRY[id];
 export const getAllPlugins = () => Object.values(REGISTRY);

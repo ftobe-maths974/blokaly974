@@ -1,32 +1,41 @@
-import MazeFeature from '../features/maze';
-import TurtleFeature from '../features/turtle';
-import MathFeature from '../features/math';
-import EquationFeature from '../features/equation';
-// 👇 AJOUT DE L'IMPORT OBLIGATOIRE
-import IframeFeature from '../features/iframe'; 
+import React from 'react';
+import { getPlugin } from '../../core/PluginRegistry';
+import BlocklyRunner from './BlocklyRunner';
 
-const REGISTRY = {};
+// Le GameEngine ne sert plus qu'à choisir le bon moteur d'exécution
+export default function GameEngine({ levelData, onWin, onNextLevel, ...props }) {
+  const currentType = levelData.type || 'MAZE';
+  const plugin = getPlugin(currentType);
 
-export const registerPlugin = (plugin) => {
   if (!plugin) {
-      console.error("❌ Erreur : Tentative d'enregistrer un plugin vide/indéfini.");
-      return;
+    return <div className="p-10 text-center">❌ Erreur : Plugin "{currentType}" introuvable.</div>;
   }
-  if (!plugin.id) {
-      console.error("❌ Erreur : Le plugin n'a pas d'ID.", plugin);
-      return;
+
+  // --- CAS 1 : Moteur Spécifique (ex: IFRAME, et bientôt PHASER) ---
+  // Si le plugin déclare être autonome via "isFullscreen" ou si c'est explicitement IFRAME
+  if (plugin.id === 'IFRAME' || plugin.isFullscreen) {
+      // On récupère le composant visuel défini dans le plugin (ex: IframeRunner)
+      const CustomRunner = plugin.RenderComponent;
+      
+      return (
+        <CustomRunner 
+            levelData={levelData} 
+            onWin={onWin} 
+            onNextLevel={onNextLevel} 
+            {...props} 
+        />
+      );
   }
-  
-  console.log(`✅ Succès : Plugin "${plugin.id}" ajouté au registre.`);
-  REGISTRY[plugin.id] = plugin;
-};
 
-registerPlugin(MazeFeature);
-registerPlugin(TurtleFeature);
-registerPlugin(MathFeature);
-registerPlugin(EquationFeature);
-// 👇 ENREGISTREMENT
-registerPlugin(IframeFeature); 
-
-export const getPlugin = (id) => REGISTRY[id];
-export const getAllPlugins = () => Object.values(REGISTRY);
+  // --- CAS 2 : Moteur Standard (Blockly) ---
+  // C'est le cas par défaut pour Maze, Turtle, Math, Equation
+  return (
+    <BlocklyRunner 
+        levelData={levelData} 
+        plugin={plugin} 
+        onWin={onWin} 
+        onNextLevel={onNextLevel}
+        {...props} 
+    />
+  );
+}
