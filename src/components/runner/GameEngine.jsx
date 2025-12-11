@@ -26,19 +26,36 @@ export default function GameEngine({ levelData, onWin, levelIndex, onNextLevel }
   return (
     <div style={{display: 'flex', height: '100%', flexDirection: 'row', overflow: 'hidden'}}>
       
-      {/* 1. Consigne (Commune à tous les modes) */}
-      <InstructionPanel 
-        title={displayTitle} 
-        content={levelData.instruction} 
-        isCollapsed={!isPanelOpen} 
-        onToggle={() => setIsPanelOpen(!isPanelOpen)} 
-      />
+     return (
+      {/* ... InstructionPanel ... */}
+
+      <div style={{flex: 1, minWidth: 0, height: '100%', position: 'relative'}}>
+        <RunnerComponent 
+            levelData={levelData} 
+            plugin={plugin} 
+            savedCode={savedCode}          // 👈 Transmis
+            onCodeChange={onCodeChange}    // 👈 Transmis
+            onWin={onWin} 
+            onNextLevel={onNextLevel} 
+        />
+      </div>
 
       {/* 2. Le Moteur Spécifique (Blockly, Iframe, etc.) */}
       <div style={{flex: 1, minWidth: 0, height: '100%', position: 'relative'}}>
         <RunnerComponent 
             levelData={levelData} 
             plugin={plugin} 
+            onWin={onWin} 
+            onNextLevel={onNextLevel} 
+        />
+      </div>
+
+      <div style={{flex: 1, minWidth: 0, height: '100%', position: 'relative'}}>
+        <RunnerComponent 
+            levelData={levelData} 
+            plugin={plugin} 
+            savedCode={savedCode}          // 👈 Transmis
+            onCodeChange={onCodeChange}    // 👈 Transmis
             onWin={onWin} 
             onNextLevel={onNextLevel} 
         />

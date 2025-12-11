@@ -1,14 +1,8 @@
 import nerdamer from 'nerdamer/all.min';
 
-// Gardien anti-doublon
-let isRegistered = false;
+// Gardien anti-doublon let isRegistered = false;
 
-export const EquationLogic = {
-  registerBlocks: (Blockly, javascriptGenerator) => {
-    if (isRegistered) return;
-    isRegistered = true;
-    console.log("📐 Enregistrement blocs EQUATION...");
-
+export const EquationLogic = { registerBlocks: (Blockly, javascriptGenerator) => { if (isRegistered) return; isRegistered = true; console.log("📐 Enregistrement blocs EQUATION...");
 
     // Définitions
     const blocks = [
@@ -46,19 +40,9 @@ export const EquationLogic = {
         const sign = block.getFieldValue('SIGN') === 'NEG' ? '-' : '';
         return [`${sign}Infinity`, javascriptGenerator.ORDER_ATOMIC];
     };
-  },
+    },
 
-  getToolboxXML: (allowedBlocks) => {
-    const allBlocks = [
-        { type: 'equation_op_both', xml: '<block type="equation_op_both"><value name="VAL"><shadow type="math_number"><field name="NUM">1</field></shadow></value></block>' },
-        { type: 'equation_term_x', xml: '<block type="equation_term_x"></block>' },
-        { type: 'equation_verify', xml: '<block type="equation_verify"><value name="VAL"><shadow type="math_number"><field name="NUM">1</field></shadow></value></block>' },
-        { type: 'equation_solution_state', xml: '<block type="equation_solution_state"></block>' },
-        { type: 'equation_solution_s', xml: '<block type="equation_solution_s"></block>' },
-        { type: 'equation_interval', xml: '<block type="equation_interval"><value name="MIN"><shadow type="math_number"><field name="NUM">0</field></shadow></value><value name="MAX"><shadow type="math_number"><field name="NUM">10</field></shadow></value></block>' },
-        { type: 'math_infinity', xml: '<block type="math_infinity"></block>' },
-        { type: 'math_number', xml: '<block type="math_number"></block>' }
-    ];
+    getToolboxXML: (allowedBlocks) => { const allBlocks = [ { type: 'equation_op_both', xml: '<block type="equation_op_both"><value name="VAL"><shadow type="math_number"><field name="NUM">1</field></shadow></value></block>' }, { type: 'equation_term_x', xml: '<block type="equation_term_x"></block>' }, { type: 'equation_verify', xml: '<block type="equation_verify"><value name="VAL"><shadow type="math_number"><field name="NUM">1</field></shadow></value></block>' }, { type: 'equation_solution_state', xml: '<block type="equation_solution_state"></block>' }, { type: 'equation_solution_s', xml: '<block type="equation_solution_s"></block>' }, { type: 'equation_interval', xml: '<block type="equation_interval"><value name="MIN"><shadow type="math_number"><field name="NUM">0</field></shadow></value><value name="MAX"><shadow type="math_number"><field name="NUM">10</field></shadow></value></block>' }, { type: 'math_infinity', xml: '<block type="math_infinity"></block>' }, { type: 'math_number', xml: '<block type="math_number"></block>' } ];
 
     let xml = '<category name="Algèbre" colour="#5b67a5">';
     allBlocks.forEach(b => {
@@ -68,25 +52,9 @@ export const EquationLogic = {
     });
     xml += '</category>';
     return xml;
-  },
+    },
 
-  executeStep: (currentState, action, levelData) => {
-    // 1. Initialisation complète avec Options (Implicit, Graph)
-    const state = currentState || { 
-      lhs: levelData.equation?.lhs || "x", 
-      rhs: levelData.equation?.rhs || "0", 
-      initialLhs: levelData.equation?.lhs || "x",
-      initialRhs: levelData.equation?.rhs || "0",
-      sign: levelData.equation?.sign || '=', 
-      initialSign: levelData.equation?.sign || '=', 
-      // 👇 RECUPERATION DES OPTIONS
-      implicit: levelData.equation?.implicit || false, 
-      showGraph: levelData.equation?.showGraph || false,
-      history: [],
-      verification: null,
-      solutionState: null,
-      finalSolutionLatex: null
-    };
+    executeStep: (currentState, action, levelData) => { // 1. Initialisation complète avec Options (Implicit, Graph) const state = currentState || { lhs: levelData.equation?.lhs || "x", rhs: levelData.equation?.rhs || "0", initialLhs: levelData.equation?.lhs || "x", initialRhs: levelData.equation?.rhs || "0", sign: levelData.equation?.sign || '=', initialSign: levelData.equation?.sign || '=', // 👇 RECUPERATION DES OPTIONS implicit: levelData.equation?.implicit || false, showGraph: levelData.equation?.showGraph || false, history: [], verification: null, solutionState: null, finalSolutionLatex: null };
 
     if (!action) return { newState: state, status: 'RUNNING' };
 
@@ -94,30 +62,30 @@ export const EquationLogic = {
 
     // --- 1. CALCUL ---
     if (action.type === 'OP_BOTH') {
-      const val = action.value; 
-      const op = action.operator; 
-      
-      if (op === '/' && (val == 0 || val === '0')) {
-          return { newState: { ...state, lastOp: { error: "Division par zéro !" } }, status: 'RUNNING' };
-      }
+    const val = action.value; 
+    const op = action.operator; 
+    
+    if (op === '/' && (val == 0 || val === '0')) {
+        return { newState: { ...state, lastOp: { error: "Division par zéro !" } }, status: 'RUNNING' };
+    }
 
-      let newSign = sign;
-      const valNum = parseFloat(val);
-      if ((op === '*' || op === '/') && valNum < 0) {
-          if (sign === '<') newSign = '>'; else if (sign === '>') newSign = '<';
-          else if (sign === '\\leq') newSign = '\\geq'; else if (sign === '\\geq') newSign = '\\leq';
-      }
-      
-      const rawLhs = `(${lhs}) ${op} (${val})`;
-      const rawRhs = `(${rhs}) ${op} (${val})`;
-      const simpleLhs = nerdamer(rawLhs).text(); 
-      const simpleRhs = nerdamer(rawRhs).text();
-      const newHistory = [...history, { lhs: simpleLhs, rhs: simpleRhs, op, val, sign: newSign }];
+    let newSign = sign;
+    const valNum = parseFloat(val);
+    if ((op === '*' || op === '/') && valNum < 0) {
+        if (sign === '<') newSign = '>'; else if (sign === '>') newSign = '<';
+        else if (sign === '\\leq') newSign = '\\geq'; else if (sign === '\\geq') newSign = '\\leq';
+    }
+    
+    const rawLhs = `(${lhs}) ${op} (${val})`;
+    const rawRhs = `(${rhs}) ${op} (${val})`;
+    const simpleLhs = nerdamer(rawLhs).text(); 
+    const simpleRhs = nerdamer(rawRhs).text();
+    const newHistory = [...history, { lhs: simpleLhs, rhs: simpleRhs, op, val, sign: newSign }];
 
-      return { 
+    return { 
         newState: { ...state, lhs: simpleLhs, rhs: simpleRhs, sign: newSign, history: newHistory, lastOp: { op, val, rawLhs, rawRhs }, verification: null, solutionState: null, finalSolutionLatex: null },
         status: 'RUNNING'
-      };
+    };
     }
 
     // --- 2. VÉRIFICATION ---
@@ -226,6 +194,9 @@ export const EquationLogic = {
 
     if (action.type === 'DECLARE_SOLUTION') {
         return { newState: state, status: 'RUNNING' };
+    }
+
+    // Sécurité par défaut
     return { newState: state, status: 'RUNNING' };
-  }
-};
+    }
+}; 
