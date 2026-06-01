@@ -24,10 +24,15 @@ export default defineConfig([
     },
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
-      // Diagnostics React Compiler : le projet n'utilise pas (encore) le compiler
-      // et certains effets d'animation/reset d'état sont volontaires → on les
-      // signale sans bloquer. À réévaluer si le React Compiler est adopté.
+      // Diagnostics React Compiler (eslint-plugin-react-hooks v7) : le projet
+      // n'utilise pas (encore) le compiler. Ces règles signalent ici des cas
+      // volontaires/faux positifs (effets d'animation, reset d'état au changement
+      // de prop, Date.now() dans un handler, récursion mutuelle de callbacks via
+      // setTimeout) → on les rétrograde en warn sans bloquer. rules-of-hooks et
+      // exhaustive-deps restent actives. À réévaluer si le compiler est adopté.
       'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/purity': 'warn',
+      'react-hooks/immutability': 'warn',
     },
   },
 ])

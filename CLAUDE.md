@@ -12,12 +12,16 @@ règles d'étoiles/score pour tous les modes, remontée LMS via SCORM/LTI).
 ## Démarrer
 
 ```bash
-npm install --legacy-peer-deps   # OBLIGATOIRE : react-blockly@9 déclare peer react <=18, le projet est en react 19
+npm install                      # plus de --legacy-peer-deps depuis le retrait de react-blockly
 npm run dev                      # http://localhost:5173
 npm run build                    # build prod (sortie dans dist/)
-npm run lint                     # eslint (vert : 0 erreur ; reste qq warnings exhaustive-deps volontaires)
+npm test                         # vitest run (tests unitaires des plugins)
+npm run lint                     # eslint (vert : 0 erreur ; warnings React Compiler/deps volontaires)
 npm run deploy                   # gh-pages -d dist  →  https://ftobe-maths974.github.io/blokaly974/
 ```
+
+> Blockly est injecté via un wrapper maison `src/components/BlocklyWorkspace.jsx`
+> (remplace `react-blockly`, qui bloquait l'install en React 19).
 
 ## Architecture
 
@@ -99,6 +103,6 @@ Le vocabulaire de statut n'est pas figé.
 ## Conventions
 
 - JS/JSX pur (pas de TypeScript), modules ES. React 19, Vite 7, Tailwind 3.
-- Pas de tests ni de CI pour l'instant.
+- Tests : Vitest (`*.test.js` co-localisés ; pour l'instant sur `executeStep`). CI : `.github/workflows/ci.yml` (lint + test + build).
 - Format des campagnes : voir `public/examples/campagne_de_tests.blokaly.json`.
 - Détail complet des dettes et de la feuille de route : **`AUDIT.md`**.
