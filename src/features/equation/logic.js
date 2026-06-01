@@ -1,8 +1,13 @@
 import nerdamer from 'nerdamer/all.min';
 
-// Gardien anti-doublon let isRegistered = false;
+// Gardien anti-doublon
+let isRegistered = false;
 
-export const EquationLogic = { registerBlocks: (Blockly, javascriptGenerator) => { if (isRegistered) return; isRegistered = true; console.log("📐 Enregistrement blocs EQUATION...");
+export const EquationLogic = {
+  registerBlocks: (Blockly, javascriptGenerator) => {
+    if (isRegistered) return;
+    isRegistered = true;
+    console.log("📐 Enregistrement blocs EQUATION...");
 
     // Définitions
     const blocks = [
@@ -54,7 +59,20 @@ export const EquationLogic = { registerBlocks: (Blockly, javascriptGenerator) =>
     return xml;
     },
 
-    executeStep: (currentState, action, levelData) => { // 1. Initialisation complète avec Options (Implicit, Graph) const state = currentState || { lhs: levelData.equation?.lhs || "x", rhs: levelData.equation?.rhs || "0", initialLhs: levelData.equation?.lhs || "x", initialRhs: levelData.equation?.rhs || "0", sign: levelData.equation?.sign || '=', initialSign: levelData.equation?.sign || '=', // 👇 RECUPERATION DES OPTIONS implicit: levelData.equation?.implicit || false, showGraph: levelData.equation?.showGraph || false, history: [], verification: null, solutionState: null, finalSolutionLatex: null };
+    executeStep: (currentState, action, levelData) => {
+    // 1. Initialisation complète avec Options (Implicit, Graph)
+    const state = currentState || {
+      lhs: levelData.equation?.lhs || "x",
+      rhs: levelData.equation?.rhs || "0",
+      initialLhs: levelData.equation?.lhs || "x",
+      initialRhs: levelData.equation?.rhs || "0",
+      sign: levelData.equation?.sign || '=',
+      initialSign: levelData.equation?.sign || '=',
+      // 👇 RECUPERATION DES OPTIONS
+      implicit: levelData.equation?.implicit || false,
+      showGraph: levelData.equation?.showGraph || false,
+      history: [], verification: null, solutionState: null, finalSolutionLatex: null
+    };
 
     if (!action) return { newState: state, status: 'RUNNING' };
 

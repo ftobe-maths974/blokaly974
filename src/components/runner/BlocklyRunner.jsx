@@ -65,26 +65,28 @@ export default function BlocklyRunner({ levelData, plugin, onWin, onNextLevel, s
   }, [plugin]);
 
   // --- SPLITTER (Redimensionnement) ---
-  const startResizing = useCallback(() => {
-      isResizing.current = true;
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', stopResizing);
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
-  }, []);
-  const stopResizing = useCallback(() => {
-      isResizing.current = false;
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', stopResizing);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-      if (workspaceRef.current) Blockly.svgResize(workspaceRef.current);
-  }, []);
+  // On utilise un AbortController pour attacher/détacher mousemove+mouseup d'un
+  // seul coup, ce qui évite qu'un handler ait à se référencer lui-même.
   const handleMouseMove = useCallback((e) => {
       if (!isResizing.current) return;
       const newWidth = ((window.innerWidth - e.clientX) / window.innerWidth) * 100;
       if (newWidth > 20 && newWidth < 80) setGameWidth(newWidth);
   }, []);
+  const startResizing = useCallback(() => {
+      isResizing.current = true;
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      const controller = new AbortController();
+      const stop = () => {
+          isResizing.current = false;
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+          controller.abort(); // retire mousemove ET mouseup en une fois
+          if (workspaceRef.current) Blockly.svgResize(workspaceRef.current);
+      };
+      document.addEventListener('mousemove', handleMouseMove, { signal: controller.signal });
+      document.addEventListener('mouseup', stop, { signal: controller.signal });
+  }, [handleMouseMove]);
 
   // --- TOOLBOX ---
   const currentToolbox = useMemo(() => {

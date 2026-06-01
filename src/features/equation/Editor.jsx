@@ -9,14 +9,6 @@ export default function EquationEditor({ levelData, onUpdate }) {
   const [manualEq, setManualEq] = useState("");
   const [tab, setTab] = useState('EQUATION'); 
 
-  useEffect(() => {
-    if (!levelData.allowedBlocks || levelData.allowedBlocks.length === 0) {
-       updateGlobal({ ...params }, true);
-    }
-    const startEq = `${params.a}*x + ${params.b} ${params.sign} ${params.c}*x + ${params.d}`;
-    setManualEq(startEq);
-  }, []);
-
   const updateGlobal = (newParams, resetBlocks = false) => {
     const lhs = newParams.manualLhs || `${newParams.a}*x + ${newParams.b}`;
     const rhs = newParams.manualRhs || `${newParams.c}*x + ${newParams.d}`;
@@ -24,6 +16,15 @@ export default function EquationEditor({ levelData, onUpdate }) {
     if (resetBlocks) updates.allowedBlocks = ['equation_op_both', 'equation_term_x', 'equation_verify', 'equation_solution_state', 'math_number'];
     onUpdate(updates);
   };
+
+  useEffect(() => {
+    if (!levelData.allowedBlocks || levelData.allowedBlocks.length === 0) {
+       updateGlobal({ ...params }, true);
+    }
+    const startEq = `${params.a}*x + ${params.b} ${params.sign} ${params.c}*x + ${params.d}`;
+    setManualEq(startEq);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const updateValidation = (field, value) => {
       const newValidation = { ...validation, [field]: value };
@@ -66,7 +67,7 @@ export default function EquationEditor({ levelData, onUpdate }) {
             if (sign === '>=') latexSign = '\\geq';
             nerdamer(lhs); nerdamer(rhs);
             updateGlobal({ ...params, manualLhs: lhs, manualRhs: rhs, sign: latexSign });
-          } catch(e) {}
+          } catch { /* expression incomplète : on ignore */ }
       }
   };
 

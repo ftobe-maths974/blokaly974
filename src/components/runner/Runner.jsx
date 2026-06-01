@@ -1,5 +1,5 @@
 // 📄 src/components/runner/Runner.jsx
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import GameEngine from './GameEngine';
 import CampaignMenu from './CampaignMenu';
 import CampaignNavBar from './CampaignNavBar'; 
@@ -7,10 +7,11 @@ import ScormService from '../../core/scorm/ScormService';
 import InstructionPanel from './InstructionPanel'; // ✅ Importation du panneau global
 
 export default function Runner({ campaign, ltiConfig, isTeacherMode, onBackToBuilder, initialLevelIndex = -1 }) {
-  
-  if (!campaign) return <div className="flex items-center justify-center h-screen">⏳ Chargement...</div>;
 
+  // ⚠️ Tous les hooks DOIVENT être appelés inconditionnellement (Rules of Hooks).
+  // La garde "campaign absente" se fait APRÈS les hooks (voir plus bas).
   const normalizedCampaign = useMemo(() => {
+      if (!campaign) return { title: "", levels: [] };
       if (campaign.levels && Array.isArray(campaign.levels)) return campaign;
       return { title: "Niveau Unique", levels: [campaign] };
   }, [campaign]);
@@ -23,7 +24,7 @@ export default function Runner({ campaign, ltiConfig, isTeacherMode, onBackToBui
     try {
         const saved = localStorage.getItem('blokaly_progress');
         return saved ? JSON.parse(saved) : {};
-    } catch (e) { return {}; }
+    } catch { return {}; }
   });
 
   const saveProgress = useCallback((levelIdx, data) => {
@@ -43,6 +44,9 @@ export default function Runner({ campaign, ltiConfig, isTeacherMode, onBackToBui
       if (activeLevelIndex < normalizedCampaign.levels.length - 1) setActiveLevelIndex(prev => prev + 1);
       else setActiveLevelIndex(-1);
   }, [activeLevelIndex, normalizedCampaign]);
+
+  // --- GARDE : campagne absente (après tous les hooks) ---
+  if (!campaign) return <div className="flex items-center justify-center h-screen">⏳ Chargement...</div>;
 
   // --- VUE MENU ---
   if (activeLevelIndex === -1) {
