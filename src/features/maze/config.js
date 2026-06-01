@@ -8,12 +8,12 @@ export const MAZE_CONFIG = {
   ],
 
   THEME: {
-    0: '⬛', // Vide (Noir)
-    1: '⬜', // Chemin (Blanc)
+    0: '🌿', // Vide (gazon)
+    1: '⬜', // Chemin (pas japonais)
     2: '🟩', // Départ
     3: '🏁', // Arrivée
-    4: '🧱', // Mur
-    PLAYER: '🤖' // Robot
+    4: '🌿', // Mur (gazon)
+    PLAYER: '🐢' // Tortue
   },
   
   victoryDelay: 1200,

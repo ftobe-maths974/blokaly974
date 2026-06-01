@@ -54,7 +54,7 @@ export default function MazeEditor({ levelData, onUpdate }) {
       { id: 3, label: "Arrivée", icon: "🏁" } 
   ];
   
-  const visualRotation = startPos.dir * 90 + 90;
+  const visualRotation = ((startPos.dir + 2) % 4) * 90;
 
   return (
     <div className="h-full flex flex-col bg-slate-50">
@@ -78,12 +78,12 @@ export default function MazeEditor({ levelData, onUpdate }) {
              </div>
              <div className="flex items-center gap-2">
                 <input type="range" min="0" max="3" step="1" value={startPos.dir} onChange={(e) => updateDirection(e.target.value)} className="w-16 accent-blue-500" />
-                <span style={{transform: `rotate(${visualRotation}deg)`}}>🤖</span>
+                <span style={{transform: `rotate(${visualRotation}deg)`}}>🐢</span>
              </div>
           </div>
           
           <div className="p-2 bg-slate-200 flex justify-center gap-2">
-             <button onClick={() => setSelectedTool(2)} className={`px-2 py-1 text-xs rounded font-bold transition-colors ${selectedTool===2?'bg-green-500 text-white shadow-md':'bg-white text-slate-600 hover:bg-slate-50'}`}>🤖 Départ</button>
+             <button onClick={() => setSelectedTool(2)} className={`px-2 py-1 text-xs rounded font-bold transition-colors ${selectedTool===2?'bg-green-500 text-white shadow-md':'bg-white text-slate-600 hover:bg-slate-50'}`}>🐢 Départ</button>
              {tools.map(tool => (
                 <button key={tool.id} onClick={() => setSelectedTool(tool.id)} className={`px-2 py-1 text-xs rounded font-bold transition-colors ${selectedTool===tool.id?'bg-blue-500 text-white shadow-md':'bg-white text-slate-600 hover:bg-slate-50'}`}>
                     {tool.icon} {tool.label}
@@ -113,7 +113,7 @@ export default function MazeEditor({ levelData, onUpdate }) {
                         {cell === 4 && <div className="absolute inset-0 bg-slate-700" />}
                         {cell === 3 && <span className="text-2xl select-none">🏁</span>}
                         {cell === 2 && <span className="text-2xl opacity-50 select-none">🟩</span>}
-                        {startPos.x === c && startPos.y === r && <span className="absolute text-2xl z-10 drop-shadow-md select-none" style={{transform: `rotate(${visualRotation}deg)`}}>🤖</span>}
+                        {startPos.x === c && startPos.y === r && <span className="absolute text-2xl z-10 drop-shadow-md select-none" style={{transform: `rotate(${visualRotation}deg)`}}>🐢</span>}
                     </div>
                 )))}
              </div>

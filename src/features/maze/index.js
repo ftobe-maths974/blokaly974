@@ -27,26 +27,28 @@ export default {
         }
 
         const validation = levelData.validation || {};
-        const targetBlocks = validation.stars?.blocks || levelData.maxBlocks || 99;
-        const targetSteps = validation.stars?.steps || 100;
+        const stars0 = validation.stars || {};
+        const optimal = stars0.blocks ?? levelData.maxBlocks ?? 99;          // solution élégante (avec boucle)
+        const flat = stars0.blocksFlat ?? Math.max(optimal * 3, optimal + 6); // solution « à plat » (sans boucle)
         const usedBlocks = metrics.blockCount || 0;
-        const usedSteps = metrics.steps || 0;
-        
-        let stars = 3;
-        const penalties = [];
-        if (usedBlocks > targetBlocks) { stars--; penalties.push("trop de blocs"); }
-        if (usedSteps > targetSteps) { stars--; penalties.push("trop lent"); }
-        stars = Math.max(1, stars);
+
+        // Barème 4 ⭐ : récompense l'usage d'une boucle « Répéter » (donc moins de blocs).
+        let stars, message;
+        if (usedBlocks <= optimal) { stars = 4; message = "Parfait ! Tu as utilisé la boucle au mieux. 🐢✨"; }
+        else if (usedBlocks <= Math.round((optimal + flat) / 2)) { stars = 3; message = "Bien joué ! Peux-tu faire encore plus court avec Répéter ?"; }
+        else if (usedBlocks <= flat) { stars = 2; message = "Réussi ! Essaie une boucle Répéter pour utiliser moins de blocs."; }
+        else { stars = 1; message = "Réussi, mais avec beaucoup de blocs. La boucle Répéter t'aiderait !"; }
 
         return {
             status: 'WIN',
             score: {
-                stars: stars,
+                stars,
+                maxStars: 4,
                 primaryMetric: `${usedBlocks} blocs`,
-                targetMetric: `Obj: ${targetBlocks}`,
-                details: { blocks: usedBlocks, steps: usedSteps }
+                targetMetric: `Optimal : ${optimal}`,
+                details: { blocks: usedBlocks }
             },
-            feedback: { title: "Niveau réussi", message: stars === 3 ? "Parfait !" : penalties.join(", ") }
+            feedback: { title: "Figure réussie", message }
         };
     },
     
