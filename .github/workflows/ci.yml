@@ -17,9 +17,8 @@ jobs:
           node-version: 22
           cache: npm
 
-      # --legacy-peer-deps requis tant que react-blockly@9 déclare peer react <=18
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        run: npm ci
 
       - name: Lint
         run: npm run lint

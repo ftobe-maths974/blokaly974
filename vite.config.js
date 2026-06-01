@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         manualChunks: {
-          blockly: ['blockly', 'react-blockly'],
+          blockly: ['blockly'],
           katex: ['katex', 'react-katex', 'rehype-katex', 'remark-math'],
           math: ['nerdamer', 'function-plot'],
           markdown: ['react-markdown', 'remark-gfm'],

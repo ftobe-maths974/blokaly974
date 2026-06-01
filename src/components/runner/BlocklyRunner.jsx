@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { BlocklyWorkspace } from 'react-blockly';
+import { BlocklyWorkspace } from '../BlocklyWorkspace';
 import * as Blockly from 'blockly';
 import { javascriptGenerator } from 'blockly/javascript';
 
