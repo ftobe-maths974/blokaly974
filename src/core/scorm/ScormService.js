@@ -30,7 +30,7 @@ const ScormService = {
           return true;
         }
       }
-    } catch (e) {
+    } catch {
       console.warn("SCORM introuvable (Mode local ?)");
     }
     return false;

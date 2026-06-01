@@ -1,5 +1,5 @@
 // 📄 src/components/builder/LevelEditor.jsx
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { BlocklyWorkspace } from 'react-blockly';
 import * as Blockly from 'blockly';
 import { javascriptGenerator } from 'blockly/javascript';
@@ -13,11 +13,12 @@ export default function LevelEditor({ levelData, onUpdate }) {
   const workspaceRef = useRef(null);
   const [codeMode, setCodeMode] = useState('START'); // START | SOLUTION
   
-  // Sécurisation
-  const safeLevelData = {
+  // Sécurisation (mémoïsée : sinon recréée à chaque rendu, ce qui casse la
+  // mémoïsation du useMemo de la toolbox et déclenche un avertissement React Compiler)
+  const safeLevelData = useMemo(() => ({
       ...levelData,
       allowedBlocks: Array.isArray(levelData.allowedBlocks) ? levelData.allowedBlocks : []
-  };
+  }), [levelData]);
 
   const currentType = safeLevelData.type || 'MAZE';
   const activeFeature = getPlugin(currentType); 

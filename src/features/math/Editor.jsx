@@ -30,7 +30,7 @@ export default function MathEditor({ levelData, onUpdate }) {
   const smartParse = (val) => {
     if (typeof val === 'string') {
       const trimmed = val.trim();
-      if (trimmed.startsWith('[') && trimmed.endsWith(']')) { try { return JSON.parse(trimmed); } catch(e) { return val; } }
+      if (trimmed.startsWith('[') && trimmed.endsWith(']')) { try { return JSON.parse(trimmed); } catch { return val; } }
       if (trimmed.startsWith('@')) return val;
       if (trimmed === '' || trimmed.endsWith('.') || trimmed.endsWith(',')) return val;
       const num = Number(trimmed.replace(',', '.'));

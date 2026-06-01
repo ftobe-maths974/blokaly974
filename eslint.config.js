@@ -14,7 +14,7 @@ export default defineConfig([
       reactRefresh.configs.vite,
     ],
     languageOptions: {
-      ecmaVersion: 2020,
+      ecmaVersion: 'latest',
       globals: globals.browser,
       parserOptions: {
         ecmaVersion: 'latest',
@@ -24,6 +24,10 @@ export default defineConfig([
     },
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // Diagnostics React Compiler : le projet n'utilise pas (encore) le compiler
+      // et certains effets d'animation/reset d'état sont volontaires → on les
+      // signale sans bloquer. À réévaluer si le React Compiler est adopté.
+      'react-hooks/set-state-in-effect': 'warn',
     },
   },
 ])

@@ -33,7 +33,6 @@ export default {
         // On vérifie si les lignes de l'utilisateur "couvrent" celles du modèle.
         // Pour une vraie comparaison pixel-perfect, c'est lourd, ici on fait une approx sur les coordonnées.
         
-        let matchedLines = 0;
         const TOLERANCE = 5; // Pixels de tolérance
 
         // On vérifie que chaque ligne du modèle a une correspondance chez l'élève
