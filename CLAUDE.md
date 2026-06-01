@@ -15,7 +15,7 @@ règles d'étoiles/score pour tous les modes, remontée LMS via SCORM/LTI).
 npm install --legacy-peer-deps   # OBLIGATOIRE : react-blockly@9 déclare peer react <=18, le projet est en react 19
 npm run dev                      # http://localhost:5173
 npm run build                    # build prod (sortie dans dist/)
-npm run lint                     # eslint (actuellement rouge, cf. AUDIT.md)
+npm run lint                     # eslint (vert : 0 erreur ; reste qq warnings exhaustive-deps volontaires)
 npm run deploy                   # gh-pages -d dist  →  https://ftobe-maths974.github.io/blokaly974/
 ```
 

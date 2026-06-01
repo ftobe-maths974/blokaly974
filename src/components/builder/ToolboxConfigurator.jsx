@@ -7,7 +7,7 @@ export default function ToolboxConfigurator({ currentType, allowedBlocks, onUpda
   const plugin = getPlugin(currentType);
   const categories = plugin?.catalog || []; // Si pas de catalogue, tableau vide
   
-  // Reset de l'onglet si on change de type
+  // Reset de l'onglet si on change de type (reset d'état volontaire au changement de prop)
   const [activeTab, setActiveTab] = useState(0);
   useEffect(() => { setActiveTab(0); }, [currentType]);
 

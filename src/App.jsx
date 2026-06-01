@@ -8,7 +8,7 @@ import './App.css';
 // Importation globale des blocs
 import { registerAllBlocks } from './core/BlockRegistry';
 // Sécurité pour éviter le double-enregistrement
-try { registerAllBlocks(); } catch(e) { console.warn("Blocks already registered"); }
+try { registerAllBlocks(); } catch { console.warn("Blocks already registered"); }
 
 function App() {
   const [mode, setMode] = useState('loading'); 

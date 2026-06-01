@@ -92,7 +92,7 @@ export default {
     id: 'MATH',
     name: 'Labo Algo',
     icon: '🧪',
-    getToolbox: (allowedBlocks) => ({ xml: '', category: 'Mathématiques' }),
+    getToolbox: () => ({ xml: '', category: 'Mathématiques' }),
     executeStep: MathLogic.executeStep,
     evaluateResult: MathLogic.evaluateResult,
     

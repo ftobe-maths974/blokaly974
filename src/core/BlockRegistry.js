@@ -9,7 +9,7 @@ try {
             Blockly.fieldRegistry.register('field_colour', Blockly.FieldColour);
         }
     }
-} catch (e) {}
+} catch { /* champ déjà enregistré */ }
 
 let isRegistered = false;
 

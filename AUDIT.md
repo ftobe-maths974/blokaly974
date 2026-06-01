@@ -130,8 +130,9 @@ Pas de tests, pas de `.github/`, pas de `tsconfig`. Le déploiement gh-pages est
 
 ## Feuille de route proposée (par lots)
 
-- **Lot 0 — Stabiliser** : corriger les 4 bugs P0, `npm audit fix`, supprimer code mort
-  (`BlockCatalog`, `StandardBlocks`, `storage.js`), favicon, `drop:['console']`. Lint au vert.
+- **Lot 0 — Stabiliser** : ✅ 4 bugs P0 corrigés, ✅ code mort supprimé
+  (`BlockCatalog`, `StandardBlocks`, `storage.js`), ✅ lint au vert (0 erreur ; 6 warnings
+  exhaustive-deps volontaires). **Reste** : `npm audit fix`, favicon `index.html`, `drop:['console']`.
 - **Lot 1 — Durcir le socle** : remplacer `react-blockly` par `blockly` direct (supprime `--legacy-peer-deps`),
   `manualChunks` + `React.lazy`, ajouter CI (lint+build) + premiers tests Vitest sur `executeStep`.
 - **Lot 2 — Notation agnostique** : `Evaluation` + `computeGrade(rubric)` central, métriques enrichies,

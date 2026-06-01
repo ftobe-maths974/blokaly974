@@ -51,7 +51,6 @@ export const generateMasterToolbox = (type, levelInputs, hiddenVars = [], locked
 const buildToolboxXML = (allowedBlocks, levelInputs, hiddenVars, lockedVars, forceFull = false) => {
   let xmlContent = ''; 
   let remainingBlocks = new Set(allowedBlocks || []);
-  const useCategories = true; 
 
   // 1. Gestion des Variables
   let variableXml = '';

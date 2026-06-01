@@ -3,7 +3,7 @@ import 'katex/dist/katex.min.css';
 import { InlineMath } from 'react-katex';
 import EquationGraph from './EquationGraph';
 
-export default function EquationRunner({ state, levelData }) {
+export default function EquationRunner({ state }) {
   // Valeurs par défaut
   const defaultState = { lhs: "x", rhs: "0", sign: "=", initialLhs: "x", initialRhs: "0", history: [] };
   const displayState = state || defaultState;
@@ -48,6 +48,8 @@ export default function EquationRunner({ state, levelData }) {
   };
 
   // --- GESTION ANIMATIONS ---
+  // Effet d'animation déclenché par un changement de `state` : les setState dans
+  // l'effet sont volontaires (séquençage temporisé des étapes de résolution).
   useEffect(() => {
     if (state && state.lastOp && !state.lastOp.error) {
       setAnimating(true);
