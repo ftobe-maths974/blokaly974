@@ -1,0 +1,332 @@
+{
+  "title": "🧪 Parcours Algo — Labo",
+  "description": "Les petits programmes de base pour bien démarrer : afficher, variables, échanges, conditions et boucles.",
+  "levels": [
+    {
+      "id": 1,
+      "type": "MATH",
+      "chapter": "Premiers affichages",
+      "maxStars": 4,
+      "title": "👋 Hello World",
+      "instruction": "Le grand classique ! **Affiche** le message `Hello World`.\n\n💡 Bloc **Afficher** + bloc **Texte** (écris dedans).",
+      "inputs": {},
+      "targets": {},
+      "expectedOutput": [
+        "Hello World"
+      ],
+      "allowedBlocks": [
+        "text_print",
+        "text"
+      ],
+      "maxBlocks": 2,
+      "validation": {
+        "stars": {
+          "blocks": 2,
+          "blocksFlat": 6,
+          "steps": 200
+        }
+      },
+      "hiddenVars": [],
+      "lockedVars": [],
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>"
+    },
+    {
+      "id": 2,
+      "type": "MATH",
+      "chapter": "Premiers affichages",
+      "maxStars": 4,
+      "title": "🙋 Bonjour + prénom",
+      "instruction": "Affiche `Bonjour ` suivi du **prénom**.\n\n💡 Bloc **Assembler texte** : « Bonjour » + `prenom`.",
+      "inputs": {
+        "prenom": "Léa"
+      },
+      "targets": {},
+      "expectedOutput": [
+        "Bonjour Léa"
+      ],
+      "allowedBlocks": [
+        "text_print",
+        "text",
+        "text_join",
+        "variables_get"
+      ],
+      "maxBlocks": 4,
+      "validation": {
+        "stars": {
+          "blocks": 4,
+          "blocksFlat": 12,
+          "steps": 200
+        }
+      },
+      "hiddenVars": [],
+      "lockedVars": [],
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><variables><variable id=\"seed_0\">prenom</variable></variables></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>"
+    },
+    {
+      "id": 3,
+      "type": "MATH",
+      "chapter": "Premiers affichages",
+      "maxStars": 4,
+      "title": "🧮 Afficher une somme",
+      "instruction": "Affiche le **résultat** de `a + b` (ici 7 + 5).",
+      "inputs": {
+        "a": 7,
+        "b": 5
+      },
+      "targets": {},
+      "expectedOutput": [
+        "12"
+      ],
+      "allowedBlocks": [
+        "text_print",
+        "math_arithmetic",
+        "variables_get",
+        "math_number"
+      ],
+      "maxBlocks": 4,
+      "validation": {
+        "stars": {
+          "blocks": 4,
+          "blocksFlat": 12,
+          "steps": 200
+        }
+      },
+      "hiddenVars": [],
+      "lockedVars": [],
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><variables><variable id=\"seed_0\">a</variable><variable id=\"seed_1\">b</variable></variables></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>"
+    },
+    {
+      "id": 4,
+      "type": "MATH",
+      "chapter": "Les variables",
+      "maxStars": 4,
+      "title": "➕ Ranger la somme",
+      "instruction": "Range dans la variable **somme** la valeur de `a + b`.",
+      "inputs": {
+        "a": 7,
+        "b": 5
+      },
+      "targets": {
+        "somme": 12
+      },
+      "allowedBlocks": [
+        "variables_set",
+        "variables_get",
+        "math_number",
+        "math_arithmetic"
+      ],
+      "maxBlocks": 4,
+      "validation": {
+        "stars": {
+          "blocks": 4,
+          "blocksFlat": 12,
+          "steps": 200
+        }
+      },
+      "hiddenVars": [],
+      "lockedVars": [],
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><variables><variable id=\"seed_0\">a</variable><variable id=\"seed_1\">b</variable><variable id=\"seed_2\">somme</variable></variables></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>"
+    },
+    {
+      "id": 5,
+      "type": "MATH",
+      "chapter": "Les variables",
+      "maxStars": 4,
+      "title": "✖️ Le triple",
+      "instruction": "Range dans **triple** la valeur de `n × 3`.",
+      "inputs": {
+        "n": 4
+      },
+      "targets": {
+        "triple": 12
+      },
+      "allowedBlocks": [
+        "variables_set",
+        "variables_get",
+        "math_number",
+        "math_arithmetic"
+      ],
+      "maxBlocks": 4,
+      "validation": {
+        "stars": {
+          "blocks": 4,
+          "blocksFlat": 12,
+          "steps": 200
+        }
+      },
+      "hiddenVars": [],
+      "lockedVars": [],
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><variables><variable id=\"seed_0\">n</variable><variable id=\"seed_1\">triple</variable></variables></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>"
+    },
+    {
+      "id": 6,
+      "type": "MATH",
+      "chapter": "Les variables",
+      "maxStars": 4,
+      "title": "🔄 Échanger a et b",
+      "instruction": "**Échange** les valeurs de a et b (a doit valoir 9, b doit valoir 5).\n\n💡 Astuce : passe par une variable **temp** pour ne rien perdre :\n`temp ← a`, puis `a ← b`, puis `b ← temp`.",
+      "inputs": {
+        "a": 5,
+        "b": 9
+      },
+      "targets": {
+        "a": "@b",
+        "b": "@a"
+      },
+      "allowedBlocks": [
+        "variables_set",
+        "variables_get"
+      ],
+      "maxBlocks": 6,
+      "validation": {
+        "stars": {
+          "blocks": 6,
+          "blocksFlat": 18,
+          "steps": 200
+        }
+      },
+      "hiddenVars": [],
+      "lockedVars": [],
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><variables><variable id=\"seed_0\">a</variable><variable id=\"seed_1\">b</variable><variable id=\"seed_2\">temp</variable></variables></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>"
+    },
+    {
+      "id": 7,
+      "type": "MATH",
+      "chapter": "Les variables",
+      "maxStars": 4,
+      "title": "🤯 Échanger sans temp (pro)",
+      "instruction": "Défi de pro : échange a et b **sans** variable temporaire, seulement avec des `+` et `−` :\n`a ← a + b`, `b ← a − b`, `a ← a − b`.",
+      "inputs": {
+        "a": 5,
+        "b": 9
+      },
+      "targets": {
+        "a": "@b",
+        "b": "@a"
+      },
+      "allowedBlocks": [
+        "variables_set",
+        "variables_get",
+        "math_number",
+        "math_arithmetic"
+      ],
+      "maxBlocks": 7,
+      "validation": {
+        "stars": {
+          "blocks": 7,
+          "blocksFlat": 21,
+          "steps": 200
+        }
+      },
+      "hiddenVars": [],
+      "lockedVars": [],
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><variables><variable id=\"seed_0\">a</variable><variable id=\"seed_1\">b</variable></variables></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>"
+    },
+    {
+      "id": 8,
+      "type": "MATH",
+      "chapter": "Décisions & boucles",
+      "maxStars": 4,
+      "title": "🏆 Le plus grand",
+      "instruction": "Range dans **max** le plus grand de a et b.\n\n💡 `Si a > b alors max ← a sinon max ← b`.",
+      "inputs": {
+        "a": 8,
+        "b": 5
+      },
+      "targets": {
+        "max": 8
+      },
+      "allowedBlocks": [
+        "variables_set",
+        "variables_get",
+        "math_number",
+        "controls_if",
+        "logic_compare"
+      ],
+      "maxBlocks": 8,
+      "validation": {
+        "stars": {
+          "blocks": 8,
+          "blocksFlat": 24,
+          "steps": 200
+        }
+      },
+      "hiddenVars": [],
+      "lockedVars": [],
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><variables><variable id=\"seed_0\">a</variable><variable id=\"seed_1\">b</variable><variable id=\"seed_2\">max</variable></variables></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>"
+    },
+    {
+      "id": 9,
+      "type": "MATH",
+      "chapter": "Décisions & boucles",
+      "maxStars": 4,
+      "title": "🔢 Compter jusqu'à n",
+      "instruction": "Mets **compteur** à 0, puis **répète n fois** : `compteur ← compteur + 1`.",
+      "inputs": {
+        "n": 5
+      },
+      "targets": {
+        "compteur": 5
+      },
+      "allowedBlocks": [
+        "variables_set",
+        "variables_get",
+        "math_number",
+        "math_arithmetic",
+        "controls_repeat_ext"
+      ],
+      "maxBlocks": 7,
+      "validation": {
+        "stars": {
+          "blocks": 7,
+          "blocksFlat": 21,
+          "steps": 200
+        }
+      },
+      "hiddenVars": [],
+      "lockedVars": [],
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><variables><variable id=\"seed_0\">n</variable><variable id=\"seed_1\">compteur</variable></variables></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>"
+    },
+    {
+      "id": 10,
+      "type": "MATH",
+      "chapter": "Décisions & boucles",
+      "maxStars": 4,
+      "title": "⚖️ Pair ou impair",
+      "instruction": "Range dans **reste** le reste de `n ÷ 2` (bloc **Reste**). 0 = pair, 1 = impair !",
+      "inputs": {
+        "n": 7
+      },
+      "targets": {
+        "reste": 1
+      },
+      "allowedBlocks": [
+        "variables_set",
+        "variables_get",
+        "math_number",
+        "math_modulo"
+      ],
+      "maxBlocks": 4,
+      "validation": {
+        "stars": {
+          "blocks": 4,
+          "blocksFlat": 12,
+          "steps": 200
+        }
+      },
+      "hiddenVars": [],
+      "lockedVars": [],
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><variables><variable id=\"seed_0\">n</variable><variable id=\"seed_1\">reste</variable></variables></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>"
+    }
+  ]
+}

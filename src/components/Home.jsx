@@ -22,6 +22,16 @@ const PARCOURS = [
     ring: 'hover:shadow-blue-500/30',
     desc: "Trace polygones réguliers (angle = 360/n), rosaces et spirales. Tu apprends les angles, les boucles et les variables… en faisant de l'art !",
   },
+  {
+    key: 'algo',
+    emoji: '🧪',
+    title: 'Le Labo Algo',
+    tagline: 'Programme comme un pro',
+    url: 'examples/parcours_algo.blokaly.json',
+    gradient: 'from-fuchsia-500 to-pink-600',
+    ring: 'hover:shadow-pink-500/30',
+    desc: 'Hello World, variables, échange de valeurs, conditions et boucles : les petits programmes qui font les vrais programmeurs.',
+  },
 ];
 
 const launch = (url) => { window.location.href = '?url=' + encodeURIComponent(url); };
@@ -54,7 +64,7 @@ export default function Home({ onFileLoaded }) {
           <h3 className="text-sm uppercase tracking-wide text-slate-400 font-bold mb-4">
             Choisis ton aventure
           </h3>
-          <div className="grid sm:grid-cols-2 gap-4 mb-8">
+          <div className="grid sm:grid-cols-3 gap-4 mb-8">
             {PARCOURS.map((p) => (
               <button
                 key={p.key}
