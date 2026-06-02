@@ -20,11 +20,11 @@ export default {
     evaluateResult: (state, levelData, metrics, solutionLines) => {
         // 1. Cas "Bac à sable" (Pas de modèle = Victoire auto)
         if (!solutionLines || solutionLines.length === 0) {
-             return { 
-                 status: 'WIN', 
-                 score: { stars: 3, primaryMetric: "Dessin libre", details: {} },
-                 feedback: { title: "Art Libre", message: "Joli dessin !" } 
-             }; 
+             return {
+                 status: 'WIN',
+                 score: { stars: 4, maxStars: 4, primaryMetric: "Dessin libre", details: {} },
+                 feedback: { title: "Art Libre", message: "Joli dessin !" }
+             };
         }
 
         const userLines = state?.lines || [];
@@ -56,34 +56,28 @@ export default {
             };
         }
 
-        // 3. SCORING
-        const validation = levelData.validation || {};
-        const targetBlocks = validation.stars?.blocks || levelData.maxBlocks || 10;
-        const targetSteps = validation.stars?.steps || 1000;
-
+        // 3. SCORING — barème 4 ⭐ : récompense les boucles / variables (moins de blocs)
+        const v = levelData.validation?.stars || {};
+        const optimal = v.blocks ?? levelData.maxBlocks ?? 10;
+        const flat = v.blocksFlat ?? Math.max(optimal * 4, optimal + 8);
         const usedBlocks = metrics.blockCount || 0;
-        const usedSteps = metrics.steps || 0;
-        
-        let stars = 3;
-        const penalties = [];
 
-        if (usedBlocks > targetBlocks) { stars--; penalties.push("trop de blocs"); }
-        if (usedSteps > targetSteps) { stars--; penalties.push("trop d'étapes"); }
-
-        stars = Math.max(1, stars);
+        let stars, message;
+        if (usedBlocks <= optimal) { stars = 4; message = "Code parfait : boucles bien utilisées ! 🎨"; }
+        else if (usedBlocks <= Math.round((optimal + flat) / 2)) { stars = 3; message = "Beau dessin ! Peux-tu raccourcir avec une boucle ?"; }
+        else if (usedBlocks <= flat) { stars = 2; message = "Dessin conforme ! Essaie une boucle « Répéter » pour faire plus court."; }
+        else { stars = 1; message = "Conforme, mais beaucoup de blocs. Pense aux boucles / variables !"; }
 
         return {
             status: 'WIN',
             score: {
-                stars: stars,
-                primaryMetric: "Dessin Conforme",
-                targetMetric: `Obj: ${targetBlocks} blocs`,
-                details: { blocks: usedBlocks, steps: usedSteps }
+                stars,
+                maxStars: 4,
+                primaryMetric: "Dessin conforme",
+                targetMetric: `Optimal : ${optimal} blocs`,
+                details: { blocks: usedBlocks }
             },
-            feedback: { 
-                title: stars === 3 ? "Artiste !" : "Validé", 
-                message: stars === 3 ? "Code parfait." : `Attention : ${penalties.join(", ")}.` 
-            }
+            feedback: { title: "Figure réussie", message }
         };
     },
     

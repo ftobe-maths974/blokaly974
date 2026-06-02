@@ -209,14 +209,14 @@ const FIGURES = [
   // ===================================================================
   {
     id: 'marches-croissantes', title: 'Les marches qui grandissent', icon: '📈', difficulty: 6, closed: false,
-    chapter: 'Variables',
-    instruction: "Chaque marche est **plus longue** (1, 2, 3, 4, 5). Crée une **variable** `n` (départ **1**). Dans une boucle **Répéter 5 fois**, fais : « **Répéter `n` fois → avancer** », tourner ↺, avancer, tourner ↻, puis **`n` = `n` + 1**.\n\n⚠️ Le grand « Répéter » compte **5**, pas `n` !",
+    chapter: 'Variables', vars: ['n'],
+    instruction: "Chaque marche est **plus longue** (1, 2, 3, 4, 5). La variable `n` est déjà prête (mets-la à **1**). Dans une boucle **Répéter 5 fois**, fais : « **Répéter `n` fois → avancer** », tourner ↺, avancer, tourner ↻, puis **`n` = `n` + 1**.\n\n⚠️ Le grand « Répéter » compte **5**, pas `n` !",
     program: growStaircase(5), optimal: 12, allowed: VAR_BLOCKS,
   },
   {
     id: 'spirale', title: 'La spirale', icon: '🌀', difficulty: 7, closed: false,
-    chapter: 'Variables',
-    instruction: "La **spirale** s'agrandit. Crée une **variable** `n` (départ **2**). Dans **Répéter 6 fois** : « Répéter `n` → avancer », tourner ↺, « Répéter `n` → avancer », tourner ↺, puis **`n` = `n` + 2**.\n\n⚠️ Le grand « Répéter » compte **6**, pas `n` !",
+    chapter: 'Variables', vars: ['n'],
+    instruction: "La **spirale** s'agrandit. La variable `n` est déjà prête (mets-la à **2**). Dans **Répéter 6 fois** : « Répéter `n` → avancer », tourner ↺, « Répéter `n` → avancer », tourner ↺, puis **`n` = `n` + 2**.\n\n⚠️ Le grand « Répéter » compte **6**, pas `n` !",
     program: squareSpiral(6), optimal: 14, allowed: VAR_BLOCKS,
   },
 ];
@@ -308,6 +308,7 @@ for (const fig of FIGURES) {
     id: Number(`${fig.difficulty}${levels.length + 1}`),
     type: 'MAZE',
     chapter: fig.chapter || 'Figures',
+    maxStars: 4,
     title: `${fig.icon} ${fig.title}`,
     instruction: fig.instruction,
     grid,
@@ -316,7 +317,9 @@ for (const fig of FIGURES) {
     maxBlocks: fig.optimal,
     // barème 4 ⭐ : blocks (optimal, avec boucle) / blocksFlat (sans boucle) / steps
     validation: { stars: { blocks: fig.optimal, blocksFlat: flatBlocks, steps: metrics.actions } },
-    startBlocks: '<xml xmlns="https://developers.google.com/blockly/xml"></xml>',
+    startBlocks: (fig.vars && fig.vars.length)
+      ? `<xml xmlns="https://developers.google.com/blockly/xml"><variables>${fig.vars.map((n, i) => `<variable id="seed_${n}_${i}">${n}</variable>`).join('')}</variables></xml>`
+      : '<xml xmlns="https://developers.google.com/blockly/xml"></xml>',
     solutionBlocks: '<xml xmlns="https://developers.google.com/blockly/xml"></xml>',
     inputs: {}, hiddenVars: [], lockedVars: [], targets: {},
   });

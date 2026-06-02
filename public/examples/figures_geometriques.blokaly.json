@@ -6,6 +6,7 @@
       "id": 11,
       "type": "MAZE",
       "chapter": "Figures",
+      "maxStars": 4,
       "title": "⬜ Le petit carré",
       "instruction": "Fais le tour du **carré** 🟩→🏁. Astuce : c'est 4 fois la même chose… pense à **Répéter** !",
       "grid": [
@@ -87,6 +88,7 @@
       "id": 22,
       "type": "MAZE",
       "chapter": "Figures",
+      "maxStars": 4,
       "title": "🪜 L'escalier",
       "instruction": "Grimpe l'**escalier** marche après marche jusqu'au drapeau 🏁.",
       "grid": [
@@ -285,6 +287,7 @@
       "id": 23,
       "type": "MAZE",
       "chapter": "Figures",
+      "maxStars": 4,
       "title": "◻️ Le grand carré",
       "instruction": "Même idée que le petit carré, mais en plus grand. **Répéter** reste ton ami.",
       "grid": [
@@ -398,6 +401,7 @@
       "id": 34,
       "type": "MAZE",
       "chapter": "Figures",
+      "maxStars": 4,
       "title": "🪮 Le peigne",
       "instruction": "Dessine les dents du **peigne**. Repère le motif qui se répète.",
       "grid": [
@@ -564,6 +568,7 @@
       "id": 45,
       "type": "MAZE",
       "chapter": "Figures",
+      "maxStars": 4,
       "title": "➕ La croix",
       "instruction": "Parcours le contour de la **croix** 🟩→🏁 (12 segments, motif à 4 branches).",
       "grid": [
@@ -696,6 +701,7 @@
       "id": 46,
       "type": "MAZE",
       "chapter": "Figures",
+      "maxStars": 4,
       "title": "▭ Le rectangle",
       "instruction": "Un **rectangle** : attention, les côtés n'ont pas tous la même longueur ! Deux longueurs, deux largeurs.",
       "grid": [
@@ -789,6 +795,7 @@
       "id": 57,
       "type": "MAZE",
       "chapter": "Figures",
+      "maxStars": 4,
       "title": "⛰️ Le double escalier",
       "instruction": "Monte puis redescends : un grand **escalier** symétrique jusqu'au 🏁.",
       "grid": [
@@ -1075,8 +1082,9 @@
       "id": 68,
       "type": "MAZE",
       "chapter": "Variables",
+      "maxStars": 4,
       "title": "📈 Les marches qui grandissent",
-      "instruction": "Chaque marche est **plus longue** (1, 2, 3, 4, 5). Crée une **variable** `n` (départ **1**). Dans une boucle **Répéter 5 fois**, fais : « **Répéter `n` fois → avancer** », tourner ↺, avancer, tourner ↻, puis **`n` = `n` + 1**.\n\n⚠️ Le grand « Répéter » compte **5**, pas `n` !",
+      "instruction": "Chaque marche est **plus longue** (1, 2, 3, 4, 5). La variable `n` est déjà prête (mets-la à **1**). Dans une boucle **Répéter 5 fois**, fais : « **Répéter `n` fois → avancer** », tourner ↺, avancer, tourner ↻, puis **`n` = `n` + 1**.\n\n⚠️ Le grand « Répéter » compte **5**, pas `n` !",
       "grid": [
         [
           4,
@@ -1261,7 +1269,7 @@
           "steps": 29
         }
       },
-      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><variables><variable id=\"seed_n_0\">n</variable></variables></xml>",
       "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
       "inputs": {},
       "hiddenVars": [],
@@ -1272,8 +1280,9 @@
       "id": 79,
       "type": "MAZE",
       "chapter": "Variables",
+      "maxStars": 4,
       "title": "🌀 La spirale",
-      "instruction": "La **spirale** s'agrandit. Crée une **variable** `n` (départ **2**). Dans **Répéter 6 fois** : « Répéter `n` → avancer », tourner ↺, « Répéter `n` → avancer », tourner ↺, puis **`n` = `n` + 2**.\n\n⚠️ Le grand « Répéter » compte **6**, pas `n` !",
+      "instruction": "La **spirale** s'agrandit. La variable `n` est déjà prête (mets-la à **2**). Dans **Répéter 6 fois** : « Répéter `n` → avancer », tourner ↺, « Répéter `n` → avancer », tourner ↺, puis **`n` = `n` + 2**.\n\n⚠️ Le grand « Répéter » compte **6**, pas `n` !",
       "grid": [
         [
           4,
@@ -1553,7 +1562,7 @@
           "steps": 95
         }
       },
-      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><variables><variable id=\"seed_n_0\">n</variable></variables></xml>",
       "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
       "inputs": {},
       "hiddenVars": [],
