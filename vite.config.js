@@ -12,11 +12,13 @@ export default defineConfig(({ mode }) => ({
     // bundle monolithique (et améliorer la mise en cache navigateur).
     rollupOptions: {
       output: {
+        // On ne split QUE des libs autonomes (sans dépendances croisées). katex +
+        // react-markdown + remark/rehype partagent le socle unified/micromark : les
+        // séparer manuellement créait un cycle d'init (TDZ « Cannot access … before
+        // initialization »). On les laisse à Rollup, qui ordonne l'init correctement.
         manualChunks: {
           blockly: ['blockly'],
-          katex: ['katex', 'react-katex', 'rehype-katex', 'remark-math'],
           math: ['nerdamer', 'function-plot'],
-          markdown: ['react-markdown', 'remark-gfm'],
         },
       },
     },
