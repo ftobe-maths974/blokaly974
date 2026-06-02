@@ -4,6 +4,7 @@ import Builder from './components/builder/Builder';
 import Runner from './components/runner/Runner';
 import Home from './components/Home';
 import AngleLab from './components/labs/AngleLab';
+import CompetencesView from './components/labs/CompetencesView';
 import './App.css';
 
 // Importation globale des blocs
@@ -82,6 +83,10 @@ function App() {
             console.log("📐 Atelier des angles");
             setMode('angles');
         }
+        else if (labParam === 'competences') {
+            console.log("📊 Mes compétences");
+            setMode('competences');
+        }
         // A. MODE PROFESSEUR
         else if (isEditorMode) {
             console.log("🛠️ Mode Enseignant activé");
@@ -143,6 +148,8 @@ function App() {
       {mode === 'home' && <Home onFileLoaded={handleFileLoaded} />}
 
       {mode === 'angles' && <AngleLab />}
+
+      {mode === 'competences' && <CompetencesView />}
       
       {mode === 'builder' && (
         <Builder onTest={handleTeacherTest} />

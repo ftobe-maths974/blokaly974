@@ -113,6 +113,12 @@ export default function Home({ onFileLoaded }) {
             >
               <span>📐</span> Atelier des angles
             </button>
+            <button
+              onClick={() => { window.location.href = '?lab=competences'; }}
+              className="flex-1 bg-white border border-slate-200 text-slate-700 font-semibold py-3 px-4 rounded-xl hover:bg-slate-50 hover:border-emerald-300 transition-colors flex items-center justify-center gap-2"
+            >
+              <span>📊</span> Mes compétences
+            </button>
             <input type="file" accept=".json" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileChange} />
           </div>
 
