@@ -16,13 +16,13 @@ function App() {
   const [campaignData, setCampaignData] = useState(null);
   const [ltiConfig, setLtiConfig] = useState(null);
   const [isTeacher, setIsTeacher] = useState(false);
-  const [startLevelIndex, setStartLevelIndex] = useState(0);
+  const [startLevelIndex, setStartLevelIndex] = useState(-1); // -1 = écran de sélection des niveaux
 
   // --- ACTIONS ---
   const handleFileLoaded = (data) => {
       setCampaignData(data);
-      setIsTeacher(false); 
-      setStartLevelIndex(0);
+      setIsTeacher(false);
+      setStartLevelIndex(-1); // affiche l'écran des niveaux
       setMode('runner');
   };
 

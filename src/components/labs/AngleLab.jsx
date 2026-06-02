@@ -14,8 +14,10 @@ const pol = (cx, cy, r, deg) => {
 const sector = (cx, cy, r, a0, a1) => {
   const [x0, y0] = pol(cx, cy, r, a0);
   const [x1, y1] = pol(cx, cy, r, a1);
-  const large = Math.abs(a1 - a0) > 180 ? 1 : 0;
-  return `M ${cx} ${cy} L ${x0.toFixed(1)} ${y0.toFixed(1)} A ${r} ${r} 0 ${large} 1 ${x1.toFixed(1)} ${y1.toFixed(1)} Z`;
+  const delta = a1 - a0;
+  const large = Math.abs(delta) > 180 ? 1 : 0;
+  const sweep = delta >= 0 ? 1 : 0; // sens horaire si l'angle augmente, anti-horaire sinon
+  return `M ${cx} ${cy} L ${x0.toFixed(1)} ${y0.toFixed(1)} A ${r} ${r} 0 ${large} ${sweep} ${x1.toFixed(1)} ${y1.toFixed(1)} Z`;
 };
 
 function useTween() {
@@ -53,8 +55,8 @@ const SpeedSlider = ({ value, onChange }) => (
     <span title="Rapide">🐇</span>
   </div>
 );
-// vitesse → durée d'animation (ms) ; à 50 on retrouve `base`
-const durFor = (speed, base) => Math.max(80, Math.round((base * (110 - speed)) / 60));
+// vitesse → durée d'animation (ms). 🐢 (0) ≈ 3,6× lent ; 🐇 (100) ≈ 0,3× rapide.
+const durFor = (speed, base) => Math.max(120, Math.round(base * (3.6 - speed * 0.033)));
 
 // ------------------------------------------------------------
 // MODE 1 — LE SUPPLÉMENT
@@ -246,55 +248,68 @@ const QUIZ = [
   { name: 'octogone régulier', interior: 135 },
 ];
 
+const randDir = () => (Math.random() < 0.5 ? 'L' : 'R');
+
 export function QuizMode() {
   const V = { x: 175, y: 215 }, L = 135;
   const [qi, setQi] = useState(0);
-  const [val, setVal] = useState(0);           // départ à 0, l'élève manipule le slider
+  const [deg, setDeg] = useState('');          // saisie dans la brique (texte)
+  const [dir, setDir] = useState(randDir());   // sens tiré au hasard
   const [result, setResult] = useState(null);
   const [score, setScore] = useState({ ok: 0, total: 0 });
 
   const q = QUIZ[qi];
   const answer = 180 - q.interior;
-  const a = val;                                // la figure suit le slider (manipulable)
+  const a = Math.max(0, Math.min(180, parseInt(deg) || 0)); // amplitude du virage saisi
   const interior = 180 - a;
+  const out = dir === 'R' ? a : -a;            // sens horaire (droite) ou anti-horaire (gauche)
+  const back = dir === 'R' ? 180 : -180;
 
   const check = () => {
-    const ok = a === answer;
+    const ok = parseInt(deg) === answer;
     setResult(ok ? 'ok' : 'ko');
     setScore((s) => ({ ok: s.ok + (ok ? 1 : 0), total: s.total + 1 }));
   };
-  const next = () => { setQi((i) => (i + 1) % QUIZ.length); setResult(null); setVal(0); };
+  const next = () => { setQi((i) => (i + 1) % QUIZ.length); setDir(randDir()); setDeg(''); setResult(null); };
 
-  const [poutX, poutY] = pol(V.x, V.y, L, a);
-  const [liX, liY] = pol(V.x, V.y, 92, (a + 180) / 2);
+  const [poutX, poutY] = pol(V.x, V.y, L, out);
+  const [ltX, ltY] = pol(V.x, V.y, 38, out / 2);
+  const [liX, liY] = pol(V.x, V.y, 92, (out + back) / 2);
 
   return (
-    <div className="grid md:grid-cols-[1fr,260px] gap-6 items-center">
+    <div className="grid md:grid-cols-[1fr,280px] gap-6 items-center">
       <svg viewBox="0 0 360 360" className="w-full bg-slate-50 rounded-xl border border-slate-200">
-        {a < 179 && <path d={sector(V.x, V.y, 86, a, 180)} fill="#3b82f6" opacity="0.15" />}
-        {a > 1 && <path d={sector(V.x, V.y, 50, 0, a)} fill="#f97316" opacity="0.22" />}
+        {a > 1 && <path d={sector(V.x, V.y, 86, out, back)} fill="#3b82f6" opacity="0.15" />}
+        {a > 1 && <path d={sector(V.x, V.y, 50, 0, out)} fill="#f97316" opacity="0.22" />}
         <line x1={V.x - L} y1={V.y} x2={V.x} y2={V.y} stroke="#334155" strokeWidth="5" strokeLinecap="round" />
         <line x1={V.x} y1={V.y} x2={V.x + L} y2={V.y} stroke="#94a3b8" strokeWidth="2.5" strokeDasharray="7 7" />
         <line x1={V.x} y1={V.y} x2={poutX} y2={poutY} stroke="#16a34a" strokeWidth="5" strokeLinecap="round" />
-        <TurtleArrow cx={V.x} cy={V.y} angle={a} />
-        {a > 12 && <text x={pol(V.x, V.y, 38, a / 2)[0]} y={pol(V.x, V.y, 38, a / 2)[1]} fontSize="14" fontWeight="bold" fill="#ea580c" textAnchor="middle">{a}°</text>}
-        {a < 168 && <text x={liX} y={liY} fontSize="14" fontWeight="bold" fill="#2563eb" textAnchor="middle">{interior}°</text>}
+        <TurtleArrow cx={V.x} cy={V.y} angle={out} />
+        {a > 12 && <text x={ltX} y={ltY} fontSize="14" fontWeight="bold" fill="#ea580c" textAnchor="middle">{a}°</text>}
+        {a > 0 && a < 168 && <text x={liX} y={liY} fontSize="14" fontWeight="bold" fill="#2563eb" textAnchor="middle">{interior}°</text>}
       </svg>
 
       <div className="flex flex-col gap-3">
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
           <div className="text-slate-500 text-xs uppercase font-bold">Défi</div>
           <div className="text-slate-800 mt-1">Pour un <b>{q.name}</b>, il faut un angle <b className="text-blue-600">🟦 {q.interior}°</b>.</div>
-          <div className="text-slate-800 mt-1 font-semibold">Règle le <b className="text-orange-600">🟧 virage</b> pour l'obtenir !</div>
+          <div className="text-slate-800 mt-1 font-semibold">Complète la brique pour l'obtenir 👇</div>
         </div>
 
-        <label className="text-sm font-semibold text-slate-600">
-          🟧 Virage : <span className="text-orange-600 font-bold">{a}°</span> &nbsp;·&nbsp; 🟦 Angle : <span className="text-blue-600 font-bold">{interior}°</span>
-          <input type="range" min="0" max="180" step="1" value={val}
-            onChange={(e) => { setVal(parseInt(e.target.value)); setResult(null); }}
-            className="w-full accent-orange-500 mt-1" />
-          <span className="block text-center text-xs text-slate-400 font-mono mt-1">{a}° + {interior}° = 180°</span>
-        </label>
+        {/* Brique Scratch « pivoter [dir] de [degrés] » */}
+        <div className="bg-[#4a90e2] text-white rounded-lg px-3 py-3 shadow-md flex flex-wrap items-center gap-2 text-sm font-bold">
+          <span>pivoter</span>
+          <select value={dir} onChange={(e) => { setDir(e.target.value); setResult(null); }}
+            className="rounded px-1 py-1 text-slate-800 font-bold bg-white">
+            <option value="L">↺ gauche</option>
+            <option value="R">↻ droite</option>
+          </select>
+          <span>de</span>
+          <input type="number" min="0" max="180" value={deg} placeholder="?"
+            onChange={(e) => { setDeg(e.target.value); setResult(null); }}
+            className="w-16 rounded px-2 py-1 text-slate-800 font-bold text-center bg-white outline-none" />
+          <span>degrés</span>
+        </div>
 
         {result === null && <button onClick={check} className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 rounded-lg shadow">✅ Vérifier</button>}
         {result === 'ok' && <div className="bg-emerald-50 border border-emerald-300 rounded-lg p-3 text-emerald-700 text-sm font-bold">🎉 Bravo ! {a}° + {q.interior}° = 180°.</div>}
