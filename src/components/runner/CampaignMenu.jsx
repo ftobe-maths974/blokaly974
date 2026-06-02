@@ -1,76 +1,80 @@
 import React from 'react';
 
+// Sépare l'emoji de tête du reste du titre ("🐢 La tortue" -> ["🐢", "La tortue"])
+function splitTitle(title = '') {
+  const m = title.match(/^(\p{Emoji_Presentation}|\p{Extended_Pictographic})\s*(.*)$/u);
+  if (m) return { icon: m[1], label: m[2] };
+  return { icon: '🎯', label: title };
+}
+
 export default function CampaignMenu({ campaign, progress, onSelectLevel }) {
-  // progress est un objet : { 0: {stars: 3}, 1: {stars: 1} ... }
+  const levels = campaign.levels || [];
+
+  // Regroupe par chapitre (en gardant l'index global pour le verrouillage / progrès)
+  const chapters = [];
+  levels.forEach((level, index) => {
+    const name = level.chapter || 'Niveaux';
+    let ch = chapters.find((c) => c.name === name);
+    if (!ch) { ch = { name, items: [] }; chapters.push(ch); }
+    ch.items.push({ level, index });
+  });
+  const showChapterHeaders = chapters.length > 1;
 
   return (
-    // 👇 MODIF : Largeur augmentée (1200px) et responsive (95%)
-    <div style={{
-        padding: '40px', 
-        maxWidth: '1200px', 
-        width: '95%', 
-        margin: '0 auto', 
-        fontFamily: 'sans-serif',
-        boxSizing: 'border-box'
-    }}>
-      <h1 style={{textAlign: 'center', color: '#2c3e50', fontSize: '2.5rem'}}>
-        🗺️ {campaign.title || "Aventure Blokaly"}
+    <div className="max-w-5xl w-[95%] mx-auto px-4 py-10 font-sans">
+      <h1 className="text-center text-3xl sm:text-4xl font-extrabold text-slate-800 mb-2">
+        {campaign.title || 'Aventure Blokaly'}
       </h1>
-      
-      <div style={{
-        display: 'grid', 
-        // 👇 MODIF : Tuiles un peu plus larges (160px) pour l'esthétique
-        gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', 
-        gap: '24px', 
-        marginTop: '40px'
-      }}>
-        {campaign.levels.map((level, index) => {
-          // LOGIQUE DE VERROUILLAGE
-          const prevLevelScore = progress[index - 1];
-          const isUnlocked = index === 0 || (prevLevelScore && prevLevelScore.stars > 0);
-          
-          const currentScore = progress[index];
-          const stars = currentScore ? currentScore.stars : 0;
+      {campaign.description && (
+        <p className="text-center text-slate-500 max-w-2xl mx-auto mb-8">{campaign.description}</p>
+      )}
 
-          return (
-            <button
-              key={index}
-              disabled={!isUnlocked}
-              onClick={() => onSelectLevel(index)}
-              style={{
-                aspectRatio: '1/1',
-                background: isUnlocked ? (stars === 3 ? '#2ecc71' : '#f1c40f') : '#bdc3c7',
-                border: 'none',
-                borderRadius: '20px', // Plus rond
-                cursor: isUnlocked ? 'pointer' : 'not-allowed',
-                boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                position: 'relative',
-                opacity: isUnlocked ? 1 : 0.6,
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                // 👇 Petit effet hover inline
-                transform: 'scale(1)',
-              }}
-              onMouseEnter={(e) => { if(isUnlocked) { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.boxShadow = '0 8px 12px rgba(0,0,0,0.15)'; } }}
-              onMouseLeave={(e) => { if(isUnlocked) { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)'; } }}
-            >
-              <span style={{fontSize: '2.5rem', marginBottom: '8px'}}>
-                {isUnlocked ? (stars > 0 ? '✅' : '🚀') : '🔒'}
-              </span>
-              <span style={{fontSize: '1.1rem', fontWeight: 'bold', color: 'white'}}>
-                Niveau {index + 1}
-              </span>
-              
-              {/* Affichage des étoiles acquises */}
-              {isUnlocked && (
-                <div style={{marginTop: '8px', color: 'white', fontSize: '1.2rem', textShadow: '0 1px 2px rgba(0,0,0,0.3)'}}>
-                  {'★'.repeat(stars)}{'☆'.repeat(3 - stars)}
-                </div>
-              )}
-            </button>
-          );
-        })}
-      </div>
+      {chapters.map((ch, ci) => (
+        <div key={ch.name} className="mb-10">
+          {showChapterHeaders && (
+            <h2 className="flex items-center gap-2 text-sm uppercase tracking-wider font-bold text-slate-400 mb-4">
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 text-xs">{ci + 1}</span>
+              {ch.name}
+            </h2>
+          )}
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-5">
+            {ch.items.map(({ level, index }) => {
+              const prev = progress[index - 1];
+              const isUnlocked = index === 0 || (prev && prev.stars > 0);
+              const stars = progress[index]?.stars || 0;
+              const maxStars = level.maxStars || 3;
+              const { icon, label } = splitTitle(level.title);
+              const done = stars > 0;
+
+              return (
+                <button
+                  key={index}
+                  disabled={!isUnlocked}
+                  onClick={() => onSelectLevel(index)}
+                  className={`relative rounded-2xl p-4 flex flex-col items-center text-center shadow-md transition-all duration-200
+                    ${isUnlocked
+                      ? 'bg-white border border-slate-200 hover:-translate-y-1 hover:shadow-xl cursor-pointer'
+                      : 'bg-slate-100 border border-slate-200 opacity-60 cursor-not-allowed'}`}
+                >
+                  <span className="absolute top-2 left-3 text-[11px] font-bold text-slate-300">{index + 1}</span>
+                  {done && <span className="absolute top-2 right-3 text-emerald-500 text-sm">✓</span>}
+
+                  <span className="text-4xl mb-2 mt-1">
+                    {isUnlocked ? icon : '🔒'}
+                  </span>
+                  <span className="text-sm font-bold text-slate-700 leading-tight min-h-[2.4em] flex items-center">
+                    {label || `Niveau ${index + 1}`}
+                  </span>
+
+                  <span className="mt-2 text-yellow-400 text-base tracking-tight" title={`${stars}/${maxStars}`}>
+                    {'★'.repeat(stars)}<span className="text-slate-200">{'★'.repeat(Math.max(0, maxStars - stars))}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

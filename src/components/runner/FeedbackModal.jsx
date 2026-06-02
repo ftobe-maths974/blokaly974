@@ -18,7 +18,7 @@ export default function FeedbackModal({ isOpen, stats, token, status, onReplay, 
             <h1 className="text-3xl font-extrabold mb-2 text-emerald-600 drop-shadow-sm">Niveau Réussi !</h1>
             
             <div className="flex justify-center gap-2 mb-6">
-                {[0, 1, 2].map(i => (
+                {Array.from({ length: stats.maxStars || 3 }, (_, i) => (
                 <span key={i} className={`text-5xl transition-all duration-500 ${i < stats.stars ? 'text-yellow-400 drop-shadow-lg scale-110' : 'text-slate-200'}`}>
                     ★
                 </span>

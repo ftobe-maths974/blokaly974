@@ -54,8 +54,15 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
         javascriptGenerator.init(headlessWs);
         const code = javascriptGenerator.workspaceToCode(headlessWs);
         const actions = [];
-        const api = { move:()=>{}, turn:()=>{}, pen:()=>{}, color:()=>{}, isPath:()=>false, isDone:()=>false, safeCheck:()=>true };
+        const realPush = actions.push.bind(actions);
+        actions.push = (...args) => {
+          if (actions.length >= 10000) throw new RangeError('TROP_ACTIONS');
+          return realPush(...args);
+        };
+        let mLoop = 0;
+        const api = { move:()=>{}, turn:()=>{}, pen:()=>{}, color:()=>{}, isPath:()=>false, isDone:()=>false, safeCheck:()=>(++mLoop <= 1000) };
         new Function('actions', 'api', code)(actions, api);
+        delete actions.push;
         
         let simState = null;
         actions.forEach(a => { if (plugin.executeStep) simState = plugin.executeStep(simState, a, safeData).newState; });
@@ -95,11 +102,12 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
 
           // 2. Mise à jour de l'UI
           if (result.status === 'WIN') {
-              setGameStats({ 
-                  stars: result.score.stars, 
+              setGameStats({
+                  stars: result.score.stars,
+                  maxStars: result.score.maxStars || 3,
                   metric: result.score.primaryMetric,
                   target: result.score.targetMetric,
-                  feedback: result.feedback 
+                  feedback: result.feedback
               });
               const token = generateProofToken(safeData.id || 1, { stars: result.score.stars });
               setProofToken(token);
@@ -241,21 +249,38 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
     };
 
     try {
+      // Garde-fou anti boucle infinie : on plafonne le nombre d'actions
+      // générées (sinon un « répéter » mal écrit sature la mémoire et fige le navigateur).
+      const MAX_ACTIONS = 10000;
       const generatedActions = [];
+      const realPush = generatedActions.push.bind(generatedActions);
+      generatedActions.push = (...args) => {
+        if (generatedActions.length >= MAX_ACTIONS) {
+          throw new RangeError('TROP_ACTIONS');
+        }
+        return realPush(...args);
+      };
+
       new Function('actions', 'api', initCode + userCode)(generatedActions, api);
-      
+
+      // on remet un push standard pour la suite
+      delete generatedActions.push;
       actionsRef.current = generatedActions;
       setTotalSteps(generatedActions.length);
-      
+
       // Init état propre
       const initialState = plugin.executeStep(null, null, safeData).newState;
       currentStateRef.current = initialState;
       setEngineState(initialState);
-      
+
       setGameState('RUNNING');
       runLoop();
     } catch (e) {
-      alert("Erreur dans votre code : " + e.message);
+      if (e instanceof RangeError && e.message === 'TROP_ACTIONS') {
+        alert("⚠️ Ton programme tourne en boucle (trop d'actions générées) !\n\nVérifie tes boucles « Répéter » : par exemple, ne mets pas « n = n + 1 » qui modifie le nombre de tours de la boucle qui l'entoure.");
+      } else {
+        alert("Erreur dans votre code : " + e.message);
+      }
       setGameState('IDLE');
     }
   }, [workspaceRef, safeData, runLoop, reset, gameState, plugin]);

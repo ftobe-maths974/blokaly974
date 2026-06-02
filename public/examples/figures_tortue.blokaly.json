@@ -1,0 +1,366 @@
+{
+  "title": "🐢 Figures géométriques — Tortue",
+  "description": "Reproduis chaque figure avec la tortue : polygones réguliers (angle = 360/n), rosaces (motifs) et spirales (variables). Inspiré des défis Scratch monclasseurdemaths.fr.",
+  "levels": [
+    {
+      "id": 1,
+      "type": "TURTLE",
+      "chapter": "Polygones",
+      "maxStars": 4,
+      "title": "🔺 Le triangle équilatéral",
+      "instruction": "Un **triangle équilatéral** : 3 côtés égaux. À chaque sommet, la tortue tourne de **360 ÷ 3 = 120°**.",
+      "startPos": {
+        "x": -80,
+        "y": 69,
+        "dir": 0
+      },
+      "allowedBlocks": [
+        "turtle_move",
+        "turtle_turn",
+        "controls_repeat_ext"
+      ],
+      "maxBlocks": 6,
+      "validation": {
+        "stars": {
+          "blocks": 6,
+          "blocksFlat": 12,
+          "steps": 24
+        }
+      },
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><block type=\"controls_repeat_ext\"><value name=\"TIMES\"><shadow type=\"math_number\"><field name=\"NUM\">3</field></shadow></value><statement name=\"DO\"><block type=\"turtle_move\"><value name=\"VALUE\"><shadow type=\"math_number\"><field name=\"NUM\">160</field></shadow></value><next><block type=\"turtle_turn\"><field name=\"DIR\">RIGHT</field><value name=\"VALUE\"><shadow type=\"math_number\"><field name=\"NUM\">120</field></shadow></value></block></next></block></statement></block></xml>",
+      "inputs": {},
+      "hiddenVars": [],
+      "lockedVars": [],
+      "targets": {}
+    },
+    {
+      "id": 2,
+      "type": "TURTLE",
+      "chapter": "Polygones",
+      "maxStars": 4,
+      "title": "⬜ Le carré",
+      "instruction": "Un **carré** : 4 côtés. Angle de rotation = **360 ÷ 4 = 90°**.",
+      "startPos": {
+        "x": -65,
+        "y": 65,
+        "dir": 0
+      },
+      "allowedBlocks": [
+        "turtle_move",
+        "turtle_turn",
+        "controls_repeat_ext"
+      ],
+      "maxBlocks": 6,
+      "validation": {
+        "stars": {
+          "blocks": 6,
+          "blocksFlat": 16,
+          "steps": 32
+        }
+      },
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><block type=\"controls_repeat_ext\"><value name=\"TIMES\"><shadow type=\"math_number\"><field name=\"NUM\">4</field></shadow></value><statement name=\"DO\"><block type=\"turtle_move\"><value name=\"VALUE\"><shadow type=\"math_number\"><field name=\"NUM\">130</field></shadow></value><next><block type=\"turtle_turn\"><field name=\"DIR\">RIGHT</field><value name=\"VALUE\"><shadow type=\"math_number\"><field name=\"NUM\">90</field></shadow></value></block></next></block></statement></block></xml>",
+      "inputs": {},
+      "hiddenVars": [],
+      "lockedVars": [],
+      "targets": {}
+    },
+    {
+      "id": 3,
+      "type": "TURTLE",
+      "chapter": "Polygones",
+      "maxStars": 4,
+      "title": "⬠ Le pentagone",
+      "instruction": "Un **pentagone régulier** : 5 côtés. Angle = **360 ÷ 5 = 72°**.",
+      "startPos": {
+        "x": -55,
+        "y": 85,
+        "dir": 0
+      },
+      "allowedBlocks": [
+        "turtle_move",
+        "turtle_turn",
+        "controls_repeat_ext"
+      ],
+      "maxBlocks": 6,
+      "validation": {
+        "stars": {
+          "blocks": 6,
+          "blocksFlat": 20,
+          "steps": 40
+        }
+      },
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><block type=\"controls_repeat_ext\"><value name=\"TIMES\"><shadow type=\"math_number\"><field name=\"NUM\">5</field></shadow></value><statement name=\"DO\"><block type=\"turtle_move\"><value name=\"VALUE\"><shadow type=\"math_number\"><field name=\"NUM\">110</field></shadow></value><next><block type=\"turtle_turn\"><field name=\"DIR\">RIGHT</field><value name=\"VALUE\"><shadow type=\"math_number\"><field name=\"NUM\">72</field></shadow></value></block></next></block></statement></block></xml>",
+      "inputs": {},
+      "hiddenVars": [],
+      "lockedVars": [],
+      "targets": {}
+    },
+    {
+      "id": 4,
+      "type": "TURTLE",
+      "chapter": "Polygones",
+      "maxStars": 4,
+      "title": "⬡ L'hexagone",
+      "instruction": "Un **hexagone régulier** : 6 côtés. Angle = **360 ÷ 6 = 60°**.",
+      "startPos": {
+        "x": -47,
+        "y": 82,
+        "dir": 0
+      },
+      "allowedBlocks": [
+        "turtle_move",
+        "turtle_turn",
+        "controls_repeat_ext"
+      ],
+      "maxBlocks": 6,
+      "validation": {
+        "stars": {
+          "blocks": 6,
+          "blocksFlat": 24,
+          "steps": 48
+        }
+      },
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><block type=\"controls_repeat_ext\"><value name=\"TIMES\"><shadow type=\"math_number\"><field name=\"NUM\">6</field></shadow></value><statement name=\"DO\"><block type=\"turtle_move\"><value name=\"VALUE\"><shadow type=\"math_number\"><field name=\"NUM\">95</field></shadow></value><next><block type=\"turtle_turn\"><field name=\"DIR\">RIGHT</field><value name=\"VALUE\"><shadow type=\"math_number\"><field name=\"NUM\">60</field></shadow></value></block></next></block></statement></block></xml>",
+      "inputs": {},
+      "hiddenVars": [],
+      "lockedVars": [],
+      "targets": {}
+    },
+    {
+      "id": 5,
+      "type": "TURTLE",
+      "chapter": "Polygones",
+      "maxStars": 4,
+      "title": "🛑 L'octogone",
+      "instruction": "Un **octogone régulier** : 8 côtés. Angle = **360 ÷ 8 = 45°**.",
+      "startPos": {
+        "x": -37,
+        "y": 91,
+        "dir": 0
+      },
+      "allowedBlocks": [
+        "turtle_move",
+        "turtle_turn",
+        "controls_repeat_ext"
+      ],
+      "maxBlocks": 6,
+      "validation": {
+        "stars": {
+          "blocks": 6,
+          "blocksFlat": 32,
+          "steps": 64
+        }
+      },
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><block type=\"controls_repeat_ext\"><value name=\"TIMES\"><shadow type=\"math_number\"><field name=\"NUM\">8</field></shadow></value><statement name=\"DO\"><block type=\"turtle_move\"><value name=\"VALUE\"><shadow type=\"math_number\"><field name=\"NUM\">75</field></shadow></value><next><block type=\"turtle_turn\"><field name=\"DIR\">RIGHT</field><value name=\"VALUE\"><shadow type=\"math_number\"><field name=\"NUM\">45</field></shadow></value></block></next></block></statement></block></xml>",
+      "inputs": {},
+      "hiddenVars": [],
+      "lockedVars": [],
+      "targets": {}
+    },
+    {
+      "id": 6,
+      "type": "TURTLE",
+      "chapter": "Polygones",
+      "maxStars": 4,
+      "title": "🔟 Le décagone",
+      "instruction": "Un **décagone** : 10 côtés. Angle = **360 ÷ 10 = 36°**. Presque un cercle !",
+      "startPos": {
+        "x": -31,
+        "y": 95,
+        "dir": 0
+      },
+      "allowedBlocks": [
+        "turtle_move",
+        "turtle_turn",
+        "controls_repeat_ext"
+      ],
+      "maxBlocks": 6,
+      "validation": {
+        "stars": {
+          "blocks": 6,
+          "blocksFlat": 40,
+          "steps": 80
+        }
+      },
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><block type=\"controls_repeat_ext\"><value name=\"TIMES\"><shadow type=\"math_number\"><field name=\"NUM\">10</field></shadow></value><statement name=\"DO\"><block type=\"turtle_move\"><value name=\"VALUE\"><shadow type=\"math_number\"><field name=\"NUM\">62</field></shadow></value><next><block type=\"turtle_turn\"><field name=\"DIR\">RIGHT</field><value name=\"VALUE\"><shadow type=\"math_number\"><field name=\"NUM\">36</field></shadow></value></block></next></block></statement></block></xml>",
+      "inputs": {},
+      "hiddenVars": [],
+      "lockedVars": [],
+      "targets": {}
+    },
+    {
+      "id": 7,
+      "type": "TURTLE",
+      "chapter": "Rosaces",
+      "maxStars": 4,
+      "title": "🌸 La rosace de carrés",
+      "instruction": "Une **rosace** : on dessine un carré, on pivote un peu, et on recommence. **Répéter 12 fois** [ un carré, puis **tourner 30°** ] (12 × 30 = 360°).",
+      "startPos": {
+        "x": 0,
+        "y": 0,
+        "dir": 0
+      },
+      "allowedBlocks": [
+        "turtle_move",
+        "turtle_turn",
+        "controls_repeat_ext"
+      ],
+      "maxBlocks": 10,
+      "validation": {
+        "stars": {
+          "blocks": 10,
+          "blocksFlat": 216,
+          "steps": 432
+        }
+      },
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><block type=\"controls_repeat_ext\"><value name=\"TIMES\"><shadow type=\"math_number\"><field name=\"NUM\">12</field></shadow></value><statement name=\"DO\"><block type=\"controls_repeat_ext\"><value name=\"TIMES\"><shadow type=\"math_number\"><field name=\"NUM\">4</field></shadow></value><statement name=\"DO\"><block type=\"turtle_move\"><value name=\"VALUE\"><shadow type=\"math_number\"><field name=\"NUM\">120</field></shadow></value><next><block type=\"turtle_turn\"><field name=\"DIR\">RIGHT</field><value name=\"VALUE\"><shadow type=\"math_number\"><field name=\"NUM\">90</field></shadow></value></block></next></block></statement><next><block type=\"turtle_turn\"><field name=\"DIR\">RIGHT</field><value name=\"VALUE\"><shadow type=\"math_number\"><field name=\"NUM\">30</field></shadow></value></block></next></block></statement></block></xml>",
+      "inputs": {},
+      "hiddenVars": [],
+      "lockedVars": [],
+      "targets": {}
+    },
+    {
+      "id": 8,
+      "type": "TURTLE",
+      "chapter": "Rosaces",
+      "maxStars": 4,
+      "title": "❇️ La rosace de triangles",
+      "instruction": "Même principe avec des **triangles** : **Répéter 8 fois** [ un triangle, puis **tourner 45°** ] (8 × 45 = 360°).",
+      "startPos": {
+        "x": 0,
+        "y": 0,
+        "dir": 0
+      },
+      "allowedBlocks": [
+        "turtle_move",
+        "turtle_turn",
+        "controls_repeat_ext"
+      ],
+      "maxBlocks": 10,
+      "validation": {
+        "stars": {
+          "blocks": 10,
+          "blocksFlat": 112,
+          "steps": 224
+        }
+      },
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><block type=\"controls_repeat_ext\"><value name=\"TIMES\"><shadow type=\"math_number\"><field name=\"NUM\">8</field></shadow></value><statement name=\"DO\"><block type=\"controls_repeat_ext\"><value name=\"TIMES\"><shadow type=\"math_number\"><field name=\"NUM\">3</field></shadow></value><statement name=\"DO\"><block type=\"turtle_move\"><value name=\"VALUE\"><shadow type=\"math_number\"><field name=\"NUM\">130</field></shadow></value><next><block type=\"turtle_turn\"><field name=\"DIR\">RIGHT</field><value name=\"VALUE\"><shadow type=\"math_number\"><field name=\"NUM\">120</field></shadow></value></block></next></block></statement><next><block type=\"turtle_turn\"><field name=\"DIR\">RIGHT</field><value name=\"VALUE\"><shadow type=\"math_number\"><field name=\"NUM\">45</field></shadow></value></block></next></block></statement></block></xml>",
+      "inputs": {},
+      "hiddenVars": [],
+      "lockedVars": [],
+      "targets": {}
+    },
+    {
+      "id": 9,
+      "type": "TURTLE",
+      "chapter": "Rosaces",
+      "maxStars": 4,
+      "title": "🏵️ La rosace d'hexagones",
+      "instruction": "Un motif d'**hexagones** : **Répéter 6 fois** [ un hexagone, puis **tourner 60°** ].",
+      "startPos": {
+        "x": 0,
+        "y": 0,
+        "dir": 0
+      },
+      "allowedBlocks": [
+        "turtle_move",
+        "turtle_turn",
+        "controls_repeat_ext"
+      ],
+      "maxBlocks": 10,
+      "validation": {
+        "stars": {
+          "blocks": 10,
+          "blocksFlat": 156,
+          "steps": 312
+        }
+      },
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><block type=\"controls_repeat_ext\"><value name=\"TIMES\"><shadow type=\"math_number\"><field name=\"NUM\">6</field></shadow></value><statement name=\"DO\"><block type=\"controls_repeat_ext\"><value name=\"TIMES\"><shadow type=\"math_number\"><field name=\"NUM\">6</field></shadow></value><statement name=\"DO\"><block type=\"turtle_move\"><value name=\"VALUE\"><shadow type=\"math_number\"><field name=\"NUM\">70</field></shadow></value><next><block type=\"turtle_turn\"><field name=\"DIR\">RIGHT</field><value name=\"VALUE\"><shadow type=\"math_number\"><field name=\"NUM\">60</field></shadow></value></block></next></block></statement><next><block type=\"turtle_turn\"><field name=\"DIR\">RIGHT</field><value name=\"VALUE\"><shadow type=\"math_number\"><field name=\"NUM\">60</field></shadow></value></block></next></block></statement></block></xml>",
+      "inputs": {},
+      "hiddenVars": [],
+      "lockedVars": [],
+      "targets": {}
+    },
+    {
+      "id": 10,
+      "type": "TURTLE",
+      "chapter": "Variables",
+      "maxStars": 4,
+      "title": "🌀 La spirale carrée",
+      "instruction": "Une **spirale** : chaque côté est plus long. Crée une variable **côté** (départ 20). **Répéter 14 fois** [ avancer **côté**, tourner **90°**, **côté = côté + 12** ].",
+      "startPos": {
+        "x": -10,
+        "y": 16,
+        "dir": 0
+      },
+      "allowedBlocks": [
+        "turtle_move",
+        "turtle_turn",
+        "controls_repeat_ext",
+        "variables_set",
+        "variables_get",
+        "math_number",
+        "math_arithmetic"
+      ],
+      "maxBlocks": 12,
+      "validation": {
+        "stars": {
+          "blocks": 12,
+          "blocksFlat": 56,
+          "steps": 112
+        }
+      },
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><variables><variable id=\"seed_côté_0\">côté</variable></variables></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><variables><variable id=\"var_côté_0\">côté</variable></variables><block type=\"variables_set\"><field name=\"VAR\" id=\"var_côté_0\">côté</field><value name=\"VALUE\"><shadow type=\"math_number\"><field name=\"NUM\">20</field></shadow></value><next><block type=\"controls_repeat_ext\"><value name=\"TIMES\"><shadow type=\"math_number\"><field name=\"NUM\">14</field></shadow></value><statement name=\"DO\"><block type=\"turtle_move\"><value name=\"VALUE\"><block type=\"variables_get\"><field name=\"VAR\" id=\"var_côté_0\">côté</field></block></value><next><block type=\"turtle_turn\"><field name=\"DIR\">RIGHT</field><value name=\"VALUE\"><shadow type=\"math_number\"><field name=\"NUM\">90</field></shadow></value><next><block type=\"variables_set\"><field name=\"VAR\" id=\"var_côté_0\">côté</field><value name=\"VALUE\"><block type=\"math_arithmetic\"><field name=\"OP\">ADD</field><value name=\"A\"><block type=\"variables_get\"><field name=\"VAR\" id=\"var_côté_0\">côté</field></block></value><value name=\"B\"><shadow type=\"math_number\"><field name=\"NUM\">12</field></shadow></value></block></value></block></next></block></next></block></statement></block></next></block></xml>",
+      "inputs": {},
+      "hiddenVars": [],
+      "lockedVars": [],
+      "targets": {}
+    },
+    {
+      "id": 11,
+      "type": "TURTLE",
+      "chapter": "Variables",
+      "maxStars": 4,
+      "title": "📐 La spirale de triangle",
+      "instruction": "Même idée, mais on tourne de **120°** : une spirale **triangulaire**. Variable **côté** (départ 15), +18 à chaque tour, sur **18 fois**.",
+      "startPos": {
+        "x": 6,
+        "y": 45,
+        "dir": 0
+      },
+      "allowedBlocks": [
+        "turtle_move",
+        "turtle_turn",
+        "controls_repeat_ext",
+        "variables_set",
+        "variables_get",
+        "math_number",
+        "math_arithmetic"
+      ],
+      "maxBlocks": 12,
+      "validation": {
+        "stars": {
+          "blocks": 12,
+          "blocksFlat": 72,
+          "steps": 144
+        }
+      },
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><variables><variable id=\"seed_côté_0\">côté</variable></variables></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><variables><variable id=\"var_côté_0\">côté</variable></variables><block type=\"variables_set\"><field name=\"VAR\" id=\"var_côté_0\">côté</field><value name=\"VALUE\"><shadow type=\"math_number\"><field name=\"NUM\">15</field></shadow></value><next><block type=\"controls_repeat_ext\"><value name=\"TIMES\"><shadow type=\"math_number\"><field name=\"NUM\">18</field></shadow></value><statement name=\"DO\"><block type=\"turtle_move\"><value name=\"VALUE\"><block type=\"variables_get\"><field name=\"VAR\" id=\"var_côté_0\">côté</field></block></value><next><block type=\"turtle_turn\"><field name=\"DIR\">RIGHT</field><value name=\"VALUE\"><shadow type=\"math_number\"><field name=\"NUM\">120</field></shadow></value><next><block type=\"variables_set\"><field name=\"VAR\" id=\"var_côté_0\">côté</field><value name=\"VALUE\"><block type=\"math_arithmetic\"><field name=\"OP\">ADD</field><value name=\"A\"><block type=\"variables_get\"><field name=\"VAR\" id=\"var_côté_0\">côté</field></block></value><value name=\"B\"><shadow type=\"math_number\"><field name=\"NUM\">18</field></shadow></value></block></value></block></next></block></next></block></statement></block></next></block></xml>",
+      "inputs": {},
+      "hiddenVars": [],
+      "lockedVars": [],
+      "targets": {}
+    }
+  ]
+}
