@@ -3,6 +3,7 @@ import LZString from 'lz-string';
 import Builder from './components/builder/Builder';
 import Runner from './components/runner/Runner';
 import Home from './components/Home';
+import AngleLab from './components/labs/AngleLab';
 import './App.css';
 
 // Importation globale des blocs
@@ -15,13 +16,13 @@ function App() {
   const [campaignData, setCampaignData] = useState(null);
   const [ltiConfig, setLtiConfig] = useState(null);
   const [isTeacher, setIsTeacher] = useState(false);
-  const [startLevelIndex, setStartLevelIndex] = useState(0);
+  const [startLevelIndex, setStartLevelIndex] = useState(-1); // -1 = écran de sélection des niveaux
 
   // --- ACTIONS ---
   const handleFileLoaded = (data) => {
       setCampaignData(data);
-      setIsTeacher(false); 
-      setStartLevelIndex(0);
+      setIsTeacher(false);
+      setStartLevelIndex(-1); // affiche l'écran des niveaux
       setMode('runner');
   };
 
@@ -71,12 +72,18 @@ function App() {
     const jsonUrl = params.get('url');
     const ltiToken = params.get('lti_token');
     const gradeUrl = params.get('api_grade');
-    const isEditorMode = params.get('mode') === 'editor'; 
+    const isEditorMode = params.get('mode') === 'editor';
+    const labParam = params.get('lab');
 
     const initApp = async () => {
       try {
+        // 0. ATELIERS (leçons interactives)
+        if (labParam === 'angles') {
+            console.log("📐 Atelier des angles");
+            setMode('angles');
+        }
         // A. MODE PROFESSEUR
-        if (isEditorMode) {
+        else if (isEditorMode) {
             console.log("🛠️ Mode Enseignant activé");
             setIsTeacher(true);
             setMode('builder');
@@ -134,6 +141,8 @@ function App() {
   return (
     <div className="App">
       {mode === 'home' && <Home onFileLoaded={handleFileLoaded} />}
+
+      {mode === 'angles' && <AngleLab />}
       
       {mode === 'builder' && (
         <Builder onTest={handleTeacherTest} />

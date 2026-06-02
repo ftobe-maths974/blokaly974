@@ -39,11 +39,16 @@ export default function FeedbackModal({ isOpen, stats, token, status, onReplay, 
             </div>
 
             <div className="flex gap-3 justify-center">
-                <button onClick={onMenu} className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold transition-colors">
+                <button onClick={onMenu} className="flex-1 py-3 px-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold transition-colors">
                     ☰ Menu
                 </button>
+                {onReplay && (
+                    <button onClick={onReplay} className="flex-1 py-3 px-3 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-xl font-bold transition-colors" title="Continuer à jouer sur ce niveau">
+                        🔁 Rester
+                    </button>
+                )}
                 {onNext && (
-                    <button onClick={onNext} className="flex-[2] py-3 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold shadow-lg shadow-emerald-200 transition-all hover:-translate-y-1">
+                    <button onClick={onNext} className="flex-[2] py-3 px-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold shadow-lg shadow-emerald-200 transition-all hover:-translate-y-1">
                     ⏩ Niveau Suivant
                     </button>
                 )}
