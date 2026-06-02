@@ -45,6 +45,17 @@ const TurtleArrow = ({ cx, cy, angle, color = '#16a34a' }) => (
   </g>
 );
 
+// Slider de vitesse 🐢—🐇 (comme le runner). 0 = lent, 100 = rapide.
+const SpeedSlider = ({ value, onChange }) => (
+  <div className="flex items-center gap-2 text-lg">
+    <span title="Lent">🐢</span>
+    <input type="range" min="0" max="100" value={value} onChange={(e) => onChange(parseInt(e.target.value))} className="flex-1 accent-indigo-500" />
+    <span title="Rapide">🐇</span>
+  </div>
+);
+// vitesse → durée d'animation (ms) ; à 50 on retrouve `base`
+const durFor = (speed, base) => Math.max(80, Math.round((base * (110 - speed)) / 60));
+
 // ------------------------------------------------------------
 // MODE 1 — LE SUPPLÉMENT
 // ------------------------------------------------------------
@@ -53,12 +64,13 @@ export function SupplementMode() {
   const L = 135;
   const [turn, setTurn] = useState(120);
   const [anim, setAnim] = useState(120);
+  const [speed, setSpeed] = useState(50);
   const [showGuide, setShowGuide] = useState(true);
   const [showInterior, setShowInterior] = useState(true);
   const { run } = useTween();
 
   const setBoth = (v) => { setTurn(v); setAnim(v); };
-  const play = () => run(0, turn, 900, setAnim);
+  const play = () => run(0, turn, durFor(speed, 1100), setAnim);
 
   const interior = 180 - anim;
   const [poutX, poutY] = pol(V.x, V.y, L, anim);
@@ -90,6 +102,7 @@ export function SupplementMode() {
             onChange={(e) => setBoth(parseInt(e.target.value))} className="w-full accent-orange-500 mt-1" />
         </label>
         <button onClick={play} className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 rounded-lg shadow">▶️ Animer la rotation</button>
+        <SpeedSlider value={speed} onChange={setSpeed} />
         <div className="flex gap-2 text-xs">
           <button onClick={() => setShowGuide((s) => !s)} className={`flex-1 py-1.5 rounded border ${showGuide ? 'bg-slate-700 text-white' : 'bg-white text-slate-500'}`}>┄ Tout droit</button>
           <button onClick={() => setShowInterior((s) => !s)} className={`flex-1 py-1.5 rounded border ${showInterior ? 'bg-blue-600 text-white' : 'bg-white text-slate-500'}`}>🟦 Angle</button>
@@ -114,6 +127,7 @@ export function TourCompletMode() {
   const [arc, setArc] = useState(null);     // { x, y, base, turn } au sommet courant
   const [cumul, setCumul] = useState(0);
   const [running, setRunning] = useState(false);
+  const [speed, setSpeed] = useState(50);
   const { run, stop } = useTween();
   const runIdRef = useRef(0);
 
@@ -146,7 +160,7 @@ export function TourCompletMode() {
       if (id !== runIdRef.current) return;
       const a = verts[i], b = verts[(i + 1) % n];
       // 1) avance le long de l'arête (trace)
-      await tweenP(0, 1, 650, (k) => {
+      await tweenP(0, 1, durFor(speed, 650), (k) => {
         setPos({ x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k });
       });
       if (id !== runIdRef.current) return;
@@ -154,7 +168,7 @@ export function TourCompletMode() {
       // 2) pivote au sommet en montrant les deux angles + l'axe
       const base = head;                 // direction d'arrivée (= axe « tout droit »)
       setArc({ x: b.x, y: b.y, base, turn: 0 });
-      await tweenP(0, ext, 600, (t) => {
+      await tweenP(0, ext, durFor(speed, 650), (t) => {
         setArc({ x: b.x, y: b.y, base, turn: t });
         setHeading(base + t);
       });
@@ -162,7 +176,7 @@ export function TourCompletMode() {
       head = base + ext;
       setHeading(head);
       setCumul((c) => Math.round((c + ext) * 100) / 100);
-      await new Promise((r) => setTimeout(r, 250));
+      await new Promise((r) => setTimeout(r, durFor(speed, 250)));
       setArc(null);
     }
     if (id === runIdRef.current) setRunning(false);
@@ -211,6 +225,7 @@ export function TourCompletMode() {
           <input type="range" min="3" max="10" step="1" value={n} onChange={(e) => changeN(parseInt(e.target.value))} className="w-full accent-indigo-500 mt-1" />
         </label>
         <button onClick={play} disabled={running} className="bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white font-bold py-2 rounded-lg shadow">▶️ Faire le tour</button>
+        <SpeedSlider value={speed} onChange={setSpeed} />
         <p className="text-xs text-slate-500 leading-relaxed">
           À chaque sommet, la tortue pivote du <b className="text-orange-600">virage</b> 🟧 ; l'<b className="text-blue-600">angle de la figure</b> 🟦 est son supplément.
           Sur un tour complet, les virages totalisent <b>360°</b> → chaque virage = <b>360 ÷ {n}</b>.
@@ -234,22 +249,24 @@ const QUIZ = [
 export function QuizMode() {
   const V = { x: 175, y: 215 }, L = 135;
   const [qi, setQi] = useState(0);
-  const [val, setVal] = useState(90);
+  const [val, setVal] = useState(0);           // départ à 0, l'élève manipule le slider
   const [result, setResult] = useState(null);
   const [score, setScore] = useState({ ok: 0, total: 0 });
 
   const q = QUIZ[qi];
   const answer = 180 - q.interior;
-  const a = Math.max(0, Math.min(180, val || 0)); // figure suit l'input (manipulable)
+  const a = val;                                // la figure suit le slider (manipulable)
+  const interior = 180 - a;
 
   const check = () => {
     const ok = a === answer;
     setResult(ok ? 'ok' : 'ko');
     setScore((s) => ({ ok: s.ok + (ok ? 1 : 0), total: s.total + 1 }));
   };
-  const next = () => { setQi((i) => (i + 1) % QUIZ.length); setResult(null); setVal(90); };
+  const next = () => { setQi((i) => (i + 1) % QUIZ.length); setResult(null); setVal(0); };
 
   const [poutX, poutY] = pol(V.x, V.y, L, a);
+  const [liX, liY] = pol(V.x, V.y, 92, (a + 180) / 2);
 
   return (
     <div className="grid md:grid-cols-[1fr,260px] gap-6 items-center">
@@ -261,20 +278,22 @@ export function QuizMode() {
         <line x1={V.x} y1={V.y} x2={poutX} y2={poutY} stroke="#16a34a" strokeWidth="5" strokeLinecap="round" />
         <TurtleArrow cx={V.x} cy={V.y} angle={a} />
         {a > 12 && <text x={pol(V.x, V.y, 38, a / 2)[0]} y={pol(V.x, V.y, 38, a / 2)[1]} fontSize="14" fontWeight="bold" fill="#ea580c" textAnchor="middle">{a}°</text>}
+        {a < 168 && <text x={liX} y={liY} fontSize="14" fontWeight="bold" fill="#2563eb" textAnchor="middle">{interior}°</text>}
       </svg>
 
       <div className="flex flex-col gap-3">
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
           <div className="text-slate-500 text-xs uppercase font-bold">Défi</div>
-          <div className="text-slate-800 mt-1">Pour un <b>{q.name}</b>, l'angle de la figure est <b className="text-blue-600">{q.interior}°</b>.</div>
-          <div className="text-slate-800 mt-1 font-semibold">De combien <b className="text-orange-600">tourner</b> ?</div>
+          <div className="text-slate-800 mt-1">Pour un <b>{q.name}</b>, il faut un angle <b className="text-blue-600">🟦 {q.interior}°</b>.</div>
+          <div className="text-slate-800 mt-1 font-semibold">Règle le <b className="text-orange-600">🟧 virage</b> pour l'obtenir !</div>
         </div>
 
         <label className="text-sm font-semibold text-slate-600">
-          Mon virage (en degrés) :
-          <input type="number" min="0" max="180" value={val}
-            onChange={(e) => { setVal(e.target.value === '' ? '' : parseInt(e.target.value)); setResult(null); }}
-            className="w-full mt-1 p-2 border-2 border-slate-200 rounded-lg text-center text-lg font-bold text-orange-600 focus:border-orange-400 outline-none" />
+          🟧 Virage : <span className="text-orange-600 font-bold">{a}°</span> &nbsp;·&nbsp; 🟦 Angle : <span className="text-blue-600 font-bold">{interior}°</span>
+          <input type="range" min="0" max="180" step="1" value={val}
+            onChange={(e) => { setVal(parseInt(e.target.value)); setResult(null); }}
+            className="w-full accent-orange-500 mt-1" />
+          <span className="block text-center text-xs text-slate-400 font-mono mt-1">{a}° + {interior}° = 180°</span>
         </label>
 
         {result === null && <button onClick={check} className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 rounded-lg shadow">✅ Vérifier</button>}
