@@ -15,6 +15,8 @@ export const BLOCK_DEFINITIONS = {
   'lists_length': '<block type="lists_length"></block>',
   'text_print': '<block type="text_print"></block>',
   'text_prompt_ext': '<block type="text_prompt_ext"><value name="TEXT"><shadow type="text"><field name="TEXT">?</field></shadow></value></block>',
+  'text': '<block type="text"><field name="TEXT">texte</field></block>',
+  'text_join': '<block type="text_join"><mutation items="2"></mutation></block>',
   'variables_get': '<block type="variables_get"></block>',
   'variables_set': '<block type="variables_set"></block>',
 };
@@ -23,14 +25,14 @@ export const BLOCK_LABELS = {
   'controls_repeat_ext': 'Répéter N fois', 'controls_whileUntil': 'Répéter tant que', 'controls_if': 'Si... Alors',
   'logic_compare': 'Comparaison', 'logic_operation': 'Opérateur',
   'math_number': 'Nombre', 'math_arithmetic': 'Calcul', 'math_modulo': 'Reste', 'math_random_int': 'Aléatoire',
-  'text_print': 'Afficher', 'text_prompt_ext': 'Demander', 'lists_create_with': 'Créer liste', 'lists_getIndex': 'Lire élément', 'lists_setIndex': 'Modifier élément', 'lists_length': 'Longueur liste', 'variables_set': 'Définir variable', 'variables_get': 'Lire variable'
+  'text_print': 'Afficher', 'text_prompt_ext': 'Demander', 'text': 'Texte', 'text_join': 'Assembler texte', 'lists_create_with': 'Créer liste', 'lists_getIndex': 'Lire élément', 'lists_setIndex': 'Modifier élément', 'lists_length': 'Longueur liste', 'variables_set': 'Définir variable', 'variables_get': 'Lire variable'
 };
 
 export const CATEGORIES_BY_TYPE = {
   'MAZE': ['Logique'], 
   'TURTLE': ['Logique', 'Mathématiques', 'Variables'],
-  'MATH': ['Mathématiques', 'Listes', 'Variables', 'Interactions', 'Logique'],
-  'EQUATION': [] 
+  'MATH': ['Mathématiques', 'Texte', 'Listes', 'Variables', 'Interactions', 'Logique'],
+  'EQUATION': []
 };
 
 export const CATEGORY_CONTENTS = {
@@ -38,6 +40,7 @@ export const CATEGORY_CONTENTS = {
   'Mathématiques': ['math_number', 'math_arithmetic', 'math_modulo', 'math_random_int'],
   'Listes': ['lists_create_with', 'lists_getIndex', 'lists_setIndex', 'lists_length'],
   'Variables': ['variables_set', 'variables_get'],
+  'Texte': ['text', 'text_join'],
   'Interactions': ['text_print', 'text_prompt_ext']
 };
 
@@ -95,7 +98,8 @@ const buildToolboxXML = (allowedBlocks, levelInputs, hiddenVars, lockedVars, for
         if (catName === 'Logique') colour = '210'; 
         if (catName === 'Mathématiques') colour = '230'; 
         if (catName === 'Listes') colour = '260'; 
-        if (catName === 'Interactions') colour = '160'; 
+        if (catName === 'Interactions') colour = '160';
+        if (catName === 'Texte') colour = '160';
         if (catName === 'Variables') colour = '330';
         
         xmlContent += `<category name="${catName}" colour="${colour}">${catXml}</category>`;

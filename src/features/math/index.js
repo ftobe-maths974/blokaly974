@@ -25,10 +25,13 @@ const MathLogic = {
         const targets = levelData.targets || {};
         const variables = state?.variables || {};
         const targetKeys = Object.keys(targets);
-        
-        if (targetKeys.length === 0) return { status: 'RUNNING', feedback: null };
+        const expected = levelData.expectedOutput; // tableau de lignes attendues (optionnel)
+        const hasOutput = Array.isArray(expected);
 
-        // 1. VERIFICATION
+        // Pas d'objectif → bac à sable
+        if (targetKeys.length === 0 && !hasOutput) return { status: 'RUNNING', feedback: null };
+
+        // 1a. VÉRIFICATION DES VARIABLES
         const checkEqual = (val1, val2) => {
             if (Array.isArray(val1) || Array.isArray(val2)) return JSON.stringify(val1) === JSON.stringify(val2);
             const n1 = parseFloat(val1);
@@ -36,54 +39,52 @@ const MathLogic = {
             if (!isNaN(n1) && !isNaN(n2)) return Math.abs(n1 - n2) < 0.0001;
             return String(val1) == String(val2);
         };
-
-        const results = targetKeys.map(key => {
+        const varsOk = targetKeys.every((key) => {
             let targetVal = targets[key];
             if (typeof targetVal === 'string' && targetVal.startsWith('@')) {
-                const refVar = targetVal.substring(1);
-                targetVal = levelData.inputs?.[refVar];
+                targetVal = levelData.inputs?.[targetVal.substring(1)];
             }
             return checkEqual(variables[key], targetVal);
         });
 
-        const isSuccess = results.every(r => r === true);
+        // 1b. VÉRIFICATION DE L'AFFICHAGE (lignes imprimées, dans l'ordre)
+        let outputOk = true;
+        if (hasOutput) {
+            const printed = (state?.logs || [])
+                .filter((l) => typeof l === 'string' && l.indexOf('🖨️') === 0)
+                .map((l) => l.replace(/^🖨️\s*/, ''));
+            outputOk = printed.length === expected.length && expected.every((e, i) => String(e) === String(printed[i]));
+        }
 
-        // 2. VERDICT ECHEC
-        if (!isSuccess) {
-            return { 
-                status: 'FAIL', 
-                feedback: { 
-                    title: "Résultat Incorrect", 
-                    message: "Les variables ne contiennent pas les valeurs attendues." 
-                } 
+        // 2. VERDICT ÉCHEC
+        if (!varsOk || !outputOk) {
+            return {
+                status: 'FAIL',
+                feedback: {
+                    title: 'Pas encore…',
+                    message: !varsOk
+                        ? 'Les variables ne contiennent pas les valeurs attendues.'
+                        : "L'affichage ne correspond pas à ce qui est attendu.",
+                },
             };
         }
 
-        // 3. SCORING
-        const validation = levelData.validation || {};
-        const targetBlocks = validation.stars?.blocks || levelData.maxBlocks || 10;
-        const targetSteps = validation.stars?.steps || 50; 
-
+        // 3. SCORING — barème 4 ⭐ (récompense un code court)
+        const v = levelData.validation?.stars || {};
+        const optimal = v.blocks ?? levelData.maxBlocks ?? 8;
+        const flat = v.blocksFlat ?? Math.max(optimal * 3, optimal + 6);
         const usedBlocks = metrics.blockCount || 0;
-        const usedSteps = metrics.steps || 0;
 
-        let stars = 3;
-        const penalties = [];
-
-        if (usedBlocks > targetBlocks) { stars--; penalties.push("trop de blocs"); }
-        if (usedSteps > targetSteps) { stars--; penalties.push("trop lent"); }
-
-        stars = Math.max(1, stars);
+        let stars, message;
+        if (usedBlocks <= optimal) { stars = 4; message = 'Parfait, code efficace ! 💡'; }
+        else if (usedBlocks <= Math.round((optimal + flat) / 2)) { stars = 3; message = 'Bien joué ! Peux-tu faire plus court ?'; }
+        else if (usedBlocks <= flat) { stars = 2; message = "Réussi ! Essaie d'utiliser moins de blocs."; }
+        else { stars = 1; message = 'Réussi, mais avec beaucoup de blocs.'; }
 
         return {
             status: 'WIN',
-            score: { 
-                stars: stars, 
-                primaryMetric: "Objectifs atteints", 
-                targetMetric: `Obj: ${targetBlocks} blocs`,
-                details: { blocks: usedBlocks, steps: usedSteps } 
-            },
-            feedback: { title: "Bravo !", message: stars === 3 ? "Algorithme optimal." : `Attention : ${penalties.join(", ")}.` }
+            score: { stars, maxStars: 4, primaryMetric: 'Objectif atteint', targetMetric: `Optimal : ${optimal} blocs`, details: { blocks: usedBlocks } },
+            feedback: { title: 'Bravo !', message },
         };
     }
 };
@@ -123,6 +124,14 @@ export default {
                 { type: 'controls_if', label: 'Si... Alors', icon: '❓' },
                 { type: 'logic_compare', label: 'Comparer', icon: '≠' },
                 { type: 'logic_operation', label: 'ET / OU', icon: '&&' }
+            ]
+        },
+        {
+            category: 'Texte',
+            color: 'teal-500',
+            blocks: [
+                { type: 'text', label: 'Texte', icon: '🔤' },
+                { type: 'text_join', label: 'Assembler', icon: '🔗' }
             ]
         },
         {
