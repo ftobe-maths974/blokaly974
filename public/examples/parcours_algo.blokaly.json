@@ -107,7 +107,8 @@
       "instruction": "Range dans la variable **somme** la valeur de `a + b`.",
       "inputs": {
         "a": 7,
-        "b": 5
+        "b": 5,
+        "somme": 0
       },
       "targets": {
         "somme": 12
@@ -139,7 +140,8 @@
       "title": "✖️ Le triple",
       "instruction": "Range dans **triple** la valeur de `n × 3`.",
       "inputs": {
-        "n": 4
+        "n": 4,
+        "triple": 0
       },
       "targets": {
         "triple": 12
@@ -172,7 +174,8 @@
       "instruction": "**Échange** les valeurs de a et b (a doit valoir 9, b doit valoir 5).\n\n💡 Astuce : passe par une variable **temp** pour ne rien perdre :\n`temp ← a`, puis `a ← b`, puis `b ← temp`.",
       "inputs": {
         "a": 5,
-        "b": 9
+        "b": 9,
+        "temp": 0
       },
       "targets": {
         "a": "@b",
@@ -238,7 +241,8 @@
       "instruction": "Range dans **max** le plus grand de a et b.\n\n💡 `Si a > b alors max ← a sinon max ← b`.",
       "inputs": {
         "a": 8,
-        "b": 5
+        "b": 5,
+        "max": 0
       },
       "targets": {
         "max": 8
@@ -271,7 +275,8 @@
       "title": "🔢 Compter jusqu'à n",
       "instruction": "Mets **compteur** à 0, puis **répète n fois** : `compteur ← compteur + 1`.",
       "inputs": {
-        "n": 5
+        "n": 5,
+        "compteur": 0
       },
       "targets": {
         "compteur": 5
@@ -304,7 +309,8 @@
       "title": "⚖️ Pair ou impair",
       "instruction": "Range dans **reste** le reste de `n ÷ 2` (bloc **Reste**). 0 = pair, 1 = impair !",
       "inputs": {
-        "n": 7
+        "n": 7,
+        "reste": 0
       },
       "targets": {
         "reste": 1
