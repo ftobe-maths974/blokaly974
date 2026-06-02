@@ -3,9 +3,8 @@
 // la capture locale (localStorage) continue de fonctionner normalement.
 import { configureBackend } from './index.js';
 
-// ⚙️ À renseigner avec l'URL du collecteur OVH (cf. OVH/www/competences/README.md).
-// Ex. 'https://maths974.fr/competences/collect.php'. Laisser vide = pas d'envoi réseau.
-export const COLLECTOR_URL = '';
+// ⚙️ URL du collecteur OVH (cf. OVH/www/competences/README.md). Vide = pas d'envoi réseau.
+export const COLLECTOR_URL = 'https://competences.maths974.fr/collect.php';
 
 // Clé du code élève dans le localStorage (partagée par convention entre toutes les apps).
 export const STUDENT_KEY_LS = 'maths974:eleve';
