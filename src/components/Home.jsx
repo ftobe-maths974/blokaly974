@@ -32,6 +32,16 @@ const PARCOURS = [
     ring: 'hover:shadow-pink-500/30',
     desc: 'Hello World, variables, échange de valeurs, conditions et boucles : les petits programmes qui font les vrais programmeurs.',
   },
+  {
+    key: 'motif',
+    emoji: '🎨',
+    title: 'Motifs sur une grille',
+    tagline: 'Reproduis les motifs colorés',
+    url: 'examples/motifs_grille.blokaly.json',
+    gradient: 'from-purple-500 to-violet-600',
+    ring: 'hover:shadow-purple-500/30',
+    desc: "Repère le motif de couleurs qui se répète et factorise-le avec la boucle Répéter. Inspiré des défis Algorea.",
+  },
 ];
 
 const launch = (url) => { window.location.href = '?url=' + encodeURIComponent(url); };
@@ -64,7 +74,7 @@ export default function Home({ onFileLoaded }) {
           <h3 className="text-sm uppercase tracking-wide text-slate-400 font-bold mb-4">
             Choisis ton aventure
           </h3>
-          <div className="grid sm:grid-cols-3 gap-4 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {PARCOURS.map((p) => (
               <button
                 key={p.key}

@@ -5,6 +5,7 @@ import EquationFeature from '../features/equation';
 // 👇 AJOUT DE L'IMPORT OBLIGATOIRE
 import IframeFeature from '../features/iframe';
 import AngleFeature from '../features/angle';
+import MotifFeature from '../features/motif';
 
 const REGISTRY = {};
 
@@ -29,6 +30,7 @@ registerPlugin(EquationFeature);
 // 👇 ENREGISTREMENT
 registerPlugin(IframeFeature);
 registerPlugin(AngleFeature);
+registerPlugin(MotifFeature);
 
 export const getPlugin = (id) => REGISTRY[id];
 export const getAllPlugins = () => Object.values(REGISTRY);
