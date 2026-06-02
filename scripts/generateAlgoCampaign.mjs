@@ -94,23 +94,31 @@ const seedXml = (vars) =>
     ? `<xml xmlns="https://developers.google.com/blockly/xml"><variables>${vars.map((n, i) => `<variable id="seed_${i}">${n}</variable>`).join('')}</variables></xml>`
     : '<xml xmlns="https://developers.google.com/blockly/xml"></xml>';
 
-const levels = LEVELS.map((l, i) => ({
-  id: i + 1,
-  type: 'MATH',
-  chapter: l.chapter,
-  maxStars: 4,
-  title: `${l.icon} ${l.title}`,
-  instruction: l.instruction,
-  inputs: l.inputs || {},
-  targets: l.targets || {},
-  ...(l.expectedOutput ? { expectedOutput: l.expectedOutput } : {}),
-  allowedBlocks: l.allowed,
-  maxBlocks: l.maxBlocks,
-  validation: { stars: { blocks: l.maxBlocks, blocksFlat: l.maxBlocks * 3, steps: 200 } },
-  hiddenVars: [], lockedVars: [],
-  startBlocks: seedXml(l.vars),
-  solutionBlocks: '<xml xmlns="https://developers.google.com/blockly/xml"></xml>',
-}));
+const levels = LEVELS.map((l, i) => {
+  // Les variables de TRAVAIL (cibles/temporaires) doivent figurer dans `inputs`
+  // pour apparaître dans la boîte à blocs (la catégorie Variables est construite
+  // depuis inputs). On les initialise à 0.
+  const inputs = { ...(l.inputs || {}) };
+  (l.vars || []).forEach((name) => { if (!(name in inputs)) inputs[name] = 0; });
+
+  return {
+    id: i + 1,
+    type: 'MATH',
+    chapter: l.chapter,
+    maxStars: 4,
+    title: `${l.icon} ${l.title}`,
+    instruction: l.instruction,
+    inputs,
+    targets: l.targets || {},
+    ...(l.expectedOutput ? { expectedOutput: l.expectedOutput } : {}),
+    allowedBlocks: l.allowed,
+    maxBlocks: l.maxBlocks,
+    validation: { stars: { blocks: l.maxBlocks, blocksFlat: l.maxBlocks * 3, steps: 200 } },
+    hiddenVars: [], lockedVars: [],
+    startBlocks: seedXml(Object.keys(inputs)),
+    solutionBlocks: '<xml xmlns="https://developers.google.com/blockly/xml"></xml>',
+  };
+});
 
 const campaign = {
   title: '🧪 Parcours Algo — Labo',
