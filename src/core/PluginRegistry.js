@@ -3,7 +3,8 @@ import TurtleFeature from '../features/turtle';
 import MathFeature from '../features/math';
 import EquationFeature from '../features/equation';
 // 👇 AJOUT DE L'IMPORT OBLIGATOIRE
-import IframeFeature from '../features/iframe'; 
+import IframeFeature from '../features/iframe';
+import AngleFeature from '../features/angle';
 
 const REGISTRY = {};
 
@@ -26,7 +27,8 @@ registerPlugin(TurtleFeature);
 registerPlugin(MathFeature);
 registerPlugin(EquationFeature);
 // 👇 ENREGISTREMENT
-registerPlugin(IframeFeature); 
+registerPlugin(IframeFeature);
+registerPlugin(AngleFeature);
 
 export const getPlugin = (id) => REGISTRY[id];
 export const getAllPlugins = () => Object.values(REGISTRY);

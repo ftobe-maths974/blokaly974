@@ -151,16 +151,22 @@ const TURTLE_VARS = [...TURTLE, 'variables_set', 'variables_get', 'math_number',
 const polygon = (n, side) => [repeat(n, [move(side), turn('R', Math.round((360 / n) * 100) / 100)])];
 
 const FIGURES = [
-  // --- CHAPITRE 1 : POLYGONES (angle extérieur = 360 / n) ---
-  { id: 'triangle', title: 'Le triangle équilatéral', icon: '🔺', chapter: 'Polygones', vars: [],
-    instruction: "Un **triangle équilatéral** : 3 côtés égaux. À chaque sommet, la tortue tourne de **360 ÷ 3 = 120°**.",
+  // --- EXERCICES « COMPRENDRE LES ANGLES » (appliquent la leçon) ---
+  { id: 'chevron', title: 'Un angle de 60°', icon: '📐', chapter: 'Comprendre les angles', vars: [],
+    allowed: ['turtle_move', 'turtle_turn'],
+    instruction: "Trace un **angle de 60°** : avance, **tourne de 120°** (le supplément : 180 − 60), puis avance.",
+    nodes: [move(130), turn('R', 120), move(130)] },
+  { id: 'triangle', title: 'Le triangle équilatéral', icon: '🔺', chapter: 'Comprendre les angles', vars: [],
+    instruction: "Applique le **tour complet** : un **triangle** a 3 sommets → on tourne de **360 ÷ 3 = 120°** à chaque fois.",
     nodes: polygon(3, 160) },
+  { id: 'pentagone', title: 'Le pentagone', icon: '⬠', chapter: 'Comprendre les angles', vars: [],
+    instruction: "À toi de trouver l'angle : **pentagone** = 5 côtés → **360 ÷ 5 = 72°** (et oui, 72 n'est pas rond !).",
+    nodes: polygon(5, 110) },
+
+  // --- CHAPITRE : POLYGONES (angle extérieur = 360 / n) ---
   { id: 'carre', title: 'Le carré', icon: '⬜', chapter: 'Polygones', vars: [],
     instruction: "Un **carré** : 4 côtés. Angle de rotation = **360 ÷ 4 = 90°**.",
     nodes: polygon(4, 130) },
-  { id: 'pentagone', title: 'Le pentagone', icon: '⬠', chapter: 'Polygones', vars: [],
-    instruction: "Un **pentagone régulier** : 5 côtés. Angle = **360 ÷ 5 = 72°**.",
-    nodes: polygon(5, 110) },
   { id: 'hexagone', title: "L'hexagone", icon: '⬡', chapter: 'Polygones', vars: [],
     instruction: "Un **hexagone régulier** : 6 côtés. Angle = **360 ÷ 6 = 60°**.",
     nodes: polygon(6, 95) },
@@ -200,49 +206,69 @@ const FIGURES = [
 // =====================================================================
 // GÉNÉRATION
 // =====================================================================
-const levels = [];
 const report = [];
+const figById = Object.fromEntries(FIGURES.map((f) => [f.id, f]));
 
-for (const fig of FIGURES) {
-  // 1ère simulation depuis l'origine pour mesurer la bounding box
+function buildFigureLevel(fig, idx) {
   const probe = simulate(fig.nodes, { x: 0, y: 0, dir: 0 });
   const xs = probe.lines.flatMap((l) => [l.x1, l.x2]);
   const ys = probe.lines.flatMap((l) => [l.y1, l.y2]);
-  const minX = Math.min(...xs), maxX = Math.max(...xs);
-  const minY = Math.min(...ys), maxY = Math.max(...ys);
-  const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
-  const span = Math.max(maxX - minX, maxY - minY);
-
-  // startPos qui recentre la figure autour de (0,0)
+  const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+  const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+  const span = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
   const startPos = { x: Math.round(-cx), y: Math.round(-cy), dir: 0 };
   const sim = simulate(fig.nodes, startPos);
-
   const optimal = countBlocks(fig.nodes);
-  const flat = sim.actions * 2; // solution « à plat » : ~2 blocs par action
-  const fits = span <= 760;     // marge dans le canvas ±400
+  const flat = sim.actions * 2;
+  report.push(`${span <= 760 ? '✅' : '⚠️ '} ${fig.id} — span ${Math.round(span)}px, ${sim.lines.length} segments, optimal ${optimal} blocs`);
 
-  report.push(`${fits ? '✅' : '⚠️ '} ${fig.id} — span ${Math.round(span)}px, ${sim.lines.length} segments, optimal ${optimal} blocs ${fits ? '' : '(dépasse le canvas !)'}`);
-
-  levels.push({
-    id: Number(`${levels.length + 1}`),
+  return {
+    id: idx + 1,
     type: 'TURTLE',
     chapter: fig.chapter,
     maxStars: 4,
     title: `${fig.icon} ${fig.title}`,
     instruction: fig.instruction,
     startPos,
-    allowedBlocks: fig.vars.length ? TURTLE_VARS : TURTLE,
+    allowedBlocks: fig.allowed || (fig.vars.length ? TURTLE_VARS : TURTLE),
     maxBlocks: optimal,
     validation: { stars: { blocks: optimal, blocksFlat: flat, steps: sim.actions * 4 } },
-    // Pré-déclare les variables du niveau pour qu'elles soient prêtes à l'emploi
-    // (l'élève n'a pas à les créer dans Blockly).
     startBlocks: fig.vars.length
       ? `<xml xmlns="https://developers.google.com/blockly/xml"><variables>${fig.vars.map((n, i) => `<variable id="seed_${n}_${i}">${n}</variable>`).join('')}</variables></xml>`
       : '<xml xmlns="https://developers.google.com/blockly/xml"></xml>',
     solutionBlocks: programXml(fig.nodes, fig.vars),
     inputs: {}, hiddenVars: [], lockedVars: [], targets: {},
-  });
+  };
 }
+
+// Leçons interactives (plugin ANGLE, plein écran)
+const LESSONS = {
+  supp: { icon: '📐', title: 'Leçon : le supplément', instruction: "Découvre pourquoi **tourner de 120°** dessine un angle de **60°**. Joue avec le curseur, puis « J'ai compris »." },
+  tour: { icon: '🔄', title: 'Leçon : le tour complet', instruction: "Regarde la tortue faire le tour d'un polygone : ses virages totalisent **360°**. D'où **360 ÷ n**." },
+  quiz: { icon: '🎯', title: 'Leçon : quiz des angles', instruction: "Entraîne-toi à trouver le bon **virage** selon l'angle voulu, puis « J'ai compris »." },
+};
+function buildLessonLevel(mode, idx) {
+  const l = LESSONS[mode];
+  report.push(`📐 leçon ${mode}`);
+  return {
+    id: idx + 1, type: 'ANGLE', mode, chapter: 'Comprendre les angles', maxStars: 4,
+    title: `${l.icon} ${l.title}`, instruction: l.instruction,
+  };
+}
+
+// ORDRE de la campagne : 6 niveaux d'intro (leçon → exercice ×3) puis le reste.
+const ORDER = [
+  { lesson: 'supp' }, { fig: 'chevron' },
+  { lesson: 'tour' }, { fig: 'triangle' },
+  { lesson: 'quiz' }, { fig: 'pentagone' },
+  { fig: 'carre' }, { fig: 'hexagone' }, { fig: 'octogone' }, { fig: 'decagone' },
+  { fig: 'rosace-carres' }, { fig: 'rosace-triangles' }, { fig: 'rosace-hexagones' },
+  { fig: 'spirale-carree' }, { fig: 'spirale-triangle' },
+];
+
+const levels = ORDER.map((entry, i) =>
+  entry.lesson ? buildLessonLevel(entry.lesson, i) : buildFigureLevel(figById[entry.fig], i)
+);
 
 const campaign = {
   title: '🐢 Figures géométriques — Tortue',
