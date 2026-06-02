@@ -8,6 +8,10 @@ import { registerAllBlocks } from './core/BlockRegistry';
 registerAllBlocks();
 // ----------------------------------
 
+// Branche le collecteur de compétences partagé (inactif tant que COLLECTOR_URL vide)
+import { initBackend } from './core/competences/backend';
+initBackend();
+
 // DEV : inspecter les compétences captées depuis la console
 // (ex. `maths974.getMastery()` après avoir réussi des niveaux)
 if (import.meta.env.DEV) {

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { getMastery, getMacroMastery, getAttempts, clearAttempts } from '../../core/competences';
+import React, { useState, useEffect } from 'react';
+import { getMastery, getMacroMastery, getAttempts, clearAttempts, fetchMastery } from '../../core/competences';
+import { COLLECTOR_URL, getStudentKey, setStudentKey } from '../../core/competences/backend';
 
 const TIER_STYLE = {
   fragile: { label: 'Fragile', bg: 'bg-red-400', text: 'text-red-700', chip: 'bg-red-100' },
@@ -24,6 +25,28 @@ export default function CompetencesView() {
   const macro = getMacroMastery({ minAttempts: 1 });
   const attempts = getAttempts();
 
+  // --- Code élève + maîtrise inter-apps (collecteur partagé) ---
+  const backendOn = !!COLLECTOR_URL;
+  const [code, setCode] = useState(getStudentKey() || '');
+  const [remote, setRemote] = useState(null); // { [id]: {label,domaine,attempts,ok,rate,tier,byApp} }
+  const [remoteLoading, setRemoteLoading] = useState(false);
+
+  useEffect(() => {
+    if (!backendOn || !getStudentKey()) return;
+    setRemoteLoading(true);
+    fetchMastery().then((m) => setRemote(m)).catch(() => setRemote(null)).finally(() => setRemoteLoading(false));
+  }, [backendOn]);
+
+  const saveCode = () => {
+    setStudentKey(code.trim() || null); // (re)configure le rail backend
+    if (backendOn && code.trim()) {
+      setRemoteLoading(true);
+      fetchMastery().then((m) => setRemote(m)).catch(() => setRemote(null)).finally(() => setRemoteLoading(false));
+    } else {
+      setRemote(null);
+    }
+  };
+
   // micro-compétences groupées par domaine
   const byDomaine = {};
   for (const [id, s] of Object.entries(skills)) {
@@ -39,6 +62,53 @@ export default function CompetencesView() {
           <span className="w-16" />
         </div>
 
+        {/* Code élève — active le cumul inter-apps */}
+        {backendOn && (
+          <div className="bg-white/85 backdrop-blur rounded-2xl shadow border border-white/60 p-4 mb-5">
+            <label className="text-xs uppercase tracking-wider font-bold text-slate-400">Mon code élève</label>
+            <div className="flex gap-2 mt-2">
+              <input
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') saveCode(); }}
+                placeholder="ex. emma-6b"
+                className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm"
+              />
+              <button onClick={saveCode} className="bg-blue-600 text-white text-sm font-bold px-4 py-2 rounded-lg hover:bg-blue-700">Suivre</button>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-2">
+              Renseigne le même code dans chaque app pour cumuler tes compétences (Blokaly, Aljeb, GS, Pezali).
+            </p>
+          </div>
+        )}
+
+        {/* Maîtrise inter-apps (collecteur partagé) */}
+        {backendOn && getStudentKey() && (
+          <div className="bg-white/85 backdrop-blur rounded-2xl shadow border border-white/60 p-5 mb-5">
+            <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400 mb-3">🌐 Toutes mes apps</h2>
+            {remoteLoading ? (
+              <p className="text-sm text-slate-400">Chargement…</p>
+            ) : remote && Object.keys(remote).length ? (
+              <div className="flex flex-col gap-3">
+                {Object.entries(remote).map(([id, s]) => (
+                  <div key={id} className="flex flex-col gap-1">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="font-semibold text-slate-700">{s.label}</span>
+                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${st(s.tier).chip} ${st(s.tier).text}`}>
+                        {s.ok}/{s.attempts} · {st(s.tier).label}
+                      </span>
+                    </div>
+                    <Bar rate={s.rate} tier={s.tier} />
+                    <span className="text-[11px] text-slate-400">supports : {Object.keys(s.byApp || {}).join(', ') || '—'}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-400">Pas encore de compétences cumulées pour ce code.</p>
+            )}
+          </div>
+        )}
+
         {attempts.length === 0 ? (
           <div className="bg-white/85 rounded-2xl shadow border border-white/60 p-8 text-center text-slate-500">
             Aucune compétence captée pour l'instant.<br />
@@ -48,7 +118,7 @@ export default function CompetencesView() {
           <>
             <p className="text-center text-slate-500 mb-6 text-sm">
               {attempts.length} tentative(s) réussie(s) captée(s) sur cet appareil.
-              <span className="block text-xs text-slate-400 mt-1">(Le cumul entre toutes les apps viendra avec le serveur partagé.)</span>
+              {!backendOn && <span className="block text-xs text-slate-400 mt-1">(Le cumul entre toutes les apps viendra avec le serveur partagé.)</span>}
             </p>
 
             {/* Macro-compétences du socle */}
