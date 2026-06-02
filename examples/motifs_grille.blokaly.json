@@ -1,0 +1,308 @@
+{
+  "title": "🎨 Motifs sur une grille",
+  "description": "Reproduis chaque motif coloré en repérant ce qui se répète, puis factorise avec la boucle « Répéter ». Inspiré des défis Algorea (didapro).",
+  "levels": [
+    {
+      "id": 1,
+      "type": "MOTIF",
+      "chapter": "Motifs répétés",
+      "maxStars": 4,
+      "title": "🔴 Rouge & Bleu",
+      "instruction": "Reproduis le motif **rouge, bleu** qui se répète. Repère l'unité qui revient et utilise **Répéter** !",
+      "target": [
+        "R",
+        "B",
+        "R",
+        "B",
+        "R",
+        "B"
+      ],
+      "allowedBlocks": [
+        "motif_R",
+        "motif_B",
+        "motif_J",
+        "motif_V",
+        "controls_repeat_ext"
+      ],
+      "maxBlocks": 4,
+      "validation": {
+        "stars": {
+          "blocks": 4,
+          "blocksFlat": 6,
+          "steps": 11
+        }
+      },
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "inputs": {},
+      "hiddenVars": [],
+      "lockedVars": [],
+      "targets": {}
+    },
+    {
+      "id": 2,
+      "type": "MOTIF",
+      "chapter": "Motifs répétés",
+      "maxStars": 4,
+      "title": "🚦 Feu tricolore",
+      "instruction": "Le motif **rouge, jaune, vert** se répète 3 fois.",
+      "target": [
+        "R",
+        "J",
+        "V",
+        "R",
+        "J",
+        "V",
+        "R",
+        "J",
+        "V"
+      ],
+      "allowedBlocks": [
+        "motif_R",
+        "motif_B",
+        "motif_J",
+        "motif_V",
+        "controls_repeat_ext"
+      ],
+      "maxBlocks": 5,
+      "validation": {
+        "stars": {
+          "blocks": 5,
+          "blocksFlat": 9,
+          "steps": 14
+        }
+      },
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "inputs": {},
+      "hiddenVars": [],
+      "lockedVars": [],
+      "targets": {}
+    },
+    {
+      "id": 3,
+      "type": "MOTIF",
+      "chapter": "Motifs répétés",
+      "maxStars": 4,
+      "title": "🧱 Deux rouges, un bleu",
+      "instruction": "Motif **rouge, rouge, bleu**, répété 4 fois.",
+      "target": [
+        "R",
+        "R",
+        "B",
+        "R",
+        "R",
+        "B",
+        "R",
+        "R",
+        "B",
+        "R",
+        "R",
+        "B"
+      ],
+      "allowedBlocks": [
+        "motif_R",
+        "motif_B",
+        "motif_J",
+        "motif_V",
+        "controls_repeat_ext"
+      ],
+      "maxBlocks": 5,
+      "validation": {
+        "stars": {
+          "blocks": 5,
+          "blocksFlat": 12,
+          "steps": 17
+        }
+      },
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "inputs": {},
+      "hiddenVars": [],
+      "lockedVars": [],
+      "targets": {}
+    },
+    {
+      "id": 4,
+      "type": "MOTIF",
+      "chapter": "Motifs répétés",
+      "maxStars": 4,
+      "title": "🌈 Quatre couleurs",
+      "instruction": "Le motif **bleu, vert, rouge, jaune** revient 3 fois.",
+      "target": [
+        "B",
+        "V",
+        "R",
+        "J",
+        "B",
+        "V",
+        "R",
+        "J",
+        "B",
+        "V",
+        "R",
+        "J"
+      ],
+      "allowedBlocks": [
+        "motif_R",
+        "motif_B",
+        "motif_J",
+        "motif_V",
+        "controls_repeat_ext"
+      ],
+      "maxBlocks": 6,
+      "validation": {
+        "stars": {
+          "blocks": 6,
+          "blocksFlat": 12,
+          "steps": 17
+        }
+      },
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "inputs": {},
+      "hiddenVars": [],
+      "lockedVars": [],
+      "targets": {}
+    },
+    {
+      "id": 5,
+      "type": "MOTIF",
+      "chapter": "Motifs répétés",
+      "maxStars": 4,
+      "title": "➿ La longue bande",
+      "instruction": "16 cases ! Sans **Répéter** c'est très long… repère le motif **rouge, bleu**.",
+      "target": [
+        "R",
+        "B",
+        "R",
+        "B",
+        "R",
+        "B",
+        "R",
+        "B",
+        "R",
+        "B",
+        "R",
+        "B",
+        "R",
+        "B",
+        "R",
+        "B"
+      ],
+      "allowedBlocks": [
+        "motif_R",
+        "motif_B",
+        "motif_J",
+        "motif_V",
+        "controls_repeat_ext"
+      ],
+      "maxBlocks": 4,
+      "validation": {
+        "stars": {
+          "blocks": 4,
+          "blocksFlat": 16,
+          "steps": 21
+        }
+      },
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "inputs": {},
+      "hiddenVars": [],
+      "lockedVars": [],
+      "targets": {}
+    },
+    {
+      "id": 6,
+      "type": "MOTIF",
+      "chapter": "Motifs riches",
+      "maxStars": 4,
+      "title": "🎏 Bandes de 3",
+      "instruction": "Motif **3 rouges, 2 bleus**, répété 3 fois. (Astuce : tu peux même imbriquer un Répéter !)",
+      "target": [
+        "R",
+        "R",
+        "R",
+        "B",
+        "B",
+        "R",
+        "R",
+        "R",
+        "B",
+        "B",
+        "R",
+        "R",
+        "R",
+        "B",
+        "B"
+      ],
+      "allowedBlocks": [
+        "motif_R",
+        "motif_B",
+        "motif_J",
+        "motif_V",
+        "controls_repeat_ext"
+      ],
+      "maxBlocks": 7,
+      "validation": {
+        "stars": {
+          "blocks": 7,
+          "blocksFlat": 15,
+          "steps": 20
+        }
+      },
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "inputs": {},
+      "hiddenVars": [],
+      "lockedVars": [],
+      "targets": {}
+    },
+    {
+      "id": 7,
+      "type": "MOTIF",
+      "chapter": "Motifs riches",
+      "maxStars": 4,
+      "title": "🎽 Drapeau répété",
+      "instruction": "Motif **bleu, bleu, jaune, vert, vert**, répété 3 fois.",
+      "target": [
+        "B",
+        "B",
+        "J",
+        "V",
+        "V",
+        "B",
+        "B",
+        "J",
+        "V",
+        "V",
+        "B",
+        "B",
+        "J",
+        "V",
+        "V"
+      ],
+      "allowedBlocks": [
+        "motif_R",
+        "motif_B",
+        "motif_J",
+        "motif_V",
+        "controls_repeat_ext"
+      ],
+      "maxBlocks": 7,
+      "validation": {
+        "stars": {
+          "blocks": 7,
+          "blocksFlat": 15,
+          "steps": 20
+        }
+      },
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "inputs": {},
+      "hiddenVars": [],
+      "lockedVars": [],
+      "targets": {}
+    }
+  ]
+}
