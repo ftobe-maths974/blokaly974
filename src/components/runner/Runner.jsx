@@ -5,6 +5,8 @@ import CampaignMenu from './CampaignMenu';
 import CampaignNavBar from './CampaignNavBar'; 
 import ScormService from '../../core/scorm/ScormService';
 import InstructionPanel from './InstructionPanel'; // ✅ Importation du panneau global
+import { makeAttempt, recordAttempt } from '../../core/competences';
+import { skillsForLevel } from '../../core/competences/blokaly-skills';
 
 export default function Runner({ campaign, ltiConfig, isTeacherMode, onBackToBuilder, initialLevelIndex = -1 }) {
 
@@ -38,7 +40,21 @@ export default function Runner({ campaign, ltiConfig, isTeacherMode, onBackToBui
       });
   }, []);
 
-  const handleLevelWin = useCallback((stats) => { saveProgress(activeLevelIndex, { stars: stats.stars }); }, [activeLevelIndex, saveProgress]);
+  const handleLevelWin = useCallback((stats) => {
+      saveProgress(activeLevelIndex, { stars: stats.stars });
+      // Émet une « Tentative » au format unifié (compétences captées, multi-supports)
+      try {
+          const level = normalizedCampaign.levels[activeLevelIndex] || {};
+          recordAttempt(makeAttempt({
+              app: 'blokaly',
+              activityId: String(level.id ?? `${normalizedCampaign.title}#${activeLevelIndex}`),
+              passed: true,
+              stars: stats.stars,
+              maxStars: stats.maxStars || 3,
+              competencies: skillsForLevel(level),
+          }));
+      } catch (e) { console.warn('compétences:', e); }
+  }, [activeLevelIndex, saveProgress, normalizedCampaign]);
   const handleCodeChange = useCallback((code) => { saveProgress(activeLevelIndex, { code }); }, [activeLevelIndex, saveProgress]);
   const handleNextLevel = useCallback(() => {
       if (activeLevelIndex < normalizedCampaign.levels.length - 1) setActiveLevelIndex(prev => prev + 1);
