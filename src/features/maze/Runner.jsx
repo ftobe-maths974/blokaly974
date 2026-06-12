@@ -54,16 +54,23 @@ const stylesCSS = `
 .cell-grass-a { background: #6ab04c; }
 .cell-grass-b { background: #61a346; }
 
-/* PAS JAPONAIS : pierre plate posée sur le gazon */
+/* PAS JAPONAIS : pierre plate posée sur le gazon.
+   position:absolute → tuile de FOND : ne pousse plus ses voisins (drapeau),
+   reste centrée. Le drapeau/robot se superposent au lieu de se partager la ligne. */
 .stepping-stone {
+    position: absolute;
+    inset: 0;
+    margin: auto;
     width: 82%;
     height: 82%;
     background: radial-gradient(circle at 35% 30%, #cfc9bd 0%, #b3aa9b 70%, #a39888 100%);
     border-radius: 46% 54% 50% 50% / 52% 48% 52% 48%;
     box-shadow: inset -2px -2px 4px rgba(0,0,0,0.18), 0 1px 2px rgba(0,0,0,0.25);
+    z-index: 1;
 }
 
 .maze-emoji {
+    position: relative; /* reste centré par le flex de la cellule, MAIS au-dessus de la dalle */
     z-index: 2;
     font-size: calc(var(--cell-size) * 0.62);
     line-height: 1;
