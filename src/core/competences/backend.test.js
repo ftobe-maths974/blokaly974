@@ -19,36 +19,36 @@ describe('garde-fou dual-mode (autoPost)', () => {
   beforeEach(() => {
     // localStorage mock (node) — backend.js lit le code séance/élève dedans.
     const ls = {};
-    global.localStorage = {
+    globalThis.localStorage = {
       getItem: (k) => (k in ls ? ls[k] : null),
       setItem: (k, v) => { ls[k] = String(v); },
       removeItem: (k) => { delete ls[k]; },
     };
-    global.fetch = vi.fn(() => Promise.resolve({ json: () => Promise.resolve({ ok: true }) }));
+    globalThis.fetch = vi.fn(() => Promise.resolve({ json: () => Promise.resolve({ ok: true }) }));
     isEmbedded.mockReturnValue(false);
     clearAttempts();
     setStudentKey(null);
     setSessionCode(null);
-    global.fetch.mockClear();
+    globalThis.fetch.mockClear();
   });
 
   it('streame quand standalone SANS séance', () => {
     initBackend();
     win();
-    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
   });
 
   it('ne streame PAS quand une séance est posée (modèle bouton Envoyer)', () => {
     setSessionCode('6B'); // déclenche initBackend → autoPost off
     win();
-    expect(global.fetch).not.toHaveBeenCalled();
+    expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 
   it('ne streame PAS quand embarqué (le connecteur est le sink)', () => {
     isEmbedded.mockReturnValue(true);
     initBackend();
     win();
-    expect(global.fetch).not.toHaveBeenCalled();
+    expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 
   it('flushSession envoie un lot estampillé (student, session, replace)', async () => {
@@ -56,8 +56,8 @@ describe('garde-fou dual-mode (autoPost)', () => {
     setSessionCode('6B');
     win(); win();
     const res = await flushSession();
-    expect(global.fetch).toHaveBeenCalledTimes(1); // le lot seulement (pas de streaming)
-    const body = JSON.parse(global.fetch.mock.calls[0][1].body);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1); // le lot seulement (pas de streaming)
+    const body = JSON.parse(globalThis.fetch.mock.calls[0][1].body);
     expect(body.student).toBe('emma');
     expect(body.session).toBe('6B');
     expect(body.replace).toBe(true);
