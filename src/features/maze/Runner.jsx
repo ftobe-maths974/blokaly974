@@ -49,7 +49,6 @@ const stylesCSS = `
     align-items: center;
     position: relative;
     overflow: visible;
-    container-type: size; /* référence pour les cqmin de la boussole */
 }
 
 /* GAZON : pelouse tondue (deux verts en damier) */

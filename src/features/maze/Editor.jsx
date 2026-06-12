@@ -81,7 +81,7 @@ export default function MazeEditor({ levelData, onUpdate }) {
              </div>
              <div className="flex items-center gap-2">
                 <input type="range" min="0" max="3" step="1" value={startPos.dir} onChange={(e) => updateDirection(e.target.value)} className="w-16 accent-blue-500" />
-                <div style={{ width: 26, height: 26, position: 'relative', containerType: 'size' }}>
+                <div style={{ width: 26, height: 26, position: 'relative' }}>
                   <MazeCompass rotation={compassRotation} />
                 </div>
              </div>
@@ -115,7 +115,7 @@ export default function MazeEditor({ levelData, onUpdate }) {
                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
              }}>
                 {grid.map((row, r) => row.map((cell, c) => (
-                    <div key={`${r}-${c}`} onClick={() => handleCellClick(r, c)} style={{ containerType: 'size' }} className="flex items-center justify-center cursor-pointer relative bg-white hover:brightness-95 transition-all overflow-hidden">
+                    <div key={`${r}-${c}`} onClick={() => handleCellClick(r, c)} className="flex items-center justify-center cursor-pointer relative bg-white hover:brightness-95 transition-all overflow-hidden">
                         {cell === 4 && <div className="absolute inset-0 bg-slate-700" />}
                         {cell === 3 && <span className="text-2xl select-none">🏁</span>}
                         {startPos.x === c && startPos.y === r && <MazeCompass rotation={compassRotation} />}
