@@ -16,27 +16,58 @@ export function getAttempts() {
 }
 
 // --- Rail backend partagé (collecteur OVH) — INACTIF tant que collectorUrl non fixée ---
-// `studentKey` (optionnel) = code élève → suivi inter-apps PAR élève.
-// Sans studentKey → envoi anonyme (corpus). Cf. SPEC §7-8.
-let _backend = { collectorUrl: null, studentKey: null };
+// `studentKey` (optionnel) = code/numéro élève → suivi PAR élève.
+// `session`   (optionnel) = code de séance → regroupe une CLASSE (cf. SPEC §7-8).
+// `autoPost`  : envoi automatique à chaque recordAttempt (streaming). Mettre à
+//   false pour un modèle « bouton Envoyer » explicite (flushSession).
+let _backend = { collectorUrl: null, studentKey: null, session: null, autoPost: true };
 export function configureBackend(cfg = {}) { _backend = { ..._backend, ...cfg }; }
+
+function attemptToComps(attempt) {
+  return {
+    app: attempt.app,
+    activityId: attempt.activityId,
+    competencies: (attempt.competencies || []).map((c) => ({ id: c.id, ok: c.ok })),
+  };
+}
 
 function postToCollector(attempt) {
   if (!_backend.collectorUrl || typeof fetch === 'undefined') return;
   try {
     const body = JSON.stringify({
-      app: attempt.app,
-      activityId: attempt.activityId,
+      ...attemptToComps(attempt),
       passed: attempt.outcome?.passed,
       score: attempt.outcome?.score,
-      competencies: (attempt.competencies || []).map((c) => ({ id: c.id, ok: c.ok })),
       student: _backend.studentKey || null, // null = anonyme (corpus)
+      session: _backend.session || null,    // null = hors séance
     });
     fetch(_backend.collectorUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
   } catch { /* silencieux */ }
 }
 // alias rétro-compat (SPEC §8)
 export const postAnonymous = postToCollector;
+
+/**
+ * Envoi EXPLICITE (« bouton Envoyer ») : pousse en UN lot toutes les tentatives
+ * locales vers le collecteur, estampillées (student, session). `replace:true`
+ * rend le renvoi idempotent (remplace les lignes de cet élève dans la session).
+ * @returns {Promise<{ok:boolean, inserted?:number}>}
+ */
+export async function flushSession({ attempts, replace = true } = {}) {
+  if (!_backend.collectorUrl || typeof fetch === 'undefined') return { ok: false };
+  const list = (attempts || getAttempts()).map(attemptToComps).filter((a) => a.competencies.length);
+  if (!list.length) return { ok: true, inserted: 0 };
+  const body = JSON.stringify({
+    student: _backend.studentKey || null,
+    session: _backend.session || null,
+    replace,
+    attempts: list,
+  });
+  try {
+    const res = await fetch(_backend.collectorUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+    return await res.json();
+  } catch { return { ok: false }; }
+}
 
 /** Maîtrise INTER-APPS lue depuis le collecteur (pour l'élève courant si studentKey). */
 export async function fetchMastery() {
@@ -62,7 +93,7 @@ export function recordAttempt(attempt) {
   all.push(attempt);
   if (all.length > CAP) all.splice(0, all.length - CAP);
   storage.setItem(KEY, JSON.stringify(all));
-  postToCollector(attempt); // backend partagé (inactif par défaut)
+  if (_backend.autoPost) postToCollector(attempt); // streaming (si autoPost)
   return attempt;
 }
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { getMastery, getMacroMastery, getAttempts, clearAttempts, fetchMastery } from '../../core/competences';
-import { COLLECTOR_URL, getStudentKey, setStudentKey } from '../../core/competences/backend';
+import { getMastery, getMacroMastery, getAttempts, clearAttempts, fetchMastery, flushSession } from '../../core/competences';
+import { COLLECTOR_URL, getStudentKey, setStudentKey, getSessionCode, setSessionCode } from '../../core/competences/backend';
+import { isEmbedded } from '../../core/embed/orchestrator';
 
 const TIER_STYLE = {
   fragile: { label: 'Fragile', bg: 'bg-red-400', text: 'text-red-700', chip: 'bg-red-100' },
@@ -26,10 +27,36 @@ export default function CompetencesView() {
   const attempts = getAttempts();
 
   // --- Code élève + maîtrise inter-apps (collecteur partagé) ---
-  const backendOn = !!COLLECTOR_URL;
+  // Embarqué dans l'orchestrateur → c'est lui qui capte (connecteur) : on masque
+  // le rail standalone (code élève / séance / envoi) pour ne pas compter deux fois.
+  const embedded = isEmbedded();
+  const backendOn = !!COLLECTOR_URL && !embedded;
   const [code, setCode] = useState(getStudentKey() || '');
   const [remote, setRemote] = useState(null); // { [id]: {label,domaine,attempts,ok,rate,tier,byApp} }
   const [remoteLoading, setRemoteLoading] = useState(false);
+
+  // --- Séance : envoi groupé (« bouton Envoyer ») vers le collecteur ---
+  const [session, setSession] = useState(getSessionCode() || '');
+  const [sending, setSending] = useState(false);
+  const [sendMsg, setSendMsg] = useState(null); // { ok, n? }
+
+  const sendSession = async () => {
+    if (code.trim()) setStudentKey(code.trim());     // s'assure que le code élève est posé
+    setSessionCode(session.trim() || null);          // persiste la séance + reconfigure le rail
+    setSending(true);
+    setSendMsg(null);
+    try {
+      const res = await flushSession();              // lot idempotent (replace) estampillé (élève, séance)
+      setSendMsg(res?.ok ? { ok: true, n: res.inserted } : { ok: false });
+      if (res?.ok && code.trim()) {                  // rafraîchit la vue inter-apps
+        fetchMastery().then((m) => setRemote(m)).catch(() => {});
+      }
+    } catch {
+      setSendMsg({ ok: false });
+    } finally {
+      setSending(false);
+    }
+  };
 
   useEffect(() => {
     if (!backendOn || !getStudentKey()) return;
@@ -78,6 +105,39 @@ export default function CompetencesView() {
             </div>
             <p className="text-[11px] text-slate-400 mt-2">
               Renseigne le même code dans chaque app pour cumuler tes compétences (Blokaly, Aljeb, GS, Pezali).
+            </p>
+          </div>
+        )}
+
+        {/* Séance — envoi groupé au prof (bouton Envoyer) */}
+        {backendOn && (
+          <div className="bg-white/85 backdrop-blur rounded-2xl shadow border border-white/60 p-4 mb-5">
+            <label className="text-xs uppercase tracking-wider font-bold text-slate-400">Code séance (donné par le prof)</label>
+            <div className="flex gap-2 mt-2">
+              <input
+                value={session}
+                onChange={(e) => setSession(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !sending) sendSession(); }}
+                placeholder="ex. 6B-LUNDI"
+                className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm"
+              />
+              <button
+                onClick={sendSession}
+                disabled={sending || !session.trim() || !code.trim()}
+                className="bg-emerald-600 text-white text-sm font-bold px-4 py-2 rounded-lg hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {sending ? 'Envoi…' : '📤 Envoyer'}
+              </button>
+            </div>
+            {sendMsg && (
+              <p className={`text-[11px] mt-2 font-semibold ${sendMsg.ok ? 'text-emerald-600' : 'text-red-500'}`}>
+                {sendMsg.ok
+                  ? `✅ Envoyé au prof (${sendMsg.n ?? 0} compétence(s)). Tu peux ré-envoyer : ça remplace ton précédent envoi.`
+                  : '❌ Échec de l\'envoi. Vérifie ta connexion et réessaie.'}
+              </p>
+            )}
+            <p className="text-[11px] text-slate-400 mt-2">
+              Renseigne ton <strong>code élève</strong> ci-dessus, puis le <strong>code séance</strong>, et clique Envoyer en fin de séance.
             </p>
           </div>
         )}

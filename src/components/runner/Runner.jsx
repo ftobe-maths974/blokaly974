@@ -7,6 +7,7 @@ import ScormService from '../../core/scorm/ScormService';
 import InstructionPanel from './InstructionPanel'; // ✅ Importation du panneau global
 import { makeAttempt, recordAttempt } from '../../core/competences';
 import { skillsForLevel } from '../../core/competences/blokaly-skills';
+import { reportToOrchestrator } from '../../core/embed/orchestrator';
 
 export default function Runner({ campaign, ltiConfig, isTeacherMode, onBackToBuilder, initialLevelIndex = -1 }) {
 
@@ -45,14 +46,16 @@ export default function Runner({ campaign, ltiConfig, isTeacherMode, onBackToBui
       // Émet une « Tentative » au format unifié (compétences captées, multi-supports)
       try {
           const level = normalizedCampaign.levels[activeLevelIndex] || {};
-          recordAttempt(makeAttempt({
+          const attempt = makeAttempt({
               app: 'blokaly',
               activityId: String(level.id ?? `${normalizedCampaign.title}#${activeLevelIndex}`),
               passed: true,
               stars: stats.stars,
               maxStars: stats.maxStars || 3,
               competencies: skillsForLevel(level),
-          }));
+          });
+          recordAttempt(attempt);          // capture locale (+ collecteur OVH si autoPost, hors embarqué)
+          reportToOrchestrator(attempt);   // → orchestrateur si embarqué (no-op sinon)
       } catch (e) { console.warn('compétences:', e); }
   }, [activeLevelIndex, saveProgress, normalizedCampaign]);
   const handleCodeChange = useCallback((code) => { saveProgress(activeLevelIndex, { code }); }, [activeLevelIndex, saveProgress]);
