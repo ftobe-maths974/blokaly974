@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MAZE_CONFIG } from './config';
+import MazeCompass, { COMPASS_CSS } from './MazeCompass';
 
 const stylesCSS = `
 @keyframes radarPing {
@@ -48,6 +49,7 @@ const stylesCSS = `
     align-items: center;
     position: relative;
     overflow: visible;
+    container-type: size; /* référence pour les cqmin de la boussole */
 }
 
 /* GAZON : pelouse tondue (deux verts en damier) */
@@ -79,42 +81,7 @@ const stylesCSS = `
     filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3));
 }
 
-.maze-player {
-    position: absolute;
-    z-index: 10;
-    transition: transform 0.25s ease;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    height: 100%;
-}
-
-/* Boussole « soleil opale » : disque nacré + flèche noire d'orientation */
-.compass {
-    position: relative;
-    width: 78%;
-    height: 78%;
-    border-radius: 50%;
-    background: radial-gradient(circle at 34% 30%, #ffffff 0%, #eaf2ff 45%, #c8d6f0 80%, #b3c4e6 100%);
-    box-shadow: 0 0 calc(var(--cell-size) * 0.18) rgba(255,245,200,0.85),
-                0 2px 3px rgba(0,0,0,0.3),
-                inset 0 0 4px rgba(255,255,255,0.9);
-    border: 1.5px solid rgba(255,255,255,0.85);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-/* Flèche noire pointant vers le HAUT par défaut (= nord) */
-.compass-arrow {
-    width: 0;
-    height: 0;
-    border-left: calc(var(--cell-size) * 0.16) solid transparent;
-    border-right: calc(var(--cell-size) * 0.16) solid transparent;
-    border-bottom: calc(var(--cell-size) * 0.42) solid #1a1a1a;
-    transform: translateY(-8%);
-    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4));
-}
+/* Boussole « soleil opale » : voir le composant partagé MazeCompass (COMPASS_CSS). */
 
 .scan-pulse {
     position: absolute;
@@ -177,7 +144,7 @@ export default function MazeRunner({ grid, playerPos, playerDir, lastAction }) {
 
   return (
     <>
-      <style>{stylesCSS}</style>
+      <style>{stylesCSS + COMPASS_CSS}</style>
       <div className="maze-wrapper">
         <div className="maze-grid" style={{ '--rows': rows, '--cols': cols }}>
           {grid.map((row, rowIndex) => (
@@ -194,12 +161,8 @@ export default function MazeRunner({ grid, playerPos, playerDir, lastAction }) {
                   {/* Drapeau d'arrivée */}
                   {cell === 3 && <span className="maze-emoji">🏁</span>}
 
-                  {/* Marqueur boussole orienté (vue de dessus) */}
-                  {isPlayerHere && (
-                    <div className="maze-player" style={{ transform: `rotate(${rotation}deg)` }}>
-                      <div className="compass"><div className="compass-arrow" /></div>
-                    </div>
-                  )}
+                  {/* Marqueur boussole orienté (vue de dessus) — composant partagé */}
+                  {isPlayerHere && <MazeCompass rotation={rotation} />}
 
                   {/* Effet Radar */}
                   {isScanned && <div key={lastAction._uid} className="scan-pulse"></div>}

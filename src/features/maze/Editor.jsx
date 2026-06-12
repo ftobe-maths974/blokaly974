@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { MAZE_CONFIG } from './config';
+import MazeCompass, { COMPASS_CSS } from './MazeCompass';
 
 export default function MazeEditor({ levelData, onUpdate }) {
   const [tab, setTab] = useState('GRID'); // GRID | SETTINGS
@@ -54,11 +55,13 @@ export default function MazeEditor({ levelData, onUpdate }) {
       { id: 3, label: "Arrivée", icon: "🏁" } 
   ];
   
-  const visualRotation = ((startPos.dir + 2) % 4) * 90;
+  // Même convention de rotation que le jeu (Runner.angleFor) → flèche identique.
+  const compassRotation = ((startPos.dir + 1) % 4) * 90;
 
   return (
     <div className="h-full flex flex-col bg-slate-50">
-      
+      <style>{COMPASS_CSS}</style>
+
       {/* TABS */}
       <div className="flex border-b border-slate-200 bg-white">
           <button onClick={() => setTab('GRID')} className={`flex-1 py-3 text-xs font-bold uppercase ${tab==='GRID' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>🗺️ Carte</button>
@@ -78,7 +81,9 @@ export default function MazeEditor({ levelData, onUpdate }) {
              </div>
              <div className="flex items-center gap-2">
                 <input type="range" min="0" max="3" step="1" value={startPos.dir} onChange={(e) => updateDirection(e.target.value)} className="w-16 accent-blue-500" />
-                <span style={{transform: `rotate(${visualRotation}deg)`}}>🐢</span>
+                <div style={{ width: 26, height: 26, position: 'relative', containerType: 'size' }}>
+                  <MazeCompass rotation={compassRotation} />
+                </div>
              </div>
           </div>
           
@@ -92,16 +97,17 @@ export default function MazeEditor({ levelData, onUpdate }) {
           </div>
 
           <div className="flex-1 p-4 overflow-hidden flex justify-center items-center bg-slate-300">
-             {/* CORRECTION RATIO 1:1
-                On utilise aspectRatio pour forcer le ratio global de la grille.
-                On utilise max-width/max-height pour qu'elle ne dépasse jamais le conteneur parent.
-                On retire 'height: 100%' qui forçait l'étirement.
+             {/* CASES CARRÉES 1:1
+                aspectRatio fixe le ratio global ; colonnes ET lignes en 1fr → chaque
+                case = carré (sinon les lignes prenaient la hauteur de leur contenu).
+                max-width/height bornent au conteneur parent.
              */}
-             <div style={{ 
-                 display: 'grid', 
-                 gridTemplateColumns: `repeat(${cols}, 1fr)`, 
-                 gap: '1px', 
-                 aspectRatio: `${cols}/${rows}`, 
+             <div style={{
+                 display: 'grid',
+                 gridTemplateColumns: `repeat(${cols}, 1fr)`,
+                 gridTemplateRows: `repeat(${rows}, 1fr)`,
+                 gap: '1px',
+                 aspectRatio: `${cols}/${rows}`,
                  maxWidth: '100%',
                  maxHeight: '100%',
                  width: 'auto', // Laisse le ratio décider
@@ -109,11 +115,10 @@ export default function MazeEditor({ levelData, onUpdate }) {
                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
              }}>
                 {grid.map((row, r) => row.map((cell, c) => (
-                    <div key={`${r}-${c}`} onClick={() => handleCellClick(r, c)} className="flex items-center justify-center cursor-pointer relative bg-white hover:brightness-95 transition-all">
+                    <div key={`${r}-${c}`} onClick={() => handleCellClick(r, c)} style={{ containerType: 'size' }} className="flex items-center justify-center cursor-pointer relative bg-white hover:brightness-95 transition-all overflow-hidden">
                         {cell === 4 && <div className="absolute inset-0 bg-slate-700" />}
                         {cell === 3 && <span className="text-2xl select-none">🏁</span>}
-                        {cell === 2 && <span className="text-2xl opacity-50 select-none">🟩</span>}
-                        {startPos.x === c && startPos.y === r && <span className="absolute text-2xl z-10 drop-shadow-md select-none" style={{transform: `rotate(${visualRotation}deg)`}}>🐢</span>}
+                        {startPos.x === c && startPos.y === r && <MazeCompass rotation={compassRotation} />}
                     </div>
                 )))}
              </div>
