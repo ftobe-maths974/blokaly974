@@ -125,13 +125,18 @@ export const MazePlugin = {
       else if (effectiveDir === 3) nextY--; 
       
       const moveStatus = MAZE_CONFIG.checkMove(levelData.grid || MAZE_CONFIG.defaultGrid, nextX, nextY);
-      
-      if (moveStatus === 'OK' || moveStatus === 'WIN') { 
-          x = nextX; 
-          y = nextY; 
-          if (moveStatus === 'WIN') status = 'WIN'; 
-      } else { 
-          status = 'LOST'; 
+
+      if (moveStatus === 'OK' || moveStatus === 'WIN') {
+          x = nextX;
+          y = nextY;
+          if (moveStatus === 'WIN') status = 'WIN';
+      } else if (moveStatus === 'DANGER') {
+          // Franchissable mais fatal : on AVANCE sur la case piège, puis c'est perdu.
+          x = nextX;
+          y = nextY;
+          status = 'LOST';
+      } else {
+          status = 'LOST';
       }
     } 
     else if (cmd && typeof cmd === 'string' && cmd.startsWith('TURN_')) {

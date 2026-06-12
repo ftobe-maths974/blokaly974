@@ -95,8 +95,9 @@ const stylesCSS = `
 }
 `;
 
-// Cases « praticables » (un pas japonais y est posé)
-const isStone = (cell) => cell === 1 || cell === 2 || cell === 3;
+// Cases « praticables » (un pas japonais y est posé) — y compris la case piège (5),
+// franchissable : le robot peut s'y poser (et y mourir).
+const isStone = (cell) => cell === 1 || cell === 2 || cell === 3 || cell === 5;
 
 export default function MazeRunner({ grid, playerPos, playerDir, lastAction }) {
   // --- Orientation du marqueur (flèche), en vue de dessus ---
@@ -159,6 +160,9 @@ export default function MazeRunner({ grid, playerPos, playerDir, lastAction }) {
 
                   {/* Drapeau d'arrivée */}
                   {cell === 3 && <span className="maze-emoji">🏁</span>}
+
+                  {/* Case piège (franchissable mais fatale) */}
+                  {cell === 5 && <span className="maze-emoji">☠️</span>}
 
                   {/* Marqueur boussole orienté (vue de dessus) — composant partagé */}
                   {isPlayerHere && <MazeCompass rotation={rotation} />}

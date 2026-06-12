@@ -49,10 +49,11 @@ export default function MazeEditor({ levelData, onUpdate }) {
       onUpdate({ ...levelData, validation: { ...validation, stars: newStars } }); 
   };
 
-  const tools = [ 
-      { id: 1, label: "Chemin", icon: "⬜" }, 
-      { id: 4, label: "Mur", icon: "🧱" }, 
-      { id: 3, label: "Arrivée", icon: "🏁" } 
+  const tools = [
+      { id: 1, label: "Chemin", icon: "⬜" },
+      { id: 4, label: "Mur", icon: "🧱" },
+      { id: 3, label: "Arrivée", icon: "🏁" },
+      { id: 5, label: "Danger", icon: "☠️" }
   ];
   
   // Même convention de rotation que le jeu (Runner.angleFor) → flèche identique.
@@ -118,6 +119,7 @@ export default function MazeEditor({ levelData, onUpdate }) {
                     <div key={`${r}-${c}`} onClick={() => handleCellClick(r, c)} className="flex items-center justify-center cursor-pointer relative bg-white hover:brightness-95 transition-all overflow-hidden">
                         {cell === 4 && <div className="absolute inset-0 bg-slate-700" />}
                         {cell === 3 && <span className="text-2xl select-none">🏁</span>}
+                        {cell === 5 && <span className="text-2xl select-none">☠️</span>}
                         {startPos.x === c && startPos.y === r && <MazeCompass rotation={compassRotation} />}
                     </div>
                 )))}

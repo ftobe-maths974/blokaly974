@@ -31,6 +31,18 @@ describe('MazePlugin.executeStep', () => {
     expect(status).toBe('LOST');
   });
 
+  it('case piège (5) : franchissable mais fatal -> AVANCE dessus puis LOST', () => {
+    // grille avec une case danger (5) à l'est du départ
+    const dangerGrid = [
+      [4, 4, 4, 4],
+      [4, 2, 5, 4], // départ (1,1), danger en (2,1)
+      [4, 4, 4, 4],
+    ];
+    const { newState, status } = MazePlugin.executeStep({ x: 1, y: 1, dir: 0 }, { type: 'MOVE' }, { grid: dangerGrid });
+    expect(newState).toMatchObject({ x: 2, y: 1 }); // a bien avancé sur la case
+    expect(status).toBe('LOST');                    // mais c'est perdu
+  });
+
   it('TURN_RIGHT incrémente la direction, TURN_LEFT la décrémente', () => {
     expect(MazePlugin.executeStep({ x: 1, y: 1, dir: 0 }, { type: 'TURN_RIGHT' }, { grid }).newState.dir).toBe(1);
     expect(MazePlugin.executeStep({ x: 1, y: 1, dir: 0 }, { type: 'TURN_LEFT' }, { grid }).newState.dir).toBe(-1);

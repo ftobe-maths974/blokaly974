@@ -13,14 +13,16 @@ export const MAZE_CONFIG = {
     2: '🟩', // Départ
     3: '🏁', // Arrivée
     4: '🌿', // Mur (gazon)
+    5: '☠️', // Danger (franchissable mais fatal)
     PLAYER: '🐢' // Tortue
   },
-  
+
   victoryDelay: 1200,
   checkMove: (grid, x, y) => {
     if (!grid || !grid[y] || typeof grid[y][x] === 'undefined') return 'WALL';
     const cell = grid[y][x];
     if (cell === 4 || cell === 0) return 'WALL';
+    if (cell === 5) return 'DANGER'; // case piège : on peut y aller, mais c'est perdu
     if (cell === 3) return 'WIN';
     return 'OK';
   },
