@@ -226,7 +226,15 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
     
     // Génération du Code
     javascriptGenerator.init(workspaceRef.current);
-    const userCode = javascriptGenerator.workspaceToCode(workspaceRef.current);
+    // Si un bloc-chapeau « Exécuter » existe, SEULE sa pile s'exécute (les blocs
+    // posés à côté sont ignorés). Sinon : repli sur tous les blocs (autres modes).
+    const startBlock = workspaceRef.current.getBlocksByType
+      ? workspaceRef.current.getBlocksByType('program_start', false)[0]
+      : null;
+    const rawCode = startBlock
+      ? javascriptGenerator.blockToCode(startBlock)
+      : javascriptGenerator.workspaceToCode(workspaceRef.current);
+    const userCode = Array.isArray(rawCode) ? rawCode[0] : rawCode;
     let initCode = "";
     if (safeData.inputs) Object.entries(safeData.inputs).forEach(([k, v]) => initCode += `var ${k} = ${JSON.stringify(v)};\n`);
 

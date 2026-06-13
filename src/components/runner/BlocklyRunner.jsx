@@ -126,6 +126,8 @@ export default function BlocklyRunner({ levelData, plugin, onWin, onNextLevel, s
            Blockly.Xml.domToWorkspace(xmlDom, newWorkspace);
        } catch (e) { console.warn("Erreur code:", e); }
     }
+    // Bloc-chapeau « Exécuter » toujours présent (+ migration des piles libres).
+    if (plugin.ensureStartBlock) plugin.ensureStartBlock(newWorkspace);
     window.setTimeout(() => Blockly.svgResize(newWorkspace), 0);
   };
 

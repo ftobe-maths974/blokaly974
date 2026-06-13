@@ -16,6 +16,15 @@ export const MazePlugin = {
 
     const blocks = [
       {
+        // Bloc-chapeau « départ du programme » : même vert que le bouton ▶️ Exécuter.
+        // Hat (pas de previousStatement). Seuls les blocs accrochés DESSOUS s'exécutent.
+        "type": "program_start",
+        "message0": "▶️ Exécuter",
+        "nextStatement": null,
+        "colour": "#27ae60",
+        "tooltip": "Le départ du programme : accroche tes blocs sous ce bloc."
+      },
+      {
         "type": "maze_move_forward",
         "message0": "avancer",
         "previousStatement": null,
@@ -64,6 +73,8 @@ export const MazePlugin = {
     Blockly.common.defineBlocksWithJsonArray(blocks);
 
     // --- GÉNÉRATEURS ---
+    // Le chapeau n'émet rien lui-même : sa pile « suivante » est ajoutée par scrub_.
+    javascriptGenerator.forBlock['program_start'] = () => '';
     javascriptGenerator.forBlock['maze_move_forward'] = (b) => `actions.push({type: 'MOVE', id: '${b.id}'}); api.move();\n`;
     javascriptGenerator.forBlock['maze_turn'] = (b) => `actions.push({type: 'TURN_${b.getFieldValue('DIR')}', id: '${b.id}'}); api.turn('${b.getFieldValue('DIR')}');\n`;
     javascriptGenerator.forBlock['maze_if'] = (b) => `actions.push({type: 'SCAN', dir: '${b.getFieldValue('DIR')}', id: '${b.id}'}); if (api.isPath('${b.getFieldValue('DIR')}')) {\n${javascriptGenerator.statementToCode(b, 'DO')}}\n`;
@@ -96,6 +107,38 @@ export const MazePlugin = {
   },
 
   getCategory: () => 'Labyrinthe',
+
+  // Garantit le bloc-chapeau « Exécuter » : toujours présent, non supprimable,
+  // unique. Si absent (niveau d'avant le chapeau), on le crée et on MIGRE les
+  // piles existantes en les accrochant dessous. Appelé après chaque chargement
+  // d'espace de travail (runner élève + éditeur prof).
+  ensureStartBlock: (workspace) => {
+    if (!workspace || !workspace.getBlocksByType) return null;
+    const existing = workspace.getBlocksByType('program_start', false);
+    let hat = existing[0];
+    if (!hat) {
+      hat = workspace.newBlock('program_start');
+      if (hat.initSvg) hat.initSvg();
+      if (hat.moveBy) hat.moveBy(24, 24);
+      // Migration : accrocher les piles libres existantes SOUS le chapeau, en ordre.
+      const tops = workspace.getTopBlocks(true).filter((b) => b !== hat && b.previousConnection);
+      let tail = hat;
+      for (const b of tops) {
+        if (tail.nextConnection && b.previousConnection) {
+          tail.nextConnection.connect(b.previousConnection);
+          let last = b;
+          while (last.getNextBlock && last.getNextBlock()) last = last.getNextBlock();
+          tail = last;
+        }
+      }
+      if (hat.render) hat.render();
+    } else {
+      // Un seul chapeau : on retire d'éventuels doublons (duplication manuelle).
+      existing.slice(1).forEach((b) => b.dispose(true));
+    }
+    if (hat.setDeletable) hat.setDeletable(false); // non supprimable
+    return hat;
+  },
 
   executeStep: (currentState, action, levelData) => {
     // 1. Initialisation de l'état (Position de départ)

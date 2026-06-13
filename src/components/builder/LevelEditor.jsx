@@ -84,6 +84,8 @@ export default function LevelEditor({ levelData, onUpdate }) {
     try {
         registerAllBlocks();
         if (safeFeature?.registerBlocks) safeFeature.registerBlocks(Blockly, javascriptGenerator);
+        // Bloc-chapeau « Exécuter » présent côté prof aussi (« Vue : ce que voit l'élève »).
+        if (safeFeature?.ensureStartBlock) safeFeature.ensureStartBlock(newWorkspace);
     } catch(e) { console.error(e); }
     window.setTimeout(() => Blockly.svgResize(newWorkspace), 0);
   };
