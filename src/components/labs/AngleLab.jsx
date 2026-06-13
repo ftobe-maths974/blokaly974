@@ -184,7 +184,15 @@ export function TourCompletMode() {
     if (id === runIdRef.current) setRunning(false);
   };
 
-  const trail = pos ? [...done.slice(0, -1).map((p) => [p.x, p.y]), [pos.x, pos.y]] : [];
+  // Tracé = tous les sommets atteints + la position vivante de la tortue, SAUF
+  // si elle est déjà pile sur le dernier sommet (pivot) → on évite le doublon.
+  // (Avant, `done.slice(0,-1)` jetait le dernier sommet → pendant le déplacement
+  //  le trait reliait l'avant-dernier sommet à la tortue = glitch « point d'avant ».)
+  const lastDone = done[done.length - 1];
+  const atVertex = pos && lastDone && Math.abs(pos.x - lastDone.x) < 0.01 && Math.abs(pos.y - lastDone.y) < 0.01;
+  const trail = pos
+    ? (atVertex ? done.map((p) => [p.x, p.y]) : [...done.map((p) => [p.x, p.y]), [pos.x, pos.y]])
+    : [];
 
   return (
     <div className="grid md:grid-cols-[1fr,260px] gap-6 items-center">
