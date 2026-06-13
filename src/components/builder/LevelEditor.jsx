@@ -25,7 +25,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
   const safeFeature = activeFeature || getAllPlugins()[0];
   const VisualEditor = safeFeature?.EditorComponent; 
 
-  const editorConfig = { scrollbars: true, trashcan: true, readOnly: false, renderer: 'zelos' };
+  const editorConfig = { scrollbars: true, trashcan: true, readOnly: false, renderer: 'zelos', theme: Blockly.Themes.Zelos };
 
   // --- ACTIONS ---
   const handleTypeChange = (newType) => {
