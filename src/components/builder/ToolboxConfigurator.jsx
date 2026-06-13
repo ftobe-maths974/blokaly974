@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { getPlugin } from '../../core/PluginRegistry'; // ✅ On utilise le registre
 
-export default function ToolboxConfigurator({ currentType, allowedBlocks, onUpdate }) {
+export default function ToolboxConfigurator({ currentType, allowedBlocks, onUpdate, blockLimits = {}, onUpdateLimits }) {
   // 1. Récupération dynamique depuis le plugin
   const plugin = getPlugin(currentType);
   const categories = plugin?.catalog || []; // Si pas de catalogue, tableau vide
@@ -82,33 +82,54 @@ export default function ToolboxConfigurator({ currentType, allowedBlocks, onUpda
         <div className="grid grid-cols-2 gap-3">
           {currentCategory.blocks.map((block) => {
             const isSelected = allowedBlocks.includes(block.type);
-            
+            const setLimit = (v) => {
+                const next = { ...blockLimits };
+                if (v > 0) next[block.type] = v; else delete next[block.type];
+                onUpdateLimits?.(next);
+            };
+
             return (
-              <button
-                key={block.type}
-                onClick={() => toggleBlock(block.type)}
-                className={`
-                  relative flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200 group
-                  ${isSelected 
-                    ? 'bg-white border-blue-500 shadow-md scale-100 opacity-100' 
-                    : 'bg-slate-50 border-slate-200 shadow-none scale-95 opacity-50 grayscale hover:opacity-80 hover:scale-95'}
-                `}
-              >
-                <span className="text-2xl mb-1 filter drop-shadow-sm group-hover:scale-110 transition-transform">
-                    {block.icon}
-                </span>
-                <span className={`text-[10px] font-bold text-center leading-tight ${isSelected ? 'text-slate-700' : 'text-slate-400'}`}>
-                    {block.label}
-                </span>
-                
-                {isSelected && (
-                    <div className="absolute top-1 right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center shadow-sm">
-                        <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                    </div>
+              <div key={block.type} className="flex flex-col">
+                <button
+                  onClick={() => toggleBlock(block.type)}
+                  className={`
+                    relative flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200 group
+                    ${isSelected
+                      ? 'bg-white border-blue-500 shadow-md scale-100 opacity-100'
+                      : 'bg-slate-50 border-slate-200 shadow-none scale-95 opacity-50 grayscale hover:opacity-80 hover:scale-95'}
+                  `}
+                >
+                  <span className="text-2xl mb-1 filter drop-shadow-sm group-hover:scale-110 transition-transform">
+                      {block.icon}
+                  </span>
+                  <span className={`text-[10px] font-bold text-center leading-tight ${isSelected ? 'text-slate-700' : 'text-slate-400'}`}>
+                      {block.label}
+                  </span>
+
+                  {isSelected && (
+                      <div className="absolute top-1 right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center shadow-sm">
+                          <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                      </div>
+                  )}
+                </button>
+
+                {/* Plafond d'usage (vide = illimité) — pousse vers les boucles */}
+                {isSelected && onUpdateLimits && (
+                  <div className="mt-1 flex items-center justify-center gap-1" title="Nombre maximum d'utilisations (vide = illimité)">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase">max</span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={blockLimits[block.type] ?? ''}
+                      onChange={(e) => setLimit(parseInt(e.target.value, 10))}
+                      placeholder="∞"
+                      className="w-12 text-center text-[11px] border border-slate-200 rounded px-1 py-0.5 focus:ring-1 focus:ring-blue-400 outline-none"
+                    />
+                  </div>
                 )}
-              </button>
+              </div>
             );
           })}
         </div>

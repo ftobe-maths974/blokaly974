@@ -47,6 +47,11 @@ export default function LevelEditor({ levelData, onUpdate }) {
       onUpdate({ ...safeLevelData, allowedBlocks: newAllowed });
   };
 
+  // Plafonds d'usage par bloc { type: max }. Vide = illimité.
+  const handleUpdateLimits = (newLimits) => {
+      onUpdate({ ...safeLevelData, blockLimits: newLimits });
+  };
+
   // --- GÉNÉRATION XML ---
   const editorToolboxXML = useMemo(() => {
       const isMaster = codeMode === 'SOLUTION';
@@ -127,10 +132,12 @@ export default function LevelEditor({ levelData, onUpdate }) {
                 </span>
             </div>
             <div className="flex-1 overflow-hidden p-2 bg-slate-50/50">
-                <ToolboxConfigurator 
-                    currentType={currentType} 
-                    allowedBlocks={safeLevelData.allowedBlocks} 
-                    onUpdate={handleUpdateAllowed} 
+                <ToolboxConfigurator
+                    currentType={currentType}
+                    allowedBlocks={safeLevelData.allowedBlocks}
+                    onUpdate={handleUpdateAllowed}
+                    blockLimits={safeLevelData.blockLimits || {}}
+                    onUpdateLimits={handleUpdateLimits}
                 />
             </div>
             {/* Consigne rapide */}

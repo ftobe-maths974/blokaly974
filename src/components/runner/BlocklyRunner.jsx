@@ -24,6 +24,7 @@ export default function BlocklyRunner({ levelData, plugin, onWin, onNextLevel, s
   const [gameWidth, setGameWidth] = useState(40);
   const isResizing = useRef(false);
   const workspaceRef = useRef(null);
+  const [reserve, setReserve] = useState([]); // [{type, max, remaining}] — blocs plafonnés
 
   // Sécurisation des données du niveau
   const safeData = useMemo(() => ({
@@ -37,6 +38,17 @@ export default function BlocklyRunner({ levelData, plugin, onWin, onNextLevel, s
     equation: levelData?.equation,
     targets: levelData?.targets
   }), [levelData, plugin]);
+
+  // Plafonds d'usage par bloc → Blockly grise le bloc dans la boîte à outils à la limite.
+  const blockLimits = useMemo(() => safeData.blockLimits || {}, [safeData.blockLimits]);
+  const wsConfig = useMemo(() => ({ ...workspaceConfig, maxInstances: blockLimits }), [blockLimits]);
+
+  // Libellé + icône par type (depuis le catalogue du plugin) pour le panneau réserve.
+  const blockMeta = useMemo(() => {
+    const m = {};
+    (plugin.catalog || []).forEach((cat) => (cat.blocks || []).forEach((b) => { m[b.type] = b; }));
+    return m;
+  }, [plugin]);
 
   // Hook principal d'exécution
   const {
@@ -128,6 +140,19 @@ export default function BlocklyRunner({ levelData, plugin, onWin, onNextLevel, s
     }
     // Bloc-chapeau « Exécuter » toujours présent (+ migration des piles libres).
     if (plugin.ensureStartBlock) plugin.ensureStartBlock(newWorkspace);
+
+    // Panneau « réserve » : recalcule le restant des blocs plafonnés à chaque changement.
+    if (Object.keys(blockLimits).length) {
+      const recompute = () => {
+        setReserve(Object.entries(blockLimits).map(([type, max]) => ({
+          type,
+          max,
+          remaining: Math.max(0, max - newWorkspace.getBlocksByType(type, false).length),
+        })));
+      };
+      newWorkspace.addChangeListener(recompute);
+      recompute();
+    }
     window.setTimeout(() => Blockly.svgResize(newWorkspace), 0);
   };
 
@@ -177,6 +202,25 @@ export default function BlocklyRunner({ levelData, plugin, onWin, onNextLevel, s
             </div>
         </div>
 
+        {/* RÉSERVE : blocs plafonnés (restant qui décompte) */}
+        {reserve.length > 0 && (
+            <div style={{display:'flex', alignItems:'center', gap:'6px', flexWrap:'wrap', marginTop:'5px', background:'#f8fafc', padding:'5px 10px', borderRadius:'6px', border:'1px solid #e2e8f0'}}>
+                <span style={{fontSize:'0.75rem', fontWeight:'bold', color:'#64748b', whiteSpace:'nowrap'}}>🎒 Réserve :</span>
+                {reserve.map((r) => {
+                    const meta = blockMeta[r.type] || {};
+                    const out = r.remaining === 0;
+                    return (
+                        <span key={r.type} title={`${meta.label || r.type} : ${r.remaining} restant(s) sur ${r.max}`}
+                            style={{display:'inline-flex', alignItems:'center', gap:'4px', fontSize:'0.8rem', fontWeight:'bold', padding:'2px 8px', borderRadius:'12px', background: out ? '#fee2e2' : '#dbeafe', color: out ? '#b91c1c' : '#1d4ed8'}}>
+                            <span>{meta.icon || '🧩'}</span>
+                            <span>{meta.label || r.type}</span>
+                            <span style={{fontVariantNumeric:'tabular-nums'}}>{r.remaining}/{r.max}</span>
+                        </span>
+                    );
+                })}
+            </div>
+        )}
+
         {/* TIME TRAVELLER */}
         {totalSteps > 0 && (
             <div className="animate-in slide-in-from-top-2 duration-300" style={{display:'flex', alignItems:'center', gap:'10px', background:'#e0f7fa', padding:'5px 10px', borderRadius:'4px', border:'1px solid #b2ebf2', marginTop:'5px'}}>
@@ -202,8 +246,8 @@ export default function BlocklyRunner({ levelData, plugin, onWin, onNextLevel, s
           <BlocklyWorkspace 
             key={`${safeData.id}-${plugin.id}`} 
             className="blockly-div" 
-            toolboxConfiguration={currentToolbox} 
-            workspaceConfiguration={workspaceConfig} 
+            toolboxConfiguration={currentToolbox}
+            workspaceConfiguration={wsConfig}
             onInject={handleInject} 
             onXmlChange={onCodeChange} // 👈 CONNEXION AU PARENT
           />
