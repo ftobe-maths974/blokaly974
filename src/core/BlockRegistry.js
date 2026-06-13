@@ -1,5 +1,6 @@
 import * as Blockly from 'blockly';
 import { javascriptGenerator } from 'blockly/javascript';
+import * as FrMsg from 'blockly/msg/fr';
 
 // --- CORRECTIF VITAL POUR VITE / BLOCKLY ---
 try {
@@ -16,6 +17,11 @@ let isRegistered = false;
 export const registerAllBlocks = () => {
   if (isRegistered) return;
   isRegistered = true;
+
+  // Locale FR : blocs INTÉGRÉS de Blockly (répéter %1 fois / faire, si/sinon,
+  // logique, maths, listes…) affichés en français. Nos blocs maison ont déjà
+  // leur texte FR, donc inchangés.
+  try { Blockly.setLocale(FrMsg.default || FrMsg); } catch { /* locale indispo */ }
 
   console.log("🧹 Nettoyage et 🏗️ Enregistrement des blocs SYSTÈME...");
 
