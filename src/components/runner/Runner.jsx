@@ -22,12 +22,26 @@ export default function Runner({ campaign, ltiConfig, isTeacherMode, onBackToBui
   const [activeLevelIndex, setActiveLevelIndex] = useState(initialLevelIndex);
   const [isInstructionCollapsed, setIsInstructionCollapsed] = useState(false); // ✅ État du panneau
 
-  // --- PERSISTANCE ---
+  // --- PERSISTANCE (PAR CAMPAGNE) ---
+  // ⚠️ Avant : un seul store global indexé par numéro de niveau → le niveau N
+  // d'un parcours chargeait le code sauvegardé au niveau N d'un AUTRE parcours
+  // (mélange de parcours). On scope désormais par campagne (titre + signature
+  // du contenu, stable pour une campagne donnée, distincte d'une autre).
+  const campaignKey = useMemo(() => {
+    const levels = normalizedCampaign?.levels || [];
+    const sig = JSON.stringify(levels.map((l, i) => [l?.type || '', l?.title || '', l?.id ?? i, l?.grid?.length || 0, l?.grid?.[0]?.length || 0]));
+    let h = 0;
+    for (let i = 0; i < sig.length; i++) { h = (h * 31 + sig.charCodeAt(i)) | 0; }
+    const base = String(normalizedCampaign?.title || 'campagne').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'campagne';
+    return `blokaly:progress:${base}:${(h >>> 0).toString(36)}`;
+  }, [normalizedCampaign]);
+
+  // Chargée une fois au montage pour CETTE campagne (la prop `campaign` est stable
+  // par montage : changer de niveau est interne, charger une autre campagne remonte
+  // le Runner). On nettoie au passage l'ancien store global contaminé.
   const [progress, setProgress] = useState(() => {
-    try {
-        const saved = localStorage.getItem('blokaly_progress');
-        return saved ? JSON.parse(saved) : {};
-    } catch { return {}; }
+    try { localStorage.removeItem('blokaly_progress'); } catch { /* ignore */ }
+    try { return JSON.parse(localStorage.getItem(campaignKey) || '{}'); } catch { return {}; }
   });
 
   const saveProgress = useCallback((levelIdx, data) => {
@@ -36,10 +50,10 @@ export default function Runner({ campaign, ltiConfig, isTeacherMode, onBackToBui
           const newLevelData = { ...prevLevelData, ...data };
           if (data.stars !== undefined) newLevelData.stars = Math.max(prevLevelData.stars || 0, data.stars);
           const newProgress = { ...prev, [levelIdx]: newLevelData };
-          localStorage.setItem('blokaly_progress', JSON.stringify(newProgress));
+          try { localStorage.setItem(campaignKey, JSON.stringify(newProgress)); } catch { /* ignore */ }
           return newProgress;
       });
-  }, []);
+  }, [campaignKey]);
 
   const handleLevelWin = useCallback((stats) => {
       saveProgress(activeLevelIndex, { stars: stats.stars });
