@@ -13,6 +13,7 @@ const workspaceConfig = {
   trashcan: true, horizontalLayout: false, toolboxPosition: 'start',
   css: true, media: 'https://blockly-demo.appspot.com/static/media/',
   rtl: false, scrollbars: true, oneBasedIndex: true,
+  renderer: 'zelos', // rendu arrondi façon Scratch (cycle 3/4)
 };
 
 const btnStyle = { padding: '8px 16px', color: 'white', border:'none', borderRadius:'4px', cursor:'pointer', fontWeight:'bold', display: 'flex', alignItems: 'center', gap: '5px' };

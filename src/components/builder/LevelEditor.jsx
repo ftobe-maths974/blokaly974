@@ -25,7 +25,7 @@ export default function LevelEditor({ levelData, onUpdate }) {
   const safeFeature = activeFeature || getAllPlugins()[0];
   const VisualEditor = safeFeature?.EditorComponent; 
 
-  const editorConfig = { scrollbars: true, trashcan: true, readOnly: false };
+  const editorConfig = { scrollbars: true, trashcan: true, readOnly: false, renderer: 'zelos' };
 
   // --- ACTIONS ---
   const handleTypeChange = (newType) => {
