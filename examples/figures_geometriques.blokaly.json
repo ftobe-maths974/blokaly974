@@ -3,6 +3,218 @@
   "description": "Reproduis chaque figure en guidant la tortue, uniquement avec avancer et tourner à 90°. Inspiré des cartes Scratch monclasseurdemaths.fr.",
   "levels": [
     {
+      "type": "MAZE",
+      "maxStars": 4,
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "inputs": {},
+      "hiddenVars": [],
+      "lockedVars": [],
+      "targets": {},
+      "id": 1,
+      "chapter": "Découverte",
+      "title": "➡️ Tout droit",
+      "instruction": "Amène la tortue 🐢 jusqu'au drapeau 🏁. Pose **3 fois** le bloc **avancer**.",
+      "grid": [
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        [
+          4,
+          2,
+          1,
+          1,
+          3,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ]
+      ],
+      "startPos": {
+        "x": 1,
+        "y": 1,
+        "dir": 0
+      },
+      "allowedBlocks": [
+        "maze_move_forward"
+      ],
+      "maxBlocks": 3,
+      "validation": {
+        "stars": {
+          "blocks": 3,
+          "blocksFlat": 3,
+          "steps": 3
+        }
+      }
+    },
+    {
+      "type": "MAZE",
+      "maxStars": 4,
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "inputs": {},
+      "hiddenVars": [],
+      "lockedVars": [],
+      "targets": {},
+      "id": 2,
+      "chapter": "Découverte",
+      "title": "↘️ Le coin",
+      "instruction": "Va tout droit, **tourne**, puis encore tout droit jusqu'au 🏁. Avec **avancer** et **tourner**.",
+      "grid": [
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        [
+          4,
+          2,
+          1,
+          1,
+          1,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          1,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          1,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          3,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ]
+      ],
+      "startPos": {
+        "x": 1,
+        "y": 1,
+        "dir": 0
+      },
+      "allowedBlocks": [
+        "maze_move_forward",
+        "maze_turn"
+      ],
+      "maxBlocks": 7,
+      "validation": {
+        "stars": {
+          "blocks": 7,
+          "blocksFlat": 7,
+          "steps": 7
+        }
+      }
+    },
+    {
+      "type": "MAZE",
+      "maxStars": 4,
+      "startBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "solutionBlocks": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+      "inputs": {},
+      "hiddenVars": [],
+      "lockedVars": [],
+      "targets": {},
+      "id": 3,
+      "chapter": "Découverte",
+      "title": "🔀 Deux virages",
+      "instruction": "Deux virages ! Avance, tourne, avance, tourne, avance jusqu'au 🏁.",
+      "grid": [
+        [
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        [
+          4,
+          2,
+          1,
+          4,
+          4
+        ],
+        [
+          4,
+          4,
+          1,
+          4,
+          4
+        ],
+        [
+          4,
+          4,
+          1,
+          4,
+          4
+        ],
+        [
+          4,
+          4,
+          1,
+          3,
+          4
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          4
+        ]
+      ],
+      "startPos": {
+        "x": 1,
+        "y": 1,
+        "dir": 0
+      },
+      "allowedBlocks": [
+        "maze_move_forward",
+        "maze_turn"
+      ],
+      "maxBlocks": 7,
+      "validation": {
+        "stars": {
+          "blocks": 7,
+          "blocksFlat": 7,
+          "steps": 7
+        }
+      }
+    },
+    {
       "id": 11,
       "type": "MAZE",
       "chapter": "Figures",
