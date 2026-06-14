@@ -88,8 +88,11 @@ export function useGameRunner(workspaceRef, plugin, safeData) {
           
           if (plugin.evaluateResult) {
               // 👇 C'EST ICI LA MODIFICATION IMPORTANTE
-              const metrics = { 
-                  blockCount: workspaceRef.current?.getAllBlocks(false).length || 0,
+              const metrics = {
+                  // On NE compte PAS le bloc-chapeau « Exécuter » (program_start) dans la
+                  // note — sinon +1 partout et toutes les étoiles sont décalées. Les ombres
+                  // (le « 3 » des répéter) restent comptées : l'optimal des figures les inclut.
+                  blockCount: (workspaceRef.current?.getAllBlocks(false) || []).filter((b) => b.type !== 'program_start').length,
                   steps: stepRef.current // On envoie le nombre d'actions exécutées au juge
               };
               

@@ -32,12 +32,18 @@ export default {
         const flat = stars0.blocksFlat ?? Math.max(optimal * 3, optimal + 6); // solution « à plat » (sans boucle)
         const usedBlocks = metrics.blockCount || 0;
 
-        // Barème 4 ⭐ : récompense l'usage d'une boucle « Répéter » (donc moins de blocs).
+        // Conseil contextuel : on ne suggère « Répéter » que si la boucle est
+        // réellement disponible dans ce niveau (sinon, sur les niveaux découverte,
+        // on conseillerait un bloc absent).
+        const loop = (levelData.allowedBlocks || []).some((b) => b === 'controls_repeat_ext' || b === 'maze_forever');
+        const tip = loop ? ' avec **Répéter**' : '';
+
+        // Barème 4 ⭐ : récompense la solution la plus courte (boucle si dispo).
         let stars, message;
-        if (usedBlocks <= optimal) { stars = 4; message = "Parfait ! Tu as utilisé la boucle au mieux. 🐢✨"; }
-        else if (usedBlocks <= Math.round((optimal + flat) / 2)) { stars = 3; message = "Bien joué ! Peux-tu faire encore plus court avec Répéter ?"; }
-        else if (usedBlocks <= flat) { stars = 2; message = "Réussi ! Essaie une boucle Répéter pour utiliser moins de blocs."; }
-        else { stars = 1; message = "Réussi, mais avec beaucoup de blocs. La boucle Répéter t'aiderait !"; }
+        if (usedBlocks <= optimal) { stars = 4; message = loop ? "Parfait ! Tu as utilisé la boucle au mieux. 🐢✨" : "Parfait ! Pile le bon nombre de blocs. 🐢✨"; }
+        else if (usedBlocks <= Math.round((optimal + flat) / 2)) { stars = 3; message = `Bien joué ! Peux-tu faire encore plus court${tip} ?`; }
+        else if (usedBlocks <= flat) { stars = 2; message = `Réussi ! Essaie d'utiliser moins de blocs${tip}.`; }
+        else { stars = 1; message = `Réussi, mais avec beaucoup de blocs. Essaie de faire plus court${tip} !`; }
 
         return {
             status: 'WIN',
