@@ -325,10 +325,32 @@ for (const fig of FIGURES) {
   });
 }
 
+// --- Niveaux de DÉCOUVERTE (en dur) — préfixés avant les figures générées.
+// Apprentissage des commandes de base : avancer, puis avancer+tourner, puis 2 virages.
+const EMPTY_XML = '<xml xmlns="https://developers.google.com/blockly/xml"></xml>';
+const baseLvl = (o) => ({ type: 'MAZE', maxStars: 4, startBlocks: EMPTY_XML, solutionBlocks: EMPTY_XML, inputs: {}, hiddenVars: [], lockedVars: [], targets: {}, ...o });
+const DECOUVERTE = [
+  baseLvl({ id: 1, chapter: 'Découverte', title: '➡️ Tout droit',
+    instruction: "Amène la tortue 🐢 jusqu'au drapeau 🏁. Pose **3 fois** le bloc **avancer**.",
+    grid: [[4,4,4,4,4,4],[4,2,1,1,3,4],[4,4,4,4,4,4]],
+    startPos: { x: 1, y: 1, dir: 0 }, allowedBlocks: ['maze_move_forward'],
+    maxBlocks: 3, validation: { stars: { blocks: 3, blocksFlat: 3, steps: 3 } } }),
+  baseLvl({ id: 2, chapter: 'Découverte', title: '↘️ Le coin',
+    instruction: "Va tout droit, **tourne**, puis encore tout droit jusqu'au 🏁. Avec **avancer** et **tourner**.",
+    grid: [[4,4,4,4,4,4],[4,2,1,1,1,4],[4,4,4,4,1,4],[4,4,4,4,1,4],[4,4,4,4,3,4],[4,4,4,4,4,4]],
+    startPos: { x: 1, y: 1, dir: 0 }, allowedBlocks: ['maze_move_forward', 'maze_turn'],
+    maxBlocks: 7, validation: { stars: { blocks: 7, blocksFlat: 7, steps: 7 } } }),
+  baseLvl({ id: 3, chapter: 'Découverte', title: '🔀 Deux virages',
+    instruction: "Deux virages ! Avance, tourne, avance, tourne, avance jusqu'au 🏁.",
+    grid: [[4,4,4,4,4],[4,2,1,4,4],[4,4,1,4,4],[4,4,1,4,4],[4,4,1,3,4],[4,4,4,4,4]],
+    startPos: { x: 1, y: 1, dir: 0 }, allowedBlocks: ['maze_move_forward', 'maze_turn'],
+    maxBlocks: 7, validation: { stars: { blocks: 7, blocksFlat: 7, steps: 7 } } }),
+];
+
 const campaign = {
   title: '🐢 Figures géométriques — Labyrinthe',
   description: "Reproduis chaque figure en guidant la tortue, uniquement avec avancer et tourner à 90°. Inspiré des cartes Scratch monclasseurdemaths.fr.",
-  levels,
+  levels: [...DECOUVERTE, ...levels],
 };
 
 const outPath = join(__dirname, '..', 'public', 'examples', 'figures_geometriques.blokaly.json');
