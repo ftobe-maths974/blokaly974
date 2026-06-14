@@ -63,12 +63,19 @@ export default {
             ]
         },
         {
+            category: 'Boucles',
+            color: 'yellow-500',
+            blocks: [
+                { type: 'controls_repeat_ext', label: 'Répéter N fois', icon: '🔁' },
+                { type: 'maze_forever', label: 'Jusqu\'à l\'Arrivée', icon: '🏁' }
+            ]
+        },
+        {
             category: 'Capteurs',
             color: 'emerald-500',
             blocks: [
                 { type: 'maze_if', label: 'Si Chemin...', icon: '❓' },
-                { type: 'maze_if_else', label: 'Si... Sinon...', icon: '🔀' },
-                { type: 'maze_forever', label: 'Jusqu\'à l\'Arrivée', icon: '🏁' }
+                { type: 'maze_if_else', label: 'Si... Sinon...', icon: '🔀' }
             ]
         }
     ],

@@ -127,6 +127,14 @@ export default {
             ]
         },
         {
+            category: 'Boucles',
+            color: 'yellow-500',
+            blocks: [
+                { type: 'controls_repeat_ext', label: 'Répéter N fois', icon: '🔁' },
+                { type: 'controls_whileUntil', label: 'Répéter tant que', icon: '🔄' }
+            ]
+        },
+        {
             category: 'Texte',
             color: 'teal-500',
             blocks: [
