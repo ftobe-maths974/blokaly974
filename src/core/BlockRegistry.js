@@ -14,6 +14,39 @@ try {
 
 let isRegistered = false;
 
+/**
+ * Garantit le bloc-chapeau « Exécuter » (program_start) dans un workspace : toujours
+ * présent, non supprimable, unique. Si absent (niveau d'avant le chapeau), on le crée
+ * et on MIGRE les piles libres existantes en les accrochant dessous. Mode-agnostique :
+ * appelé pour TOUS les modes Blockly (runner élève + éditeur prof).
+ */
+export const ensureStartBlock = (workspace) => {
+  if (!workspace || !workspace.getBlocksByType) return null;
+  const existing = workspace.getBlocksByType('program_start', false);
+  let hat = existing[0];
+  if (!hat) {
+    hat = workspace.newBlock('program_start');
+    if (hat.initSvg) hat.initSvg();
+    if (hat.moveBy) hat.moveBy(24, 24);
+    // Migration : accrocher les piles libres existantes SOUS le chapeau, en ordre.
+    const tops = workspace.getTopBlocks(true).filter((b) => b !== hat && b.previousConnection);
+    let tail = hat;
+    for (const b of tops) {
+      if (tail.nextConnection && b.previousConnection) {
+        tail.nextConnection.connect(b.previousConnection);
+        let last = b;
+        while (last.getNextBlock && last.getNextBlock()) last = last.getNextBlock();
+        tail = last;
+      }
+    }
+    if (hat.render) hat.render();
+  } else {
+    existing.slice(1).forEach((b) => b.dispose(true)); // un seul chapeau
+  }
+  if (hat.setDeletable) hat.setDeletable(false);
+  return hat;
+};
+
 export const registerAllBlocks = () => {
   if (isRegistered) return;
   isRegistered = true;
@@ -88,6 +121,20 @@ export const registerAllBlocks = () => {
       Blockly.Blocks['system_var_get'] = { init: function() { this.jsonInit({ "message0": "%1", "args0": [{ "type": "field_label_serializable", "name": "VAR_NAME", "text": "VAR" }], "output": null, "colour": 60, "editable": false }); } }; 
   }
   javascriptGenerator.forBlock['system_var_get'] = (block) => [block.getField('VAR_NAME').getText(), javascriptGenerator.ORDER_ATOMIC];
+
+  // --- BLOC « EXÉCUTER » (départ de programme) — système, présent dans TOUS les modes ---
+  // Hat (pas de previousStatement), même vert que le bouton ▶️ Exécuter. Seuls les blocs
+  // accrochés DESSOUS s'exécutent (cf. useGameRunner). Injecté par ensureStartBlock.
+  if (!Blockly.Blocks['program_start']) {
+    Blockly.defineBlocksWithJsonArray([{
+      "type": "program_start",
+      "message0": "▶️ Exécuter",
+      "nextStatement": null,
+      "colour": "#27ae60",
+      "tooltip": "Le départ du programme : accroche tes blocs sous ce bloc."
+    }]);
+  }
+  javascriptGenerator.forBlock['program_start'] = () => ''; // n'émet rien ; sa pile suivante est ajoutée par scrub_
 
   // --- LISTES ---
   // On écrase les générateurs de listes par défaut pour ajouter l'enregistrement des actions

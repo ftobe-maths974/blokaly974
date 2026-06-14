@@ -3,7 +3,7 @@ import { BlocklyWorkspace } from '../BlocklyWorkspace';
 import * as Blockly from 'blockly';
 import { javascriptGenerator } from 'blockly/javascript';
 
-import { registerAllBlocks } from '../../core/BlockRegistry';
+import { registerAllBlocks, ensureStartBlock } from '../../core/BlockRegistry';
 import { generateToolbox } from '../../core/BlockDefinitions';
 import FeedbackModal from './FeedbackModal';
 import { useGameRunner } from '../../hooks/useGameRunner';
@@ -140,8 +140,8 @@ export default function BlocklyRunner({ levelData, plugin, onWin, onNextLevel, s
            Blockly.Xml.domToWorkspace(xmlDom, newWorkspace);
        } catch (e) { console.warn("Erreur code:", e); }
     }
-    // Bloc-chapeau « Exécuter » toujours présent (+ migration des piles libres).
-    if (plugin.ensureStartBlock) plugin.ensureStartBlock(newWorkspace);
+    // Bloc-chapeau « Exécuter » toujours présent dans TOUS les modes (+ migration).
+    ensureStartBlock(newWorkspace);
 
     // Panneau « réserve » : recalcule le restant des blocs plafonnés à chaque changement.
     if (Object.keys(blockLimits).length) {

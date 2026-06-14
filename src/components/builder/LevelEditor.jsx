@@ -5,7 +5,7 @@ import * as Blockly from 'blockly';
 import { javascriptGenerator } from 'blockly/javascript';
 
 import { getPlugin, getAllPlugins } from '../../core/PluginRegistry'; 
-import { registerAllBlocks } from '../../core/BlockRegistry';
+import { registerAllBlocks, ensureStartBlock } from '../../core/BlockRegistry';
 import { generateToolbox, generateMasterToolbox } from '../../core/BlockDefinitions'; 
 import ToolboxConfigurator from './ToolboxConfigurator'; // 👈 IMPORT NOUVEAU
 
@@ -89,8 +89,8 @@ export default function LevelEditor({ levelData, onUpdate }) {
     try {
         registerAllBlocks();
         if (safeFeature?.registerBlocks) safeFeature.registerBlocks(Blockly, javascriptGenerator);
-        // Bloc-chapeau « Exécuter » présent côté prof aussi (« Vue : ce que voit l'élève »).
-        if (safeFeature?.ensureStartBlock) safeFeature.ensureStartBlock(newWorkspace);
+        // Bloc-chapeau « Exécuter » présent dans TOUS les modes (« Vue : ce que voit l'élève »).
+        ensureStartBlock(newWorkspace);
     } catch(e) { console.error(e); }
     window.setTimeout(() => Blockly.svgResize(newWorkspace), 0);
   };

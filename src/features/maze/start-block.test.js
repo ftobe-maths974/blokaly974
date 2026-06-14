@@ -2,9 +2,11 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import * as Blockly from 'blockly';
 import { javascriptGenerator } from 'blockly/javascript';
 import { MazePlugin } from './logic';
+import { registerAllBlocks, ensureStartBlock } from '../../core/BlockRegistry';
 
-// Blocs maze (dont program_start) définis une fois pour tous les tests.
+// program_start vient désormais du core (registerAllBlocks) ; blocs maze du plugin.
 beforeAll(() => {
+  registerAllBlocks();
   MazePlugin.registerBlocks(Blockly, javascriptGenerator);
 });
 
@@ -12,7 +14,7 @@ describe('bloc « Exécuter » (program_start)', () => {
   it('migre les blocs libres existants SOUS le chapeau et le rend non supprimable', () => {
     const ws = new Blockly.Workspace();
     ws.newBlock('maze_move_forward'); // pile libre (niveau d'avant le chapeau)
-    const hat = MazePlugin.ensureStartBlock(ws);
+    const hat = ensureStartBlock(ws);
 
     expect(hat.type).toBe('program_start');
     expect(hat.isDeletable()).toBe(false);
@@ -22,22 +24,22 @@ describe('bloc « Exécuter » (program_start)', () => {
 
   it('crée un chapeau seul quand le workspace est vide', () => {
     const ws = new Blockly.Workspace();
-    const hat = MazePlugin.ensureStartBlock(ws);
+    const hat = ensureStartBlock(ws);
     expect(hat.type).toBe('program_start');
     expect(hat.getNextBlock()).toBeNull();
   });
 
   it('ne crée pas de second chapeau si un existe déjà', () => {
     const ws = new Blockly.Workspace();
-    MazePlugin.ensureStartBlock(ws);
-    MazePlugin.ensureStartBlock(ws); // 2e appel (re-chargement)
+    ensureStartBlock(ws);
+    ensureStartBlock(ws); // 2e appel (re-chargement)
     expect(ws.getBlocksByType('program_start', false).length).toBe(1);
   });
 
   it('ne génère QUE la pile sous le chapeau (les blocs à côté sont ignorés)', () => {
     const ws = new Blockly.Workspace();
     ws.newBlock('maze_move_forward'); // sera migré sous le chapeau
-    const hat = MazePlugin.ensureStartBlock(ws);
+    const hat = ensureStartBlock(ws);
     ws.newBlock('maze_turn'); // pile DÉTACHÉE, posée à côté du chapeau
 
     javascriptGenerator.init(ws);

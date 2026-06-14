@@ -14,7 +14,6 @@ export default {
         category: 'Labyrinthe' 
     }),
     executeStep: MazePlugin.executeStep,
-    ensureStartBlock: MazePlugin.ensureStartBlock,
 
     evaluateResult: (state, levelData, metrics) => {
         const moveResult = MAZE_CONFIG.checkMove(levelData.grid, state.x, state.y);
